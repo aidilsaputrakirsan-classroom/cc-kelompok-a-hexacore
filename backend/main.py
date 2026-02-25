@@ -39,7 +39,7 @@ def team_info():
             # TODO: Isi dengan data tim Anda
             {"name": "Maulana Malik Ibrahim", "nim": "10231051", "role": "Lead Backend"},
             {"name": "Micka Mayulia Utama", "nim": "10231053", "role": "Lead Frontend"},
-            {"name": "Nama 3", "nim": "NIM3", "role": "Lead DevOps"},
+            {"name": "Khanza Nabila Tsabita", "nim": "10231049", "role": "Lead DevOps"},
             {"name": "Muhammad Aqila Ardhi", "nim": "10231057", "role": "Lead QA & Docs"},
         ]
     }
