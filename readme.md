@@ -7,7 +7,7 @@
 | Nama | NIM | Peran |
 |------|-----|-------|
 | Maulana Malik Ibrahim | 10231051 | Lead Backend |
-| [Nama Teman 1] | [NIM Teman 1] | Lead Frontend |
+| Micka Mayulia Utama | 10231053 | Lead Frontend |
 | [Nama Teman 2] | [NIM Teman 2] | Lead DevOps |
 | [Nama Teman 3] | [NIM Teman 3] | Lead QA & Docs |
 
@@ -26,3 +26,23 @@
 
 ```text
 [React Frontend] <--HTTP--> [FastAPI Backend] <--SQL--> [PostgreSQL]
+
+## 🤖 Getting Started
+Prasyarat
+- Python 3.10+
+- Node.js 18+
+- Git
+
+Backend
+```
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+Frontend
+```
+cd frontend
+npm install
+npm run dev
+```
