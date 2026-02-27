@@ -8,7 +8,7 @@
 |------|-----|-------|
 | Maulana Malik Ibrahim | 10231051 | Lead Backend |
 | Micka Mayulia Utama | 10231053 | Lead Frontend |
-| [Nama Teman 2] | [NIM Teman 2] | Lead DevOps |
+| Khanza Nabila Tsabita | 10231049 | Lead DevOps |
 | [Nama Teman 3] | [NIM Teman 3] | Lead QA & Docs |
 
 ## 🛠️ Tech Stack
@@ -26,6 +26,7 @@
 
 ```text
 [React Frontend] <--HTTP--> [FastAPI Backend] <--SQL--> [PostgreSQL]
+```
 
 ## 🤖 Getting Started
 Prasyarat
@@ -45,4 +46,38 @@ Frontend
 cd frontend
 npm install
 npm run dev
+```
+
+## 📅 Roadmap
+
+| Minggu | Target | Status |
+|--------|--------|--------|
+| 1 | Setup & Hello World | ✅ |
+| 2 | REST API + Database | ⬜ |
+| 3 | React Frontend | ⬜ |
+| 4 | Full-Stack Integration | ⬜ |
+| 5-7 | Docker & Compose | ⬜ |
+| 8 | UTS Demo | ⬜ |
+| 9-11 | CI/CD Pipeline | ⬜ |
+| 12-14 | Microservices | ⬜ |
+| 15-16 | Final & UAS | ⬜ |
+
+## Project Structure
+```
+CC-KELOMPOK-A-HEXACORE/
+├── backend/
+│   ├── main.py
+│   ├── requirements.txt
+├── docs/ 
+│   ├── member-aqila.md
+│   ├── member-Khanza_Nabila_Tsabita.md
+│   ├── member-Maulana_Malik_Ibrahim.md
+│   ├── member-Micka_Mayulia_Utama.md
+├── frontend/  
+│   ├── frontend/
+│   ├── node_modules/
+│   ├── public/    
+│   └── src/   
+├── .gitignore            
+└── README.md
 ```
