@@ -1,6 +1,22 @@
-# ☁️ Cloud App - [HEXACORE]
+# ☁️ Cloud App - [LenteraPustaka]
 
-[Deskripsi singkat aplikasi (1-2 paragraf): tuliskan apa yang dilakukan aplikasi ini, untuk siapa target penggunanya, dan masalah apa yang diselesaikannya berdasarkan rekomendasi proyek dari temanmu]
+Aplikasi **LenteraPustaka** adalah sebuah platform berbasis web yang dirancang untuk mendigitalisasi proses pengelolaan katalog dan transaksi peminjaman buku di perpustakaan. Aplikasi ini bertujuan untuk memberikan kemudahan akses informasi bagi pengunjung perpustakaan, memfasilitasi sirkulasi peminjaman, sekaligus menyederhanakan tugas administratif pustakawan secara terpusat.
+
+Sistem ini dirancang untuk tiga kelompok demografi pengguna dengan kebutuhan yang berbeda:
+1. **Pengunjung Publik (Guest):**
+mahasiswa, pelajar, atau masyarakat umum yang ingin menelusuri katalog atau cek ketersediaan buku sebelum memutuskan untuk mendaftar
+2. **Anggota Terdaftar (Member):**
+pengguna aktif perpustakaan yang membtuuhkan fasilitas untuk meminjam buku, mengecek batas waktu pengembalian, dan melihat riwayat.
+3. **Pustakawan (Admin):**
+Petugas perpustakaan yang membutahkan alat bantu efisien untuk mengelola inventaris, menambah stok buku baru, dan menyetujui peminjaman.
+
+Aplikasi ini dikembangkan untuk memberikan solusi atas beberapa kendala dalam pengelolaan perpustakaan:
+1. **Pencarian yang inefisien:**
+Menyelesaikan masalah pengunjung yang kesulitan menemukan buku di rak fisik dengan menyediakan fitur *searchbar* digital yang cepat dan akurat.
+2. **Risiko Kehilagan Data Transaksi:**
+Menggantikan pencatatan peminjaman dengan menjadi basis data digital yang terstruktur.
+3. **Keterbatasan Akses Informasi:**
+Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apakah sebuah buku sedang dipinjam orang lain atau tersedia dengan menampilkan ketersediaan stok secara real-time
 
 ## 👥 Tim
 
@@ -9,7 +25,7 @@
 | Maulana Malik Ibrahim | 10231051 | Lead Backend |
 | Micka Mayulia Utama | 10231053 | Lead Frontend |
 | Khanza Nabila Tsabita | 10231049 | Lead DevOps |
-| [Nama Teman 3] | [NIM Teman 3] | Lead QA & Docs |
+| Muhammad Aqila Ardhi | 10231057 | Lead QA & Docs |
 
 ## 🛠️ Tech Stack
 
