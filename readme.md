@@ -8,7 +8,7 @@ mahasiswa, pelajar, atau masyarakat umum yang ingin menelusuri katalog atau cek 
 2. **Anggota Terdaftar (Member):**
 pengguna aktif perpustakaan yang membtuuhkan fasilitas untuk meminjam buku, mengecek batas waktu pengembalian, dan melihat riwayat.
 3. **Pustakawan (Admin):**
-Petugas perpustakaan yang membutahkan alat bantu efisien untuk mengelola inventaris, menambah stok buku baru, dan menyetujui peminjaman.
+Petugas perpustakaan yang membutuhkan alat bantu efisien berupa dashboard statistik terstruktur dan mengelola inventaris, menyetujui peminjaman, dan mengelola member.
 
 Aplikasi ini dikembangkan untuk memberikan solusi atas beberapa kendala dalam pengelolaan perpustakaan:
 1. **Pencarian yang inefisien:**
