@@ -46,3 +46,22 @@ class ItemListResponse(BaseModel):
     """Schema untuk response list items dengan total count."""
     total: int
     items: list[ItemResponse]
+
+
+# === ITEM SUMMARY (untuk most_expensive & cheapest di stats) ===
+class ItemSummary(BaseModel):
+    """Schema ringkas untuk item yang ditampilkan di statistik."""
+    name: str
+    price: float
+
+    class Config:
+        from_attributes = True
+
+
+# === STATS RESPONSE ===
+class ItemStatsResponse(BaseModel):
+    """Schema untuk response statistik inventory."""
+    total_items: int
+    total_value: float
+    most_expensive: Optional[ItemSummary]
+    cheapest: Optional[ItemSummary]
