@@ -1,20 +1,39 @@
-from fastapi import FastAPI
+import uuid
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
-from database import engine
+from database import engine, get_db
 from models import Base
+from schemas import (
+    # Category
+    CategoryCreate, CategoryResponse,
+    # Book
+    BookCreate, BookUpdate, BookResponse, BookListResponse, BookStatsResponse,
+    # User
+    UserCreate, UserResponse,
+    # Transaction
+    TransactionCreate, TransactionUpdate, TransactionResponse, TransactionListResponse,
+    # Fine
+    FineResponse, FineListResponse,
+)
+import crud
 
 # Buat semua tabel di database (jika belum ada)
-# Ini akan membuat: users, categories, books, transactions, fines
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="LenteraPustaka API",
-    description="REST API Sistem Informasi Perpustakaan — Komputasi Awan SI ITK",
+    description=(
+        "REST API Sistem Informasi Perpustakaan — Komputasi Awan SI ITK\n\n"
+        "Kelompok A (HEXACORE)\n"
+        "**Arsitektur:** 5-file Separation of Concerns "
+        "(database.py → models.py → schemas.py → crud.py → main.py)"
+    ),
     version="0.3.0",
 )
 
-# CORS
+# CORS — sementara wildcard (*), akan diubah ke whitelist di Modul 4
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,22 +43,26 @@ app.add_middleware(
 )
 
 
-# ==================== HEALTH CHECK ====================
+# ============================================================
+# HEALTH CHECK
+# ============================================================
 
-@app.get("/health")
+@app.get("/health", tags=["System"])
 def health_check():
-    """Endpoint untuk mengecek apakah API berjalan."""
+    """Cek apakah API berjalan."""
     return {"status": "healthy", "version": "0.3.0", "app": "LenteraPustaka"}
 
 
-# ==================== TEAM INFO ====================
+# ============================================================
+# TEAM INFO
+# ============================================================
 
-@app.get("/team")
+@app.get("/team", tags=["System"])
 def team_info():
-    """Informasi tim."""
+    """Informasi tim pengembang."""
     return {
         "team": "cloud-team-hexacore",
-        "app": "LenteraPustaka",
+        "app":  "LenteraPustaka",
         "members": [
             {"name": "Maulana Malik Ibrahim", "nim": "10231051", "role": "Lead Backend"},
             {"name": "Micka Mayulia Utama",   "nim": "10231053", "role": "Lead Frontend"},
@@ -49,5 +72,248 @@ def team_info():
     }
 
 
-# ==================== PLACEHOLDER ====================
-# Endpoint CRUD akan ditambahkan setelah schemas.py dan crud.py selesai (Tahap B & C)
+# ============================================================
+# CATEGORIES
+# ============================================================
+
+@app.post("/categories", response_model=CategoryResponse, status_code=201, tags=["Categories"])
+def create_category(data: CategoryCreate, db: Session = Depends(get_db)):
+    """Tambah kategori buku baru."""
+    return crud.create_category(db=db, data=data)
+
+
+@app.get("/categories", response_model=list[CategoryResponse], tags=["Categories"])
+def list_categories(
+    skip:  int = Query(0,   ge=0,  description="Offset pagination"),
+    limit: int = Query(100, ge=1, le=200, description="Jumlah data"),
+    db: Session = Depends(get_db),
+):
+    """Ambil semua kategori buku."""
+    return crud.get_categories(db=db, skip=skip, limit=limit)
+
+
+@app.get("/categories/{category_id}", response_model=CategoryResponse, tags=["Categories"])
+def get_category(category_id: int, db: Session = Depends(get_db)):
+    """Ambil satu kategori berdasarkan ID."""
+    category = crud.get_category(db=db, category_id=category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail=f"Kategori id={category_id} tidak ditemukan")
+    return category
+
+
+@app.put("/categories/{category_id}", response_model=CategoryResponse, tags=["Categories"])
+def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db)):
+    """Update nama dan deskripsi kategori."""
+    updated = crud.update_category(db=db, category_id=category_id, data=data)
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"Kategori id={category_id} tidak ditemukan")
+    return updated
+
+
+@app.delete("/categories/{category_id}", status_code=204, tags=["Categories"])
+def delete_category(category_id: int, db: Session = Depends(get_db)):
+    """Hapus kategori."""
+    success = crud.delete_category(db=db, category_id=category_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Kategori id={category_id} tidak ditemukan")
+    return None
+
+
+# ============================================================
+# BOOKS
+# ⚠️  GET /books/stats HARUS sebelum GET /books/{book_id}
+#     agar FastAPI tidak salah parse 'stats' sebagai UUID
+# ============================================================
+
+@app.post("/books", response_model=BookResponse, status_code=201, tags=["Books"])
+def create_book(data: BookCreate, db: Session = Depends(get_db)):
+    """
+    Tambah buku baru ke inventaris.
+
+    - **isbn**: Harus unik
+    - **total_stock** & **available_stock**: Jumlah eksemplar
+    - **category_id**: ID kategori harus sudah ada
+    """
+    return crud.create_book(db=db, data=data)
+
+
+@app.get("/books", response_model=BookListResponse, tags=["Books"])
+def list_books(
+    skip:   int            = Query(0,    ge=0,       description="Offset pagination"),
+    limit:  int            = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
+    search: str | None     = Query(None,             description="Cari berdasarkan judul, pengarang, atau ISBN"),
+    db: Session = Depends(get_db),
+):
+    """Ambil daftar buku dengan pagination dan pencarian."""
+    return crud.get_books(db=db, skip=skip, limit=limit, search=search)
+
+
+@app.get("/books/stats", response_model=BookStatsResponse, tags=["Books"])
+def get_book_stats(db: Session = Depends(get_db)):
+    """
+    Statistik inventaris buku.
+
+    - **total_titles**: Jumlah judul buku unik
+    - **total_stock**: Total seluruh eksemplar
+    - **available_stock**: Stok tersedia saat ini
+    - **borrowed_count**: Sedang dipinjam
+    - **overdue_count**: Terlambat dikembalikan
+    """
+    return crud.get_book_stats(db=db)
+
+
+@app.get("/books/{book_id}", response_model=BookResponse, tags=["Books"])
+def get_book(book_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Ambil detail satu buku berdasarkan UUID."""
+    book = crud.get_book(db=db, book_id=book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail=f"Buku id={book_id} tidak ditemukan")
+    return book
+
+
+@app.put("/books/{book_id}", response_model=BookResponse, tags=["Books"])
+def update_book(book_id: uuid.UUID, data: BookUpdate, db: Session = Depends(get_db)):
+    """
+    Update data buku — partial update, hanya field yang dikirim yang berubah.
+    ISBN tidak bisa diubah (gunakan DELETE + POST jika perlu).
+    """
+    updated = crud.update_book(db=db, book_id=book_id, data=data)
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"Buku id={book_id} tidak ditemukan")
+    return updated
+
+
+@app.delete("/books/{book_id}", status_code=204, tags=["Books"])
+def delete_book(book_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Hapus buku dari inventaris."""
+    success = crud.delete_book(db=db, book_id=book_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Buku id={book_id} tidak ditemukan")
+    return None
+
+
+# ============================================================
+# USERS
+# ============================================================
+
+@app.post("/users", response_model=UserResponse, status_code=201, tags=["Users"])
+def create_user(data: UserCreate, db: Session = Depends(get_db)):
+    """
+    Daftarkan user baru (anggota perpustakaan atau admin).
+
+    - **role**: `member` (default) atau `admin`
+    - **password**: Minimal 8 karakter
+    """
+    user = crud.create_user(db=db, data=data)
+    if not user:
+        raise HTTPException(status_code=400, detail="Email sudah terdaftar")
+    return user
+
+
+@app.get("/users", response_model=list[UserResponse], tags=["Users"])
+def list_users(
+    skip:  int = Query(0,  ge=0,       description="Offset pagination"),
+    limit: int = Query(50, ge=1, le=200, description="Jumlah data"),
+    db: Session = Depends(get_db),
+):
+    """Ambil daftar semua user."""
+    return crud.get_users(db=db, skip=skip, limit=limit)
+
+
+@app.get("/users/{user_id}", response_model=UserResponse, tags=["Users"])
+def get_user(user_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Ambil detail satu user berdasarkan UUID."""
+    user = crud.get_user(db=db, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
+    return user
+
+
+# ============================================================
+# TRANSACTIONS (BORROW & RETURN)
+# ============================================================
+
+@app.post("/transactions", response_model=TransactionResponse, status_code=201, tags=["Transactions"])
+def borrow_book(data: TransactionCreate, db: Session = Depends(get_db)):
+    """
+    Pinjam buku.
+
+    Business rules:
+    - Stok tersedia harus > 0
+    - `available_stock` buku otomatis dikurangi 1
+    - Status transaksi: `borrowed`
+    """
+    try:
+        trx = crud.create_transaction(db=db, data=data)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    if trx is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Stok buku habis — tidak tersedia untuk dipinjam saat ini",
+        )
+    return trx
+
+
+@app.get("/transactions", response_model=TransactionListResponse, tags=["Transactions"])
+def list_transactions(
+    skip:   int            = Query(0,    ge=0,       description="Offset pagination"),
+    limit:  int            = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
+    status: str | None     = Query(None,             description="Filter status: borrowed | returned | overdue | lost"),
+    db: Session = Depends(get_db),
+):
+    """Ambil daftar transaksi, opsional filter berdasarkan status."""
+    return crud.get_transactions(db=db, skip=skip, limit=limit, status=status)
+
+
+@app.get("/transactions/{transaction_id}", response_model=TransactionResponse, tags=["Transactions"])
+def get_transaction(transaction_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Ambil detail satu transaksi berdasarkan UUID."""
+    trx = crud.get_transaction(db=db, transaction_id=transaction_id)
+    if not trx:
+        raise HTTPException(status_code=404, detail=f"Transaksi id={transaction_id} tidak ditemukan")
+    return trx
+
+
+@app.put("/transactions/{transaction_id}/return", response_model=TransactionResponse, tags=["Transactions"])
+def return_book(transaction_id: uuid.UUID, db: Session = Depends(get_db)):
+    """
+    Kembalikan buku.
+
+    Business rules:
+    - `available_stock` buku otomatis ditambah 1
+    - Jika terlambat: status → `overdue`, denda dibuat otomatis (Rp 1.000/hari)
+    - Jika tepat waktu: status → `returned`
+    """
+    trx = crud.return_book(db=db, transaction_id=transaction_id)
+    if not trx:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Transaksi id={transaction_id} tidak ditemukan atau sudah dikembalikan",
+        )
+    return trx
+
+
+# ============================================================
+# FINES (DENDA)
+# ============================================================
+
+@app.get("/fines", response_model=FineListResponse, tags=["Fines"])
+def list_fines(
+    skip:    int            = Query(0,    ge=0,       description="Offset pagination"),
+    limit:   int            = Query(50,   ge=1, le=200, description="Jumlah data"),
+    is_paid: bool | None    = Query(None,             description="Filter: true=lunas, false=belum lunas"),
+    db: Session = Depends(get_db),
+):
+    """Ambil daftar denda keterlambatan, opsional filter berdasarkan status lunas."""
+    return crud.get_fines(db=db, skip=skip, limit=limit, is_paid=is_paid)
+
+
+@app.put("/fines/{fine_id}/pay", response_model=FineResponse, tags=["Fines"])
+def pay_fine(fine_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Tandai denda sebagai lunas."""
+    fine = crud.pay_fine(db=db, fine_id=fine_id)
+    if not fine:
+        raise HTTPException(status_code=404, detail=f"Denda id={fine_id} tidak ditemukan")
+    return fine
