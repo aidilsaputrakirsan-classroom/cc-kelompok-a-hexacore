@@ -42,6 +42,9 @@ Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apa
 
 ```text
 [React Frontend] <--HTTP--> [FastAPI Backend] <--SQL--> [PostgreSQL]
+       |                            |
+  Vite + JSX               REST API Endpoints
+  (Port 5173)               (Port 8000)
 ```
 
 ## 🤖 Getting Started
@@ -64,6 +67,11 @@ npm install
 npm run dev
 ```
 
+Access
+- API: http://localhost:8000"
+- API Docs: http://localhost:8000/docs"
+- Frontend: http://localhost:5173"
+
 ## 📅 Roadmap
 
 | Minggu | Target | Status |
@@ -78,13 +86,23 @@ npm run dev
 | 12-14 | Microservices | ⬜ |
 | 15-16 | Final & UAS | ⬜ |
 
-## Project Structure
+## 🗃️ Project Structure
+
 ```
 CC-KELOMPOK-A-HEXACORE/
 ├── backend/
+│   ├── crud.py              ← Baru
+│   ├── database.py          ← Baru
 │   ├── main.py
-│   ├── requirements.txt
+│   ├── models.py            ← Baru
+│   ├── requirements.txt     ← Updated
+│   ├── schemas.py           ← Baru
+│   ├── .env                 
+│   └── .env.example         ← Update
 ├── docs/ 
+│   ├── test/                ← Baru
+│   ├── api-test-results.md  ← Baru
+│   ├── schemadatabase.md      ← Baru
 │   ├── member-aqila.md
 │   ├── member-Khanza_Nabila_Tsabita.md
 │   ├── member-Maulana_Malik_Ibrahim.md
@@ -95,5 +113,50 @@ CC-KELOMPOK-A-HEXACORE/
 │   ├── public/    
 │   └── src/   
 ├── .gitignore            
+├── setup.sh            ← Baru
 └── README.md
 ```
+
+## 📁Tabel ERD
+```
++-------------------+              +-----------------------+
+|       USERS       |              |      TRANSACTIONS     |
++-------------------+              +-----------------------+
+| user_id (PK/UUID) | 1          N | transaction_id (PK)   |
+| email (UK)        |--------------| user_id (FK/UUID)     |
+| password_hash     | (Melakukan)  | book_id (FK/UUID)     |
+| full_name         |              | borrow_date           |
+| role              |              | due_date              |
+| created_at        |              | return_date           |
++-------------------+              | status                |
+                                   +-----------+-----------+
+                                               | 1
+                                               |
++-------------------+                          | (Memiliki)
+|     CATEGORIES    |                          |
++-------------------+                          | 1
+| category_id (PK)  | 1          N +-----------+-----------+
+| name (UK)         |--------------|         FINES         |
+| description       | (Membawahi)  +-----------------------+
++---------+---------+              | fine_id (PK/UUID)     |
+          |                        | transaction_id (FK/UK)|
+          | 1                      | amount                |
+          |                        | is_paid               |
+          | (Memiliki)             +-----------------------+
+          |
+          | N
++---------+---------+
+|       BOOKS       |
++-------------------+
+| book_id (PK/UUID) |
+| category_id (FK)  |
+| isbn (UK)         |
+| title             |
+| author            |
+| available_stock   |
++-------------------+
+```
+
+## Dokumentasi Endpoint API
+| method | URL | request body | response example |
+|--------|--------|--------|--------|
