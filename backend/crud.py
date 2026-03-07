@@ -1,102 +1,412 @@
-from sqlalchemy.orm import Session
+import hashlib
+import uuid
+from datetime import datetime, timezone
+from typing import Optional
+
 from sqlalchemy import or_
-from models import Item
-from schemas import ItemCreate, ItemUpdate
+from sqlalchemy.orm import Session
+
+from models import Book, Category, Fine, Transaction, User
+from schemas import (
+    BookCreate, BookUpdate,
+    BookStatsResponse,
+    CategoryCreate,
+    FineResponse,
+    TransactionCreate,
+    UserCreate,
+)
+
+# ============================================================
+# KONSTANTA
+# ============================================================
+FINE_PER_DAY = 1_000   # Rp 1.000 per hari keterlambatan
 
 
-def create_item(db: Session, item_data: ItemCreate) -> Item:
-    """Buat item baru di database."""
-    db_item = Item(**item_data.model_dump())
-    db.add(db_item)
+# ============================================================
+# HELPER
+# ============================================================
+def _hash_password(plain: str) -> str:
+    """
+    Hash password dengan SHA-256 (sementara).
+    CATATAN: Akan diganti dengan bcrypt pada Modul 4 (JWT Auth).
+    """
+    return hashlib.sha256(plain.encode()).hexdigest()
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    """Verifikasi password terhadap hash SHA-256."""
+    return hashlib.sha256(plain.encode()).hexdigest() == hashed
+
+
+# ============================================================
+# CRUD: CATEGORY
+# ============================================================
+
+def create_category(db: Session, data: CategoryCreate) -> Category:
+    """Buat kategori buku baru."""
+    category = Category(name=data.name, description=data.description)
+    db.add(category)
     db.commit()
-    db.refresh(db_item)
-    return db_item
+    db.refresh(category)
+    return category
 
 
-def get_items(db: Session, skip: int = 0, limit: int = 20, search: str = None):
-    """
-    Ambil daftar items dengan pagination & search.
-    - skip: jumlah data yang di-skip (untuk pagination)
-    - limit: jumlah data per halaman
-    - search: cari berdasarkan nama atau deskripsi
-    """
-    query = db.query(Item)
-    
-    if search:
-        query = query.filter(
-            or_(
-                Item.name.ilike(f"%{search}%"),
-                Item.description.ilike(f"%{search}%")
-            )
-        )
-    
-    total = query.count()
-    items = query.order_by(Item.created_at.desc()).offset(skip).limit(limit).all()
-    
-    return {"total": total, "items": items}
+def get_categories(db: Session, skip: int = 0, limit: int = 100) -> list[Category]:
+    """Ambil semua kategori."""
+    return db.query(Category).offset(skip).limit(limit).all()
 
 
-def get_item(db: Session, item_id: int) -> Item | None:
-    """Ambil satu item berdasarkan ID."""
-    return db.query(Item).filter(Item.id == item_id).first()
+def get_category(db: Session, category_id: int) -> Optional[Category]:
+    """Ambil satu kategori berdasarkan ID."""
+    return db.query(Category).filter(Category.category_id == category_id).first()
 
 
-def update_item(db: Session, item_id: int, item_data: ItemUpdate) -> Item | None:
-    """
-    Update item berdasarkan ID.
-    Hanya update field yang dikirim (bukan None).
-    """
-    db_item = db.query(Item).filter(Item.id == item_id).first()
-    
-    if not db_item:
+def update_category(db: Session, category_id: int, data: CategoryCreate) -> Optional[Category]:
+    """Update nama/deskripsi kategori."""
+    category = get_category(db, category_id)
+    if not category:
         return None
-    
-    # Hanya update field yang dikirim (exclude_unset=True)
-    update_data = item_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(db_item, field, value)
-    
+    category.name        = data.name
+    category.description = data.description
     db.commit()
-    db.refresh(db_item)
-    return db_item
+    db.refresh(category)
+    return category
 
 
-def delete_item(db: Session, item_id: int) -> bool:
-    """Hapus item berdasarkan ID. Return True jika berhasil."""
-    db_item = db.query(Item).filter(Item.id == item_id).first()
-    
-    if not db_item:
+def delete_category(db: Session, category_id: int) -> bool:
+    """Hapus kategori. Gagal jika masih ada buku di kategori ini."""
+    category = get_category(db, category_id)
+    if not category:
         return False
-    
-    db.delete(db_item)
+    db.delete(category)
     db.commit()
     return True
 
 
-def get_items_stats(db: Session) -> dict:
+# ============================================================
+# CRUD: BOOK
+# ============================================================
+
+def create_book(db: Session, data: BookCreate) -> Book:
+    """Tambah buku baru ke inventaris."""
+    book = Book(
+        category_id      = data.category_id,
+        isbn             = data.isbn,
+        title            = data.title,
+        author           = data.author,
+        publisher        = data.publisher,
+        publication_year = data.publication_year,
+        total_stock      = data.total_stock,
+        available_stock  = data.available_stock,
+    )
+    db.add(book)
+    db.commit()
+    db.refresh(book)
+    return book
+
+
+def get_books(
+    db: Session,
+    skip: int = 0,
+    limit: int = 20,
+    search: Optional[str] = None,
+) -> dict:
     """
-    Hitung statistik inventory:
-    - total_items  : jumlah item di database
-    - total_value  : total nilai inventory (price × quantity)
-    - most_expensive: item dengan harga tertinggi
-    - cheapest     : item dengan harga terendah
+    Ambil daftar buku dengan pagination dan pencarian.
+    Search mencakup: title, author, isbn.
     """
-    items = db.query(Item).all()
+    query = db.query(Book)
+    if search:
+        kw = f"%{search}%"
+        query = query.filter(
+            or_(
+                Book.title.ilike(kw),
+                Book.author.ilike(kw),
+                Book.isbn.ilike(kw),
+            )
+        )
+    total = query.count()
+    books = query.offset(skip).limit(limit).all()
+    return {"total": total, "books": books}
 
-    if not items:
-        return {
-            "total_items": 0,
-            "total_value": 0.0,
-            "most_expensive": None,
-            "cheapest": None,
-        }
 
-    most_expensive = max(items, key=lambda x: x.price)
-    cheapest = min(items, key=lambda x: x.price)
+def get_book(db: Session, book_id: uuid.UUID) -> Optional[Book]:
+    """Ambil satu buku berdasarkan UUID."""
+    return db.query(Book).filter(Book.book_id == book_id).first()
 
-    return {
-        "total_items": len(items),
-        "total_value": sum(i.price * i.quantity for i in items),
-        "most_expensive": {"name": most_expensive.name, "price": most_expensive.price},
-        "cheapest": {"name": cheapest.name, "price": cheapest.price},
-    }
+
+def update_book(db: Session, book_id: uuid.UUID, data: BookUpdate) -> Optional[Book]:
+    """Update data buku — hanya field yang dikirim yang diubah (partial update)."""
+    book = get_book(db, book_id)
+    if not book:
+        return None
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(book, field, value)
+    db.commit()
+    db.refresh(book)
+    return book
+
+
+def delete_book(db: Session, book_id: uuid.UUID) -> bool:
+    """Hapus buku. Gagal jika ada transaksi aktif (status 'borrowed')."""
+    book = get_book(db, book_id)
+    if not book:
+        return False
+    db.delete(book)
+    db.commit()
+    return True
+
+
+def get_book_stats(db: Session) -> BookStatsResponse:
+    """
+    Statistik inventaris buku:
+    - total_titles    : jumlah judul unik
+    - total_stock     : total eksemplar seluruh buku
+    - available_stock : jumlah stok tersedia saat ini
+    - borrowed_count  : transaksi dengan status 'borrowed'
+    - overdue_count   : transaksi dengan status 'overdue'
+    """
+    books = db.query(Book).all()
+
+    total_titles    = len(books)
+    total_stock     = sum(b.total_stock     for b in books)
+    available_stock = sum(b.available_stock for b in books)
+
+    borrowed_count = (
+        db.query(Transaction)
+        .filter(Transaction.status == "borrowed")
+        .count()
+    )
+    overdue_count = (
+        db.query(Transaction)
+        .filter(Transaction.status == "overdue")
+        .count()
+    )
+
+    return BookStatsResponse(
+        total_titles    = total_titles,
+        total_stock     = total_stock,
+        available_stock = available_stock,
+        borrowed_count  = borrowed_count,
+        overdue_count   = overdue_count,
+    )
+
+
+# ============================================================
+# CRUD: USER
+# ============================================================
+
+def create_user(db: Session, data: UserCreate) -> Optional[User]:
+    """
+    Daftarkan user baru.
+    Return None jika email sudah terdaftar.
+    """
+    existing = db.query(User).filter(User.email == data.email).first()
+    if existing:
+        return None
+    user = User(
+        email         = data.email,
+        password_hash = _hash_password(data.password),
+        full_name     = data.full_name,
+        role          = data.role,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def get_users(db: Session, skip: int = 0, limit: int = 50) -> list[User]:
+    """Ambil semua user."""
+    return db.query(User).offset(skip).limit(limit).all()
+
+
+def get_user(db: Session, user_id: uuid.UUID) -> Optional[User]:
+    """Ambil satu user berdasarkan UUID."""
+    return db.query(User).filter(User.user_id == user_id).first()
+
+
+def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
+    """
+    Autentikasi user: cek email & password.
+    Digunakan nanti di Modul 4 (JWT Auth).
+    """
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return None
+    if not _verify_password(password, user.password_hash):
+        return None
+    return user
+
+
+# ============================================================
+# BUSINESS LOGIC: TRANSACTION (BORROW)
+# ============================================================
+
+def create_transaction(db: Session, data: TransactionCreate) -> Optional[Transaction]:
+    """
+    Proses peminjaman buku (borrow).
+
+    Business rules:
+    1. Validasi user dan buku ada
+    2. Cek available_stock > 0 — jika habis, return None
+    3. Decrement available_stock
+    4. Buat transaksi baru (status='borrowed')
+
+    Return:
+    - Transaction jika berhasil
+    - None jika stok habis
+    - Raise ValueError jika user/buku tidak ditemukan
+    """
+    user = get_user(db, data.user_id)
+    if not user:
+        raise ValueError(f"User {data.user_id} tidak ditemukan")
+
+    book = get_book(db, data.book_id)
+    if not book:
+        raise ValueError(f"Buku {data.book_id} tidak ditemukan")
+
+    # Cek stok — jika habis, tolak peminjaman
+    if book.available_stock <= 0:
+        return None   # Caller akan raise HTTP 400
+
+    # Decrement stok
+    book.available_stock -= 1
+
+    # Buat transaksi
+    trx = Transaction(
+        user_id  = data.user_id,
+        book_id  = data.book_id,
+        due_date = data.due_date,
+        status   = "borrowed",
+    )
+    db.add(trx)
+    db.commit()
+    db.refresh(trx)
+    return trx
+
+
+# ============================================================
+# BUSINESS LOGIC: TRANSACTION (RETURN)
+# ============================================================
+
+def return_book(db: Session, transaction_id: uuid.UUID) -> Optional[Transaction]:
+    """
+    Proses pengembalian buku (return).
+
+    Business rules:
+    1. Cek transaksi ada dan statusnya 'borrowed'
+    2. Isi return_date = sekarang
+    3. Increment available_stock buku
+    4. Hitung keterlambatan:
+       - Jika return_date > due_date → status = 'overdue'
+       - Auto-buat Fine (denda) = selisih hari × FINE_PER_DAY
+       - Jika tepat waktu → status = 'returned'
+
+    Return:
+    - Transaction yang sudah di-update
+    - None jika transaksi tidak ditemukan atau sudah dikembalikan
+    """
+    trx = (
+        db.query(Transaction)
+        .filter(Transaction.transaction_id == transaction_id)
+        .first()
+    )
+    if not trx:
+        return None
+    if trx.status != "borrowed":
+        return None   # Sudah dikembalikan / overdue / lost
+
+    # Set return_date
+    now = datetime.now(timezone.utc)
+    trx.return_date = now
+
+    # Increment stok
+    book = get_book(db, trx.book_id)
+    if book:
+        book.available_stock += 1
+
+    # Hitung keterlambatan
+    due = trx.due_date
+    if due.tzinfo is None:
+        due = due.replace(tzinfo=timezone.utc)
+
+    if now > due:
+        # Terlambat
+        trx.status   = "overdue"
+        days_late     = (now - due).days or 1   # minimal 1 hari
+        fine_amount   = days_late * FINE_PER_DAY
+
+        fine = Fine(
+            transaction_id = trx.transaction_id,
+            amount         = fine_amount,
+            is_paid        = False,
+        )
+        db.add(fine)
+    else:
+        trx.status = "returned"
+
+    db.commit()
+    db.refresh(trx)
+    return trx
+
+
+def get_transactions(
+    db: Session,
+    skip: int = 0,
+    limit: int = 20,
+    status: Optional[str] = None,
+) -> dict:
+    """
+    Ambil daftar transaksi dengan filter opsional berdasarkan status.
+    Status: 'borrowed' | 'returned' | 'overdue' | 'lost'
+    """
+    query = db.query(Transaction)
+    if status:
+        query = query.filter(Transaction.status == status)
+    total = query.count()
+    trxs  = query.offset(skip).limit(limit).all()
+    return {"total": total, "transactions": trxs}
+
+
+def get_transaction(db: Session, transaction_id: uuid.UUID) -> Optional[Transaction]:
+    """Ambil satu transaksi berdasarkan UUID."""
+    return (
+        db.query(Transaction)
+        .filter(Transaction.transaction_id == transaction_id)
+        .first()
+    )
+
+
+# ============================================================
+# CRUD: FINE (DENDA)
+# ============================================================
+
+def get_fines(
+    db: Session,
+    skip: int = 0,
+    limit: int = 50,
+    is_paid: Optional[bool] = None,
+) -> dict:
+    """
+    Ambil daftar denda.
+    Filter opsional: is_paid=True (lunas) / False (belum lunas).
+    """
+    query = db.query(Fine)
+    if is_paid is not None:
+        query = query.filter(Fine.is_paid == is_paid)
+    total = query.count()
+    fines = query.offset(skip).limit(limit).all()
+    return {"total": total, "fines": fines}
+
+
+def pay_fine(db: Session, fine_id: uuid.UUID) -> Optional[Fine]:
+    """Tandai denda sebagai lunas."""
+    fine = db.query(Fine).filter(Fine.fine_id == fine_id).first()
+    if not fine:
+        return None
+    fine.is_paid = True
+    db.commit()
+    db.refresh(fine)
+    return fine
