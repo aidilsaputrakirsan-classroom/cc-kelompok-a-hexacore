@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from database import engine, get_db
 from models import Base
-from schemas import ItemCreate, ItemUpdate, ItemResponse, ItemListResponse
+from schemas import ItemCreate, ItemUpdate, ItemResponse, ItemListResponse, ItemStatsResponse
 import crud
 
 # Buat semua tabel di database (jika belum ada)
@@ -64,6 +64,19 @@ def list_items(
     - **search**: Kata kunci pencarian (opsional)
     """
     return crud.get_items(db=db, skip=skip, limit=limit, search=search)
+
+
+@app.get("/items/stats", response_model=ItemStatsResponse)
+def get_items_stats(db: Session = Depends(get_db)):
+    """
+    Statistik inventory.
+
+    - **total_items**: Jumlah item yang tersimpan di database
+    - **total_value**: Total nilai inventory (price × quantity)
+    - **most_expensive**: Item dengan harga tertinggi
+    - **cheapest**: Item dengan harga terendah
+    """
+    return crud.get_items_stats(db=db)
 
 
 @app.get("/items/{item_id}", response_model=ItemResponse)
