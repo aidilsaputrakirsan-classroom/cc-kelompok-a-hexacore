@@ -53,6 +53,11 @@ Prasyarat
 - Node.js 18+
 - Git
 
+Setup.sh
+```
+./setup.sh
+```
+
 Backend
 ```
 cd backend
@@ -68,9 +73,9 @@ npm run dev
 ```
 
 Access
-- API: http://localhost:8000"
-- API Docs: http://localhost:8000/docs"
-- Frontend: http://localhost:5173"
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Frontend: http://localhost:5173
 
 ## 📅 Roadmap
 
@@ -102,7 +107,7 @@ CC-KELOMPOK-A-HEXACORE/
 ├── docs/ 
 │   ├── test/                ← Baru
 │   ├── api-test-results.md  ← Baru
-│   ├── schemadatabase.md      ← Baru
+│   ├── schemadatabase.md    ← Baru
 │   ├── member-aqila.md
 │   ├── member-Khanza_Nabila_Tsabita.md
 │   ├── member-Maulana_Malik_Ibrahim.md
@@ -113,7 +118,7 @@ CC-KELOMPOK-A-HEXACORE/
 │   ├── public/    
 │   └── src/   
 ├── .gitignore            
-├── setup.sh            ← Baru
+├── setup.sh                 ← Baru
 └── README.md
 ```
 
@@ -257,3 +262,5 @@ Berikut adalah daftar *endpoint* beserta bukti pengujian menggunakan Swagger/Thu
 | **25** | `GET` | `/fines` | Parameter: `belum lunas`<br><img src="docs/test/getfines.png" width="300"> | Menampilkan detail denda berjalan<br><img src="docs/test/responsgetfines.png" width="300"> |
 | **26** | `PUT` | `/fines/{fines_id}` | Parameter: `fines_id`<br><img src="docs/test/putfines.png" width="300"> | Status pelunasan berhasil di-update<br><img src="docs/test/responsputfines.png" width="300"> |
 | **27** | `GET` | `/fines` | Parameter: `lunas`<br><img src="docs/test/getfines2.png" width="300"> | Menampilkan riwayat denda lunas<br><img src="docs/test/responsgetfines2.png" width="300"> |
+
+_Sources:_ [docs/api-test-results.md](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/blob/main/docs/api-test-results.md) | [setup.sh](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/blob/main/setup.sh)

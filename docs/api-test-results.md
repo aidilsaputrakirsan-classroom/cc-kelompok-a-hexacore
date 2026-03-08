@@ -1,3 +1,6 @@
+# API Test Results (Swagger)
+Dokumen hasil pengujian endpoint backen menggunakan Swagger UI (http://localhost:8000/docs).
+
 | Gambar |Deskripsi |
 |------|-----|
 |<img src="test/categories.png" width="600">|Daftar 6 poin dengan total 22 sub-poin yang akan di testing `endpointnya via Swagger atau Thunder Client`|
