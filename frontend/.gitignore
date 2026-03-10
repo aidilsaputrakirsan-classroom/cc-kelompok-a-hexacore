@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# --- Custom Environment Variables (DevOps Section) ---
+frontend/.env
+backend/.env
+.env
