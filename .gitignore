@@ -1,6 +1,7 @@
 ﻿# Python
 __pycache__/
 *.pyc
+.venv/
 venv/
 .env
 
@@ -14,5 +15,3 @@ dist/
 # IDE
 .vscode/
 .idea/
-
-
