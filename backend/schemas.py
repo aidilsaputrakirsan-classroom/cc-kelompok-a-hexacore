@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr
+import re
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -8,11 +9,32 @@ from datetime import datetime
 # ============================================================
 
 class UserCreate(BaseModel):
-    """Schema untuk mendaftarkan user baru."""
-    email     : EmailStr
-    password  : str  = Field(..., min_length=8, examples=["password123"])
+    """Schema untuk mendaftarkan user baru dengan validasi keamanan."""
+    email     : EmailStr = Field(
+        ...,
+        pattern=r"^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]{2,}$",
+        description="Format email harus sesuai standar"
+    )
+    password  : str  = Field(
+        ..., 
+        min_length=8, 
+        examples=["P4ssw0rd!"]
+    )
     full_name : str  = Field(..., min_length=2, max_length=150, examples=["Budi Santoso"])
     role      : str  = Field("member", examples=["member"])   # 'admin' | 'member'
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password wajib mengandung minimal 1 huruf besar')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password wajib mengandung minimal 1 huruf kecil')
+        if not re.search(r'\d', v):
+            raise ValueError('Password wajib mengandung minimal 1 angka')
+        if not re.search(r'[@$!%*?&]', v):
+            raise ValueError('Password wajib mengandung minimal 1 karakter spesial (@$!%*?&)')
+        return v
 
 
 class UserUpdate(BaseModel):
@@ -32,6 +54,17 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class LoginRequest(BaseModel):
+    """Schema request untuk endpoint login."""
+    email: EmailStr = Field(..., examples=["budi@student.itk.ac.id"])
+    password: str = Field(..., examples=["P4ssw0rd!"])
+
+class TokenResponse(BaseModel):
+    """Schema untuk JWT access_token saat login sukses."""
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
 
 
 # ============================================================
@@ -55,12 +88,32 @@ class CategoryResponse(BaseModel):
 
 
 # ============================================================
+# GENRE SCHEMAS
+# ============================================================
+
+class GenreCreate(BaseModel):
+    """Schema untuk membuat genre buku baru."""
+    name        : str           = Field(..., min_length=1, max_length=100, examples=["Horor"])
+    description : Optional[str] = Field(None, examples=["Cerita yang menakutkan"])
+
+class GenreResponse(BaseModel):
+    """Schema output genre."""
+    genre_id    : int
+    name        : str
+    description : Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================
 # BOOK SCHEMAS
 # ============================================================
 
 class BookCreate(BaseModel):
     """Schema untuk menambahkan buku baru ke inventaris."""
     category_id      : int
+    genre_ids        : list[int]     = Field(default_factory=list, description="List ID Genre buku")
     isbn             : Optional[str] = Field(None, min_length=10, max_length=20, examples=["978-602-03-3446-5"])
     title            : str           = Field(..., min_length=1, max_length=255, examples=["Laskar Pelangi"])
     author           : str           = Field(..., min_length=1, max_length=150, examples=["Andrea Hirata"])
@@ -74,6 +127,7 @@ class BookCreate(BaseModel):
 class BookUpdate(BaseModel):
     """Schema untuk update data buku — semua field opsional (partial update)."""
     category_id      : Optional[int] = None
+    genre_ids        : Optional[list[int]] = Field(None, description="Ganti seluruh relasi genre buku ini")
     title            : Optional[str] = Field(None, min_length=1, max_length=255)
     author           : Optional[str] = Field(None, min_length=1, max_length=150)
     publisher        : Optional[str] = None
@@ -87,6 +141,7 @@ class BookResponse(BaseModel):
     """Schema output buku — termasuk info stok real-time."""
     book_id          : int
     category_id      : int
+    genres           : list[GenreResponse] = []
     isbn             : Optional[str]
     title            : str
     author           : str

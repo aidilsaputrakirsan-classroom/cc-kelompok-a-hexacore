@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean,
-    DateTime, ForeignKey, UniqueConstraint
+    DateTime, ForeignKey, UniqueConstraint, Table
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -54,7 +54,38 @@ class Category(Base):
 
 
 # ============================================================
-# MODEL 3: Book
+# TABEL ASOSIASI: book_genres (Many-to-Many Buku ↔ Genre)
+# ============================================================
+book_genres = Table(
+    "book_genres",
+    Base.metadata,
+    Column("book_id", Integer, ForeignKey("books.book_id", ondelete="CASCADE"), primary_key=True),
+    Column("genre_id", Integer, ForeignKey("genres.genre_id", ondelete="CASCADE"), primary_key=True)
+)
+
+
+# ============================================================
+# MODEL 3: Genre
+# ============================================================
+class Genre(Base):
+    """
+    Tabel genres — topik/tema spesifik dari isi buku (relasi N-N dengan Buku).
+    """
+    __tablename__ = "genres"
+
+    genre_id    = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    name        = Column(String(100), nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+
+    # Relasi Many-to-Many ke tabel books
+    books = relationship("Book", secondary=book_genres, back_populates="genres")
+
+    def __repr__(self):
+        return f"<Genre(genre_id={self.genre_id}, name='{self.name}')>"
+
+
+# ============================================================
+# MODEL 4: Book
 # ============================================================
 class Book(Base):
     """
@@ -76,6 +107,7 @@ class Book(Base):
 
     # Relasi
     category     = relationship("Category", back_populates="books")
+    genres       = relationship("Genre", secondary=book_genres, back_populates="books")
     transactions = relationship("Transaction", back_populates="book")
 
     def __repr__(self):
@@ -86,7 +118,7 @@ class Book(Base):
 
 
 # ============================================================
-# MODEL 4: Transaction
+# MODEL 5: Transaction
 # ============================================================
 class Transaction(Base):
     """
@@ -118,7 +150,7 @@ class Transaction(Base):
 
 
 # ============================================================
-# MODEL 5: Fine
+# MODEL 6: Fine
 # ============================================================
 class Fine(Base):
     """

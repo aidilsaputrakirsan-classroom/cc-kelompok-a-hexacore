@@ -5,14 +5,16 @@ from typing import Optional
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from models import Book, Category, Fine, Transaction, User
+from models import Book, Category, Genre, Fine, Transaction, User
 from schemas import (
     BookCreate, BookUpdate,
     BookStatsResponse,
-    CategoryCreate,
+    CategoryCreate, GenreCreate,
     TransactionCreate,
     UserCreate, UserUpdate,
 )
+
+from auth import hash_password, verify_password
 
 # ============================================================
 # KONSTANTA
@@ -21,19 +23,8 @@ FINE_PER_DAY = 1_000   # Rp 1.000 per hari keterlambatan
 
 
 # ============================================================
-# HELPER — PASSWORD
+# HELPER — PASSWORD dihapus (sekarang memakai auth.py)
 # ============================================================
-def _hash_password(plain: str) -> str:
-    """
-    Hash password dengan SHA-256 (sementara).
-    CATATAN: Akan diganti dengan bcrypt pada Modul 4 (JWT Auth).
-    """
-    return hashlib.sha256(plain.encode()).hexdigest()
-
-
-def _verify_password(plain: str, hashed: str) -> bool:
-    """Verifikasi password terhadap hash SHA-256."""
-    return hashlib.sha256(plain.encode()).hexdigest() == hashed
 
 
 # ============================================================
@@ -82,11 +73,55 @@ def delete_category(db: Session, category_id: int) -> bool:
 
 
 # ============================================================
+# CRUD: GENRE
+# ============================================================
+
+def create_genre(db: Session, data: GenreCreate) -> Genre:
+    """Buat referensi genre baru."""
+    genre = Genre(name=data.name, description=data.description)
+    db.add(genre)
+    db.commit()
+    db.refresh(genre)
+    return genre
+
+
+def get_genres(db: Session, skip: int = 0, limit: int = 100) -> list[Genre]:
+    """Ambil semua genre (untuk filter/dropdown)."""
+    return db.query(Genre).offset(skip).limit(limit).all()
+
+
+def get_genre(db: Session, genre_id: int) -> Optional[Genre]:
+    """Ambil satu genre spesifik."""
+    return db.query(Genre).filter(Genre.genre_id == genre_id).first()
+
+
+def update_genre(db: Session, genre_id: int, data: GenreCreate) -> Optional[Genre]:
+    """Update detail genre."""
+    genre = get_genre(db, genre_id)
+    if not genre:
+        return None
+    genre.name        = data.name
+    genre.description = data.description
+    db.commit()
+    db.refresh(genre)
+    return genre
+
+
+def delete_genre(db: Session, genre_id: int) -> bool:
+    """Hapus genre."""
+    genre = get_genre(db, genre_id)
+    if not genre:
+        return False
+    db.delete(genre)
+    db.commit()
+    return True
+
+# ============================================================
 # CRUD: BOOK
 # ============================================================
 
 def create_book(db: Session, data: BookCreate) -> Book:
-    """Tambah buku baru ke inventaris."""
+    """Tambah buku baru ke inventaris beserta relasi genrenya."""
     book = Book(
         category_id      = data.category_id,
         isbn             = data.isbn,
@@ -98,6 +133,12 @@ def create_book(db: Session, data: BookCreate) -> Book:
         total_stock      = data.total_stock,
         available_stock  = data.available_stock,
     )
+    
+    # Mencari object Genre sesuai genre_ids dan merakitnya
+    if data.genre_ids:
+        genres_query = db.query(Genre).filter(Genre.genre_id.in_(data.genre_ids)).all()
+        book.genres.extend(genres_query)
+
     db.add(book)
     db.commit()
     db.refresh(book)
@@ -140,8 +181,19 @@ def update_book(db: Session, book_id: int, data: BookUpdate) -> Optional[Book]:
     if not book:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    
+    # Handle genre_ids terpisah karena relasi M2M
+    if "genre_ids" in update_data:
+        genre_ids = update_data.pop("genre_ids")
+        if genre_ids is not None:
+            # Ganti semua genre lama dengan list genre yang baru
+            new_genres = db.query(Genre).filter(Genre.genre_id.in_(genre_ids)).all()
+            book.genres = new_genres
+            
+    # Modify basic columns
     for field, value in update_data.items():
         setattr(book, field, value)
+        
     db.commit()
     db.refresh(book)
     return book
@@ -206,7 +258,7 @@ def create_user(db: Session, data: UserCreate) -> Optional[User]:
         return None
     user = User(
         email         = data.email,
-        password_hash = _hash_password(data.password),
+        password_hash = hash_password(data.password),
         full_name     = data.full_name,
         role          = data.role,
     )
@@ -263,7 +315,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
-    if not _verify_password(password, user.password_hash):
+    if not verify_password(password, user.password_hash):
         return None
     return user
 
