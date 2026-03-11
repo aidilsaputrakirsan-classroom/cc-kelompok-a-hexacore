@@ -1,9 +1,7 @@
-import uuid
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean,
     DateTime, ForeignKey, UniqueConstraint
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -16,16 +14,16 @@ from database import Base
 class User(Base):
     """
     Tabel users — menyimpan data anggota dan admin perpustakaan.
-    Role: 'admin' atau 'member'
+    Role: 'admin' | 'member'
     """
     __tablename__ = "users"
 
-    user_id     = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    email       = Column(String(255), unique=True, nullable=False, index=True)
+    user_id       = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    email         = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
-    full_name   = Column(String(150), nullable=False)
-    role        = Column(String(10), nullable=False, default="member")  # 'admin' | 'member'
-    created_at  = Column(DateTime(timezone=True), server_default=func.now())
+    full_name     = Column(String(150), nullable=False)
+    role          = Column(String(10), nullable=False, default="member")  # 'admin' | 'member'
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relasi: satu user bisa punya banyak transaksi
     transactions = relationship("Transaction", back_populates="user")
@@ -40,11 +38,11 @@ class User(Base):
 class Category(Base):
     """
     Tabel categories — kategori buku (misal: Fiksi, Sains, Pendidikan).
-    PK Integer (bukan UUID) sesuai ERD.
+    PK Integer autoincrement.
     """
     __tablename__ = "categories"
 
-    category_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    category_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
     name        = Column(String(100), nullable=False, unique=True)
     description = Column(Text, nullable=True)
 
@@ -65,13 +63,14 @@ class Book(Base):
     """
     __tablename__ = "books"
 
-    book_id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    book_id          = Column(Integer, primary_key=True, autoincrement=True, index=True)
     category_id      = Column(Integer, ForeignKey("categories.category_id"), nullable=False)
-    isbn             = Column(String(20), unique=True, nullable=True, index=True) 
+    isbn             = Column(String(20), unique=True, nullable=True, index=True)
     title            = Column(String(255), nullable=False, index=True)
     author           = Column(String(150), nullable=False)
     publisher        = Column(String(150), nullable=True)
     publication_year = Column(Integer, nullable=True)
+    synopsis         = Column(Text, nullable=True)                          # Sinopsis buku
     total_stock      = Column(Integer, nullable=False, default=1)
     available_stock  = Column(Integer, nullable=False, default=1)
 
@@ -92,17 +91,19 @@ class Book(Base):
 class Transaction(Base):
     """
     Tabel transactions — mencatat peminjaman dan pengembalian buku.
-    Status: 'borrowed' | 'returned' | 'overdue' | 'lost'
+    Status: 'pending' | 'borrowed' | 'returned' | 'overdue' | 'rejected' | 'lost'
     """
     __tablename__ = "transactions"
 
-    transaction_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    user_id        = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False)
-    book_id        = Column(UUID(as_uuid=True), ForeignKey("books.book_id"), nullable=False)
+    transaction_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id        = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    book_id        = Column(Integer, ForeignKey("books.book_id"), nullable=False)
     borrow_date    = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     due_date       = Column(DateTime(timezone=True), nullable=False)
     return_date    = Column(DateTime(timezone=True), nullable=True)   # Nullable: belum dikembalikan
-    status         = Column(String(10), nullable=False, default="borrowed")  # borrowed|returned|overdue|lost
+    status         = Column(
+        String(10), nullable=False, default="pending"
+    )  # pending | borrowed | returned | overdue | rejected | lost
 
     # Relasi
     user = relationship("User", back_populates="transactions")
@@ -122,13 +123,13 @@ class Transaction(Base):
 class Fine(Base):
     """
     Tabel fines — denda keterlambatan pengembalian buku.
-    Relasi 1:1 dengan Transaction (UniqueConstraint pada transaction_id).
+    Relasi 1:1 dengan Transaction (unique pada transaction_id).
     """
     __tablename__ = "fines"
 
-    fine_id        = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    fine_id        = Column(Integer, primary_key=True, autoincrement=True, index=True)
     transaction_id = Column(
-        UUID(as_uuid=True),
+        Integer,
         ForeignKey("transactions.transaction_id"),
         nullable=False,
         unique=True          # 1:1 — satu transaksi hanya bisa punya 1 denda

@@ -1,4 +1,3 @@
-import uuid
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from datetime import datetime
@@ -16,9 +15,16 @@ class UserCreate(BaseModel):
     role      : str  = Field("member", examples=["member"])   # 'admin' | 'member'
 
 
+class UserUpdate(BaseModel):
+    """Schema untuk update data user — semua field opsional (partial update)."""
+    email     : Optional[EmailStr] = None
+    full_name : Optional[str]      = Field(None, min_length=2, max_length=150)
+    role      : Optional[str]      = None   # 'admin' | 'member'
+
+
 class UserResponse(BaseModel):
     """Schema output user — password tidak pernah dikembalikan."""
-    user_id    : uuid.UUID
+    user_id    : int
     email      : str
     full_name  : str
     role       : str
@@ -55,13 +61,14 @@ class CategoryResponse(BaseModel):
 class BookCreate(BaseModel):
     """Schema untuk menambahkan buku baru ke inventaris."""
     category_id      : int
-    isbn             : Optional[str] = Field(None, min_length=10, max_length=20, examples=["978-602-03-3446-5"])  # Opsional — None jika tidak ada ISBN
-    title            : str = Field(..., min_length=1, max_length=255, examples=["Laskar Pelangi"])
-    author           : str = Field(..., min_length=1, max_length=150, examples=["Andrea Hirata"])
+    isbn             : Optional[str] = Field(None, min_length=10, max_length=20, examples=["978-602-03-3446-5"])
+    title            : str           = Field(..., min_length=1, max_length=255, examples=["Laskar Pelangi"])
+    author           : str           = Field(..., min_length=1, max_length=150, examples=["Andrea Hirata"])
     publisher        : Optional[str] = Field(None, examples=["Bentang Pustaka"])
     publication_year : Optional[int] = Field(None, ge=1000, le=2100, examples=[2005])
-    total_stock      : int = Field(1, ge=1, examples=[5])
-    available_stock  : int = Field(1, ge=0, examples=[5])
+    synopsis         : Optional[str] = Field(None, examples=["Novel tentang semangat anak-anak Belitung..."])
+    total_stock      : int           = Field(1, ge=1, examples=[5])
+    available_stock  : int           = Field(1, ge=0, examples=[5])
 
 
 class BookUpdate(BaseModel):
@@ -71,19 +78,21 @@ class BookUpdate(BaseModel):
     author           : Optional[str] = Field(None, min_length=1, max_length=150)
     publisher        : Optional[str] = None
     publication_year : Optional[int] = Field(None, ge=1000, le=2100)
+    synopsis         : Optional[str] = None
     total_stock      : Optional[int] = Field(None, ge=1)
     available_stock  : Optional[int] = Field(None, ge=0)
 
 
 class BookResponse(BaseModel):
     """Schema output buku — termasuk info stok real-time."""
-    book_id          : uuid.UUID
+    book_id          : int
     category_id      : int
-    isbn             : Optional[str]   # None jika buku tidak memiliki ISBN
+    isbn             : Optional[str]
     title            : str
     author           : str
     publisher        : Optional[str]
     publication_year : Optional[int]
+    synopsis         : Optional[str]
     total_stock      : int
     available_stock  : int
 
@@ -112,32 +121,28 @@ class BookStatsResponse(BaseModel):
 
 class TransactionCreate(BaseModel):
     """
-    Schema untuk meminjam buku.
-    Backend akan otomatis mengisi borrow_date, mengecek stok,
-    dan men-decrement available_stock.
+    Schema untuk mengajukan peminjaman buku.
+    Status awal otomatis 'pending' — menunggu verifikasi admin.
     """
-    user_id  : uuid.UUID
-    book_id  : uuid.UUID
+    user_id  : int
+    book_id  : int
     due_date : datetime = Field(..., examples=["2026-03-18T00:00:00+08:00"])
 
 
 class TransactionUpdate(BaseModel):
-    """
-    Schema untuk update status transaksi.
-    Digunakan pada endpoint return — backend mengisi return_date otomatis.
-    """
-    status : str = Field(..., examples=["returned"])  # 'returned' | 'overdue' | 'lost'
+    """Schema untuk update status transaksi secara manual."""
+    status : str = Field(..., examples=["returned"])
 
 
 class TransactionResponse(BaseModel):
     """Schema output transaksi peminjaman."""
-    transaction_id : uuid.UUID
-    user_id        : uuid.UUID
-    book_id        : uuid.UUID
+    transaction_id : int
+    user_id        : int
+    book_id        : int
     borrow_date    : datetime
     due_date       : datetime
     return_date    : Optional[datetime]
-    status         : str
+    status         : str   # pending | borrowed | returned | overdue | rejected | lost
 
     class Config:
         from_attributes = True
@@ -155,8 +160,8 @@ class TransactionListResponse(BaseModel):
 
 class FineResponse(BaseModel):
     """Schema output denda keterlambatan."""
-    fine_id        : uuid.UUID
-    transaction_id : uuid.UUID
+    fine_id        : int
+    transaction_id : int
     amount         : int    # dalam Rupiah
     is_paid        : bool
 

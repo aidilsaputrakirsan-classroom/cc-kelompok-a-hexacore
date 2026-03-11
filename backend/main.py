@@ -11,7 +11,7 @@ from schemas import (
     # Book
     BookCreate, BookUpdate, BookResponse, BookListResponse, BookStatsResponse,
     # User
-    UserCreate, UserResponse,
+    UserCreate, UserUpdate, UserResponse,
     # Transaction
     TransactionCreate, TransactionUpdate, TransactionResponse, TransactionListResponse,
     # Fine
@@ -30,7 +30,7 @@ app = FastAPI(
         "**Arsitektur:** 5-file Separation of Concerns "
         "(database.py → models.py → schemas.py → crud.py → main.py)"
     ),
-    version="0.3.0",
+    version="0.4.0",
 )
 
 # CORS — sementara wildcard (*), akan diubah ke whitelist di Modul 4
@@ -50,7 +50,7 @@ app.add_middleware(
 @app.get("/health", tags=["System"])
 def health_check():
     """Cek apakah API berjalan."""
-    return {"status": "healthy", "version": "0.3.0", "app": "LenteraPustaka"}
+    return {"status": "healthy", "version": "0.4.0", "app": "LenteraPustaka"}
 
 
 # ============================================================
@@ -122,7 +122,7 @@ def delete_category(category_id: int, db: Session = Depends(get_db)):
 # ============================================================
 # BOOKS
 # ⚠️  GET /books/stats HARUS sebelum GET /books/{book_id}
-#     agar FastAPI tidak salah parse 'stats' sebagai UUID
+#     agar FastAPI tidak salah parse 'stats' sebagai integer
 # ============================================================
 
 @app.post("/books", response_model=BookResponse, status_code=201, tags=["Books"])
@@ -130,7 +130,8 @@ def create_book(data: BookCreate, db: Session = Depends(get_db)):
     """
     Tambah buku baru ke inventaris.
 
-    - **isbn**: Harus unik
+    - **isbn**: Opsional, harus unik jika diisi
+    - **synopsis**: Ringkasan/sinopsis buku (opsional)
     - **total_stock** & **available_stock**: Jumlah eksemplar
     - **category_id**: ID kategori harus sudah ada
     """
@@ -139,9 +140,9 @@ def create_book(data: BookCreate, db: Session = Depends(get_db)):
 
 @app.get("/books", response_model=BookListResponse, tags=["Books"])
 def list_books(
-    skip:   int            = Query(0,    ge=0,       description="Offset pagination"),
-    limit:  int            = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
-    search: str | None     = Query(None,             description="Cari berdasarkan judul, pengarang, atau ISBN"),
+    skip:   int        = Query(0,    ge=0,       description="Offset pagination"),
+    limit:  int        = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
+    search: str | None = Query(None,             description="Cari berdasarkan judul, pengarang, atau ISBN"),
     db: Session = Depends(get_db),
 ):
     """Ambil daftar buku dengan pagination dan pencarian."""
@@ -163,8 +164,8 @@ def get_book_stats(db: Session = Depends(get_db)):
 
 
 @app.get("/books/{book_id}", response_model=BookResponse, tags=["Books"])
-def get_book(book_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Ambil detail satu buku berdasarkan UUID."""
+def get_book(book_id: int, db: Session = Depends(get_db)):
+    """Ambil detail satu buku berdasarkan ID."""
     book = crud.get_book(db=db, book_id=book_id)
     if not book:
         raise HTTPException(status_code=404, detail=f"Buku id={book_id} tidak ditemukan")
@@ -172,7 +173,7 @@ def get_book(book_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @app.put("/books/{book_id}", response_model=BookResponse, tags=["Books"])
-def update_book(book_id: uuid.UUID, data: BookUpdate, db: Session = Depends(get_db)):
+def update_book(book_id: int, data: BookUpdate, db: Session = Depends(get_db)):
     """
     Update data buku — partial update, hanya field yang dikirim yang berubah.
     ISBN tidak bisa diubah (gunakan DELETE + POST jika perlu).
@@ -184,7 +185,7 @@ def update_book(book_id: uuid.UUID, data: BookUpdate, db: Session = Depends(get_
 
 
 @app.delete("/books/{book_id}", status_code=204, tags=["Books"])
-def delete_book(book_id: uuid.UUID, db: Session = Depends(get_db)):
+def delete_book(book_id: int, db: Session = Depends(get_db)):
     """Hapus buku dari inventaris."""
     success = crud.delete_book(db=db, book_id=book_id)
     if not success:
@@ -221,12 +222,33 @@ def list_users(
 
 
 @app.get("/users/{user_id}", response_model=UserResponse, tags=["Users"])
-def get_user(user_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Ambil detail satu user berdasarkan UUID."""
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    """Ambil detail satu user berdasarkan ID."""
     user = crud.get_user(db=db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
     return user
+
+
+@app.put("/users/{user_id}", response_model=UserResponse, tags=["Users"])
+def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db)):
+    """
+    Update data user — partial update, hanya field yang dikirim yang berubah.
+    Dapat digunakan admin untuk mengubah role, nama, atau email user.
+    """
+    updated = crud.update_user(db=db, user_id=user_id, data=data)
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
+    return updated
+
+
+@app.delete("/users/{user_id}", status_code=204, tags=["Users"])
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    """Hapus user dari sistem."""
+    success = crud.delete_user(db=db, user_id=user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
+    return None
 
 
 # ============================================================
@@ -236,12 +258,12 @@ def get_user(user_id: uuid.UUID, db: Session = Depends(get_db)):
 @app.post("/transactions", response_model=TransactionResponse, status_code=201, tags=["Transactions"])
 def borrow_book(data: TransactionCreate, db: Session = Depends(get_db)):
     """
-    Pinjam buku.
+    Ajukan peminjaman buku (status awal: 'pending').
 
     Business rules:
     - Stok tersedia harus > 0
-    - `available_stock` buku otomatis dikurangi 1
-    - Status transaksi: `borrowed`
+    - Stok belum dikurangi — menunggu persetujuan admin
+    - Gunakan `PUT /transactions/{id}/approve` untuk menyetujui
     """
     try:
         trx = crud.create_transaction(db=db, data=data)
@@ -256,11 +278,45 @@ def borrow_book(data: TransactionCreate, db: Session = Depends(get_db)):
     return trx
 
 
+@app.put("/transactions/{transaction_id}/approve", response_model=TransactionResponse, tags=["Transactions"])
+def approve_transaction(transaction_id: int, db: Session = Depends(get_db)):
+    """
+    Admin menyetujui pengajuan peminjaman (pending → borrowed).
+
+    - Stok buku otomatis berkurang 1 setelah disetujui
+    - Hanya transaksi berstatus 'pending' yang bisa di-approve
+    """
+    trx = crud.approve_transaction(db=db, transaction_id=transaction_id)
+    if not trx:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Transaksi id={transaction_id} tidak ditemukan atau bukan berstatus 'pending'",
+        )
+    return trx
+
+
+@app.put("/transactions/{transaction_id}/reject", response_model=TransactionResponse, tags=["Transactions"])
+def reject_transaction(transaction_id: int, db: Session = Depends(get_db)):
+    """
+    Admin menolak pengajuan peminjaman (pending → rejected).
+
+    - Stok buku tidak berubah
+    - Hanya transaksi berstatus 'pending' yang bisa di-reject
+    """
+    trx = crud.reject_transaction(db=db, transaction_id=transaction_id)
+    if not trx:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Transaksi id={transaction_id} tidak ditemukan atau bukan berstatus 'pending'",
+        )
+    return trx
+
+
 @app.get("/transactions", response_model=TransactionListResponse, tags=["Transactions"])
 def list_transactions(
-    skip:   int            = Query(0,    ge=0,       description="Offset pagination"),
-    limit:  int            = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
-    status: str | None     = Query(None,             description="Filter status: borrowed | returned | overdue | lost"),
+    skip:   int        = Query(0,    ge=0,       description="Offset pagination"),
+    limit:  int        = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
+    status: str | None = Query(None,             description="Filter status: pending | borrowed | returned | overdue | rejected | lost"),
     db: Session = Depends(get_db),
 ):
     """Ambil daftar transaksi, opsional filter berdasarkan status."""
@@ -268,8 +324,8 @@ def list_transactions(
 
 
 @app.get("/transactions/{transaction_id}", response_model=TransactionResponse, tags=["Transactions"])
-def get_transaction(transaction_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Ambil detail satu transaksi berdasarkan UUID."""
+def get_transaction(transaction_id: int, db: Session = Depends(get_db)):
+    """Ambil detail satu transaksi berdasarkan ID."""
     trx = crud.get_transaction(db=db, transaction_id=transaction_id)
     if not trx:
         raise HTTPException(status_code=404, detail=f"Transaksi id={transaction_id} tidak ditemukan")
@@ -277,12 +333,12 @@ def get_transaction(transaction_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @app.put("/transactions/{transaction_id}/return", response_model=TransactionResponse, tags=["Transactions"])
-def return_book(transaction_id: uuid.UUID, db: Session = Depends(get_db)):
+def return_book(transaction_id: int, db: Session = Depends(get_db)):
     """
-    Kembalikan buku.
+    Kembalikan buku (borrowed → returned/overdue).
 
     Business rules:
-    - `available_stock` buku otomatis ditambah 1
+    - `available_stock` buku otomatis bertambah 1
     - Jika terlambat: status → `overdue`, denda dibuat otomatis (Rp 1.000/hari)
     - Jika tepat waktu: status → `returned`
     """
@@ -290,7 +346,7 @@ def return_book(transaction_id: uuid.UUID, db: Session = Depends(get_db)):
     if not trx:
         raise HTTPException(
             status_code=404,
-            detail=f"Transaksi id={transaction_id} tidak ditemukan atau sudah dikembalikan",
+            detail=f"Transaksi id={transaction_id} tidak ditemukan atau tidak berstatus 'borrowed'",
         )
     return trx
 
@@ -301,9 +357,9 @@ def return_book(transaction_id: uuid.UUID, db: Session = Depends(get_db)):
 
 @app.get("/fines", response_model=FineListResponse, tags=["Fines"])
 def list_fines(
-    skip:    int            = Query(0,    ge=0,       description="Offset pagination"),
-    limit:   int            = Query(50,   ge=1, le=200, description="Jumlah data"),
-    is_paid: bool | None    = Query(None,             description="Filter: true=lunas, false=belum lunas"),
+    skip:    int        = Query(0,    ge=0,       description="Offset pagination"),
+    limit:   int        = Query(50,   ge=1, le=200, description="Jumlah data"),
+    is_paid: bool | None = Query(None,             description="Filter: true=lunas, false=belum lunas"),
     db: Session = Depends(get_db),
 ):
     """Ambil daftar denda keterlambatan, opsional filter berdasarkan status lunas."""
@@ -311,7 +367,7 @@ def list_fines(
 
 
 @app.put("/fines/{fine_id}/pay", response_model=FineResponse, tags=["Fines"])
-def pay_fine(fine_id: uuid.UUID, db: Session = Depends(get_db)):
+def pay_fine(fine_id: int, db: Session = Depends(get_db)):
     """Tandai denda sebagai lunas."""
     fine = crud.pay_fine(db=db, fine_id=fine_id)
     if not fine:
