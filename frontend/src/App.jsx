@@ -136,6 +136,7 @@ function BooksPage({ showToast }) {
   const [cats, setCats]         = useState([])
   const [total, setTotal]       = useState(0)
   const [search, setSearch]     = useState("")
+  const [sortBy, setSortBy]     = useState("terbaru")   // "nama" | "harga" | "terbaru"
   const [loading, setLoading]   = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing]   = useState(null)
@@ -147,6 +148,14 @@ function BooksPage({ showToast }) {
 
   useEffect(() => { fetchCategories().then(setCats) }, [])
   useEffect(() => { load() }, [load])
+
+  // ── Sorting di frontend ─────────────────────────────────────
+  const sortedBooks = [...books].sort((a, b) => {
+    if (sortBy === "nama")    return a.title.localeCompare(b.title, "id")
+    if (sortBy === "harga")   return a.available_stock - b.available_stock  // stok tersedia (relevan utk pustaka)
+    if (sortBy === "terbaru") return 0   // urutan dari API (sudah newest-first)
+    return 0
+  })
 
   const handleSave = async (data, editId) => {
     if (editId) { await updateBook(editId, data); showToast("Buku diperbarui!") }
@@ -175,14 +184,16 @@ function BooksPage({ showToast }) {
         <SearchBar onSearch={setSearch} placeholder="Cari judul, pengarang, ISBN…" />
       </div>
 
-      {/* ItemList — komponen modul 3 */}
+      {/* ItemList — komponen modul 3 (sortBy & onSortChange diteruskan sebagai props) */}
       <ItemList
-        books={books}
+        books={sortedBooks}
         total={total}
         onEdit={handleEdit}
         onDelete={handleDelete}
         loading={loading}
         searchQuery={search}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
       />
 
       {/* ItemForm — komponen modul 3 */}
