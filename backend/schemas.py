@@ -55,7 +55,7 @@ class CategoryResponse(BaseModel):
 class BookCreate(BaseModel):
     """Schema untuk menambahkan buku baru ke inventaris."""
     category_id      : int
-    isbn             : str = Field(..., min_length=10, max_length=20, examples=["978-602-03-3446-5"])
+    isbn             : Optional[str] = Field(None, min_length=10, max_length=20, examples=["978-602-03-3446-5"])  # Opsional — None jika tidak ada ISBN
     title            : str = Field(..., min_length=1, max_length=255, examples=["Laskar Pelangi"])
     author           : str = Field(..., min_length=1, max_length=150, examples=["Andrea Hirata"])
     publisher        : Optional[str] = Field(None, examples=["Bentang Pustaka"])
@@ -79,7 +79,7 @@ class BookResponse(BaseModel):
     """Schema output buku — termasuk info stok real-time."""
     book_id          : uuid.UUID
     category_id      : int
-    isbn             : str
+    isbn             : Optional[str]   # None jika buku tidak memiliki ISBN
     title            : str
     author           : str
     publisher        : Optional[str]

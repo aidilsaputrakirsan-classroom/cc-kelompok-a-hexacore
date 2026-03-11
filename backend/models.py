@@ -67,7 +67,7 @@ class Book(Base):
 
     book_id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     category_id      = Column(Integer, ForeignKey("categories.category_id"), nullable=False)
-    isbn             = Column(String(20), unique=True, nullable=False, index=True)
+    isbn             = Column(String(20), unique=True, nullable=True, index=True) 
     title            = Column(String(255), nullable=False, index=True)
     author           = Column(String(150), nullable=False)
     publisher        = Column(String(150), nullable=True)
