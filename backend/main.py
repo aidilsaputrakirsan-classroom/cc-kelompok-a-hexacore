@@ -22,7 +22,7 @@ from schemas import (
     # Transaction
     TransactionCreate, TransactionUpdate, TransactionResponse, TransactionListResponse,
     # Fine
-    FineResponse, FineListResponse,
+    FineResponse, FineListResponse, FinePaymentSubmit, FineRejectRequest,
 )
 from auth import create_access_token, get_current_user
 from models import User
@@ -457,20 +457,38 @@ def return_book_endpoint(transaction_id: int, db: Session = Depends(get_db), cur
 
 @app.get("/fines", response_model=FineListResponse, tags=["Fines"])
 def list_fines(
-    skip:    int        = Query(0,    ge=0,       description="Offset pagination"),
-    limit:   int        = Query(50,   ge=1, le=200, description="Jumlah data"),
-    is_paid: bool | None = Query(None,             description="Filter: true=lunas, false=belum lunas"),
+    skip:          int        = Query(0,    ge=0,       description="Offset pagination"),
+    limit:         int        = Query(50,   ge=1, le=200, description="Jumlah data"),
+    status_filter: str | None = Query(None,             description="Filter: unpaid | pending_verification | paid | rejected"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Ambil daftar denda keterlambatan, opsional filter berdasarkan status lunas."""
-    return crud.get_fines(db=db, skip=skip, limit=limit, is_paid=is_paid)
+    return crud.get_fines(db=db, skip=skip, limit=limit, status_filter=status_filter)
 
 
-@app.put("/fines/{fine_id}/pay", response_model=FineResponse, tags=["Fines"])
-def pay_fine_endpoint(fine_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Tandai denda sebagai lunas."""
-    fine = crud.pay_fine(db=db, fine_id=fine_id)
+@app.post("/fines/{fine_id}/submit-payment", response_model=FineResponse, tags=["Fines"])
+def submit_fine_payment_endpoint(fine_id: int, data: FinePaymentSubmit, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Member mengirimkan file bukti pembayaran denda."""
+    fine = crud.submit_fine_payment(db=db, fine_id=fine_id, proof_url=data.payment_proof_url)
+    if not fine:
+        raise HTTPException(status_code=404, detail=f"Denda id={fine_id} tidak ditemukan")
+    return fine
+
+
+@app.put("/fines/{fine_id}/approve", response_model=FineResponse, tags=["Fines"])
+def admin_approve_fine_endpoint(fine_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Tandai denda sebagai lunas (Admin verifikasi bukti bayar)."""
+    fine = crud.admin_approve_fine(db=db, fine_id=fine_id)
+    if not fine:
+        raise HTTPException(status_code=404, detail=f"Denda id={fine_id} tidak ditemukan")
+    return fine
+
+
+@app.put("/fines/{fine_id}/reject", response_model=FineResponse, tags=["Fines"])
+def admin_reject_fine_endpoint(fine_id: int, data: FineRejectRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Tolak bukti pembayaran jika tidak valid (Admin)."""
+    fine = crud.admin_reject_fine(db=db, fine_id=fine_id, note=data.rejection_note)
     if not fine:
         raise HTTPException(status_code=404, detail=f"Denda id={fine_id} tidak ditemukan")
     return fine

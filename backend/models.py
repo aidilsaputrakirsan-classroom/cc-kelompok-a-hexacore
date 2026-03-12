@@ -166,8 +166,10 @@ class Fine(Base):
         nullable=False,
         unique=True          # 1:1 — satu transaksi hanya bisa punya 1 denda
     )
-    amount   = Column(Integer, nullable=False, default=0)   # dalam Rupiah
-    is_paid  = Column(Boolean, nullable=False, default=False)
+    amount              = Column(Integer, nullable=False, default=0)   # dalam Rupiah
+    status              = Column(String(25), nullable=False, default="unpaid")
+    payment_proof_url   = Column(String(500), nullable=True)   # Lokasi file gambar bukti transfer
+    rejection_note      = Column(Text, nullable=True)          # Alasan penolakan dari admin
 
     # Relasi
     transaction = relationship("Transaction", back_populates="fine")

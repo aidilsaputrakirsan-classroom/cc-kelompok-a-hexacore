@@ -215,13 +215,19 @@ class TransactionListResponse(BaseModel):
 
 class FineResponse(BaseModel):
     """Schema output denda keterlambatan."""
-    fine_id        : int
-    transaction_id : int
-    amount         : int    # dalam Rupiah
-    is_paid        : bool
+    fine_id           : int
+    transaction_id    : int
+    amount            : int    # dalam Rupiah
+    status            : str    # unpaid | pending_verification | paid | rejected
+    payment_proof_url : Optional[str] = None
+    rejection_note    : Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class FineRejectRequest(BaseModel):
+    """Schema dari Form Admin saat me-reject bukti pembayaran."""
+    rejection_note    : str = Field(..., description="Alasan mengapa bukti ditolak")
 
 
 class FineListResponse(BaseModel):

@@ -479,7 +479,7 @@ def return_book(db: Session, transaction_id: int) -> Optional[Transaction]:
         fine = Fine(
             transaction_id = trx.transaction_id,
             amount         = fine_amount,
-            is_paid        = False,
+            status         = "unpaid",
         )
         db.add(fine)
     else:
@@ -525,26 +525,58 @@ def get_fines(
     db: Session,
     skip: int = 0,
     limit: int = 50,
-    is_paid: Optional[bool] = None,
+    status_filter: Optional[str] = None,
 ) -> dict:
     """
     Ambil daftar denda.
-    Filter opsional: is_paid=True (lunas) / False (belum lunas).
+    Filter opsional: status (unpaid, pending_verification, paid, rejected).
     """
     query = db.query(Fine)
-    if is_paid is not None:
-        query = query.filter(Fine.is_paid == is_paid)
+    if status_filter is not None:
+        query = query.filter(Fine.status == status_filter)
     total = query.count()
     fines = query.offset(skip).limit(limit).all()
     return {"total": total, "fines": fines}
 
 
-def pay_fine(db: Session, fine_id: int) -> Optional[Fine]:
-    """Tandai denda sebagai lunas."""
-    fine = db.query(Fine).filter(Fine.fine_id == fine_id).first()
+def get_fine(db: Session, fine_id: int) -> Optional[Fine]:
+    """Ambil satu denda spesifik."""
+    return db.query(Fine).filter(Fine.fine_id == fine_id).first()
+
+
+def submit_fine_payment(db: Session, fine_id: int, proof_url: str) -> Optional[Fine]:
+    """
+    Member mengirimkan file bukti pembayaran denda.
+    Status berubah menjadi 'pending_verification'.
+    """
+    fine = get_fine(db, fine_id)
     if not fine:
         return None
-    fine.is_paid = True
+    fine.status = "pending_verification"
+    fine.payment_proof_url = proof_url
+    db.commit()
+    db.refresh(fine)
+    return fine
+
+
+def admin_approve_fine(db: Session, fine_id: int) -> Optional[Fine]:
+    """Admin mem-verifikasi bukti bayar valid (Lunas)."""
+    fine = get_fine(db, fine_id)
+    if not fine:
+        return None
+    fine.status = "paid"
+    db.commit()
+    db.refresh(fine)
+    return fine
+
+
+def admin_reject_fine(db: Session, fine_id: int, note: str) -> Optional[Fine]:
+    """Admin menolak bukti bayar (foto blur, nominal kurang, dll)."""
+    fine = get_fine(db, fine_id)
+    if not fine:
+        return None
+    fine.status = "rejected"
+    fine.rejection_note = note
     db.commit()
     db.refresh(fine)
     return fine
