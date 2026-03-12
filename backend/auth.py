@@ -89,3 +89,16 @@ def get_current_user(
         )
 
     return user
+
+
+def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Dependency injection lapis kedua: pastikan user yang login adalah admin.
+    Gunakan di endpoint yang butuh otoritas mutlak (CRUD referensi & persetujuan denda/transaksi).
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Hak akses ditolak, Anda bukan admin",
+        )
+    return current_user

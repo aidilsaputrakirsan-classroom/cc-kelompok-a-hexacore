@@ -24,7 +24,7 @@ from schemas import (
     # Fine
     FineResponse, FineListResponse, FinePaymentSubmit, FineRejectRequest,
 )
-from auth import create_access_token, get_current_user
+from auth import create_access_token, get_current_user, get_admin_user
 from models import User
 import crud
 
@@ -128,7 +128,7 @@ def get_me(current_user: User = Depends(get_current_user)):
 # ============================================================
 
 @app.post("/categories", response_model=CategoryResponse, status_code=201, tags=["Categories"])
-def create_category(data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_category(data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Tambah kategori buku baru."""
     return crud.create_category(db=db, data=data)
 
@@ -145,7 +145,7 @@ def list_categories(
 
 
 @app.get("/categories/{category_id}", response_model=CategoryResponse, tags=["Categories"])
-def get_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_category(category_id: int, db: Session = Depends(get_db)):
     """Ambil satu kategori berdasarkan ID."""
     category = crud.get_category(db=db, category_id=category_id)
     if not category:
@@ -154,7 +154,7 @@ def get_category(category_id: int, db: Session = Depends(get_db), current_user: 
 
 
 @app.put("/categories/{category_id}", response_model=CategoryResponse, tags=["Categories"])
-def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Update nama dan deskripsi kategori."""
     updated = crud.update_category(db=db, category_id=category_id, data=data)
     if not updated:
@@ -163,7 +163,7 @@ def update_category(category_id: int, data: CategoryCreate, db: Session = Depend
 
 
 @app.delete("/categories/{category_id}", status_code=204, tags=["Categories"])
-def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Hapus kategori."""
     success = crud.delete_category(db=db, category_id=category_id)
     if not success:
@@ -176,7 +176,7 @@ def delete_category(category_id: int, db: Session = Depends(get_db), current_use
 # ============================================================
 
 @app.post("/genres", response_model=GenreResponse, status_code=201, tags=["Genres"])
-def create_genre(data: GenreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_genre(data: GenreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Tambah genre buku baru."""
     return crud.create_genre(db=db, data=data)
 
@@ -193,7 +193,7 @@ def list_genres(
 
 
 @app.get("/genres/{genre_id}", response_model=GenreResponse, tags=["Genres"])
-def get_genre(genre_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_genre(genre_id: int, db: Session = Depends(get_db)):
     """Ambil satu genre berdasarkan ID."""
     genre = crud.get_genre(db=db, genre_id=genre_id)
     if not genre:
@@ -202,7 +202,7 @@ def get_genre(genre_id: int, db: Session = Depends(get_db), current_user: User =
 
 
 @app.put("/genres/{genre_id}", response_model=GenreResponse, tags=["Genres"])
-def update_genre(genre_id: int, data: GenreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_genre(genre_id: int, data: GenreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Update nama dan deskripsi genre."""
     updated = crud.update_genre(db=db, genre_id=genre_id, data=data)
     if not updated:
@@ -211,7 +211,7 @@ def update_genre(genre_id: int, data: GenreCreate, db: Session = Depends(get_db)
 
 
 @app.delete("/genres/{genre_id}", status_code=204, tags=["Genres"])
-def delete_genre(genre_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_genre(genre_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Hapus genre."""
     success = crud.delete_genre(db=db, genre_id=genre_id)
     if not success:
@@ -226,7 +226,7 @@ def delete_genre(genre_id: int, db: Session = Depends(get_db), current_user: Use
 # ============================================================
 
 @app.post("/books", response_model=BookResponse, status_code=201, tags=["Books"])
-def create_book(data: BookCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_book(data: BookCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     Tambah buku baru ke inventaris.
 
@@ -243,15 +243,14 @@ def list_books(
     skip:   int        = Query(0,    ge=0,       description="Offset pagination"),
     limit:  int        = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
     search: str | None = Query(None,             description="Cari berdasarkan judul, pengarang, atau ISBN"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """Ambil daftar buku dengan pagination dan pencarian."""
     return crud.get_books(db=db, skip=skip, limit=limit, search=search)
 
 
 @app.get("/books/stats", response_model=BookStatsResponse, tags=["Books"])
-def get_book_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_book_stats(db: Session = Depends(get_db)):
     """
     Statistik inventaris buku.
 
@@ -265,7 +264,7 @@ def get_book_stats(db: Session = Depends(get_db), current_user: User = Depends(g
 
 
 @app.get("/books/{book_id}", response_model=BookResponse, tags=["Books"])
-def get_book(book_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_book(book_id: int, db: Session = Depends(get_db)):
     """Ambil detail satu buku berdasarkan ID."""
     book = crud.get_book(db=db, book_id=book_id)
     if not book:
@@ -274,7 +273,7 @@ def get_book(book_id: int, db: Session = Depends(get_db), current_user: User = D
 
 
 @app.put("/books/{book_id}", response_model=BookResponse, tags=["Books"])
-def update_book(book_id: int, data: BookUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_book(book_id: int, data: BookUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     Update data buku — partial update, hanya field yang dikirim yang berubah.
     ISBN tidak bisa diubah (gunakan DELETE + POST jika perlu).
@@ -286,7 +285,7 @@ def update_book(book_id: int, data: BookUpdate, db: Session = Depends(get_db), c
 
 
 @app.delete("/books/{book_id}", status_code=204, tags=["Books"])
-def delete_book(book_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_book(book_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Hapus buku dari inventaris."""
     success = crud.delete_book(db=db, book_id=book_id)
     if not success:
@@ -330,7 +329,7 @@ def get_user_detail(user_id: int, db: Session = Depends(get_db), current_user: U
 
 
 @app.put("/users/{user_id}", response_model=UserResponse, tags=["Users"])
-def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     Update data user — partial update, hanya field yang dikirim yang berubah.
     Dapat digunakan admin untuk mengubah role, nama, atau email user.
@@ -342,7 +341,7 @@ def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db), c
 
 
 @app.delete("/users/{user_id}", status_code=204, tags=["Users"])
-def delete_admin_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_admin_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Hapus user dari sistem."""
     success = crud.delete_user(db=db, user_id=user_id)
     if not success:
@@ -378,7 +377,7 @@ def borrow_book(data: TransactionCreate, db: Session = Depends(get_db), current_
 
 
 @app.put("/transactions/{transaction_id}/approve", response_model=TransactionResponse, tags=["Transactions"])
-def approve_transaction_admin(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def approve_transaction_admin(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     Admin menyetujui pengajuan peminjaman (pending → borrowed).
 
@@ -395,7 +394,7 @@ def approve_transaction_admin(transaction_id: int, db: Session = Depends(get_db)
 
 
 @app.put("/transactions/{transaction_id}/reject", response_model=TransactionResponse, tags=["Transactions"])
-def reject_transaction_admin(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def reject_transaction_admin(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     Admin menolak pengajuan peminjaman (pending → rejected).
 
@@ -433,7 +432,7 @@ def get_transaction_detail(transaction_id: int, db: Session = Depends(get_db), c
 
 
 @app.put("/transactions/{transaction_id}/return", response_model=TransactionResponse, tags=["Transactions"])
-def return_book_endpoint(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def return_book_endpoint(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """
     Kembalikan buku (borrowed → returned/overdue).
 
@@ -477,7 +476,7 @@ def submit_fine_payment_endpoint(fine_id: int, data: FinePaymentSubmit, db: Sess
 
 
 @app.put("/fines/{fine_id}/approve", response_model=FineResponse, tags=["Fines"])
-def admin_approve_fine_endpoint(fine_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def admin_approve_fine_endpoint(fine_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Tandai denda sebagai lunas (Admin verifikasi bukti bayar)."""
     fine = crud.admin_approve_fine(db=db, fine_id=fine_id)
     if not fine:
@@ -486,7 +485,7 @@ def admin_approve_fine_endpoint(fine_id: int, db: Session = Depends(get_db), cur
 
 
 @app.put("/fines/{fine_id}/reject", response_model=FineResponse, tags=["Fines"])
-def admin_reject_fine_endpoint(fine_id: int, data: FineRejectRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def admin_reject_fine_endpoint(fine_id: int, data: FineRejectRequest, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Tolak bukti pembayaran jika tidak valid (Admin)."""
     fine = crud.admin_reject_fine(db=db, fine_id=fine_id, note=data.rejection_note)
     if not fine:
