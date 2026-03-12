@@ -1,20 +1,20 @@
 import hashlib
-import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from models import Book, Category, Fine, Transaction, User
+from models import Book, Category, Genre, Fine, Transaction, User
 from schemas import (
     BookCreate, BookUpdate,
     BookStatsResponse,
-    CategoryCreate,
-    FineResponse,
+    CategoryCreate, GenreCreate,
     TransactionCreate,
-    UserCreate,
+    UserCreate, UserUpdate,
 )
+
+from auth import hash_password, verify_password
 
 # ============================================================
 # KONSTANTA
@@ -23,19 +23,8 @@ FINE_PER_DAY = 1_000   # Rp 1.000 per hari keterlambatan
 
 
 # ============================================================
-# HELPER
+# HELPER — PASSWORD dihapus (sekarang memakai auth.py)
 # ============================================================
-def _hash_password(plain: str) -> str:
-    """
-    Hash password dengan SHA-256 (sementara).
-    CATATAN: Akan diganti dengan bcrypt pada Modul 4 (JWT Auth).
-    """
-    return hashlib.sha256(plain.encode()).hexdigest()
-
-
-def _verify_password(plain: str, hashed: str) -> bool:
-    """Verifikasi password terhadap hash SHA-256."""
-    return hashlib.sha256(plain.encode()).hexdigest() == hashed
 
 
 # ============================================================
@@ -84,11 +73,55 @@ def delete_category(db: Session, category_id: int) -> bool:
 
 
 # ============================================================
+# CRUD: GENRE
+# ============================================================
+
+def create_genre(db: Session, data: GenreCreate) -> Genre:
+    """Buat referensi genre baru."""
+    genre = Genre(name=data.name, description=data.description)
+    db.add(genre)
+    db.commit()
+    db.refresh(genre)
+    return genre
+
+
+def get_genres(db: Session, skip: int = 0, limit: int = 100) -> list[Genre]:
+    """Ambil semua genre (untuk filter/dropdown)."""
+    return db.query(Genre).offset(skip).limit(limit).all()
+
+
+def get_genre(db: Session, genre_id: int) -> Optional[Genre]:
+    """Ambil satu genre spesifik."""
+    return db.query(Genre).filter(Genre.genre_id == genre_id).first()
+
+
+def update_genre(db: Session, genre_id: int, data: GenreCreate) -> Optional[Genre]:
+    """Update detail genre."""
+    genre = get_genre(db, genre_id)
+    if not genre:
+        return None
+    genre.name        = data.name
+    genre.description = data.description
+    db.commit()
+    db.refresh(genre)
+    return genre
+
+
+def delete_genre(db: Session, genre_id: int) -> bool:
+    """Hapus genre."""
+    genre = get_genre(db, genre_id)
+    if not genre:
+        return False
+    db.delete(genre)
+    db.commit()
+    return True
+
+# ============================================================
 # CRUD: BOOK
 # ============================================================
 
 def create_book(db: Session, data: BookCreate) -> Book:
-    """Tambah buku baru ke inventaris."""
+    """Tambah buku baru ke inventaris beserta relasi genrenya."""
     book = Book(
         category_id      = data.category_id,
         isbn             = data.isbn,
@@ -96,9 +129,16 @@ def create_book(db: Session, data: BookCreate) -> Book:
         author           = data.author,
         publisher        = data.publisher,
         publication_year = data.publication_year,
+        synopsis         = data.synopsis,
         total_stock      = data.total_stock,
         available_stock  = data.available_stock,
     )
+    
+    # Mencari object Genre sesuai genre_ids dan merakitnya
+    if data.genre_ids:
+        genres_query = db.query(Genre).filter(Genre.genre_id.in_(data.genre_ids)).all()
+        book.genres.extend(genres_query)
+
     db.add(book)
     db.commit()
     db.refresh(book)
@@ -130,26 +170,37 @@ def get_books(
     return {"total": total, "books": books}
 
 
-def get_book(db: Session, book_id: uuid.UUID) -> Optional[Book]:
-    """Ambil satu buku berdasarkan UUID."""
+def get_book(db: Session, book_id: int) -> Optional[Book]:
+    """Ambil satu buku berdasarkan ID."""
     return db.query(Book).filter(Book.book_id == book_id).first()
 
 
-def update_book(db: Session, book_id: uuid.UUID, data: BookUpdate) -> Optional[Book]:
+def update_book(db: Session, book_id: int, data: BookUpdate) -> Optional[Book]:
     """Update data buku — hanya field yang dikirim yang diubah (partial update)."""
     book = get_book(db, book_id)
     if not book:
         return None
     update_data = data.model_dump(exclude_unset=True)
+    
+    # Handle genre_ids terpisah karena relasi M2M
+    if "genre_ids" in update_data:
+        genre_ids = update_data.pop("genre_ids")
+        if genre_ids is not None:
+            # Ganti semua genre lama dengan list genre yang baru
+            new_genres = db.query(Genre).filter(Genre.genre_id.in_(genre_ids)).all()
+            book.genres = new_genres
+            
+    # Modify basic columns
     for field, value in update_data.items():
         setattr(book, field, value)
+        
     db.commit()
     db.refresh(book)
     return book
 
 
-def delete_book(db: Session, book_id: uuid.UUID) -> bool:
-    """Hapus buku. Gagal jika ada transaksi aktif (status 'borrowed')."""
+def delete_book(db: Session, book_id: int) -> bool:
+    """Hapus buku dari inventaris."""
     book = get_book(db, book_id)
     if not book:
         return False
@@ -207,7 +258,7 @@ def create_user(db: Session, data: UserCreate) -> Optional[User]:
         return None
     user = User(
         email         = data.email,
-        password_hash = _hash_password(data.password),
+        password_hash = hash_password(data.password),
         full_name     = data.full_name,
         role          = data.role,
     )
@@ -222,9 +273,38 @@ def get_users(db: Session, skip: int = 0, limit: int = 50) -> list[User]:
     return db.query(User).offset(skip).limit(limit).all()
 
 
-def get_user(db: Session, user_id: uuid.UUID) -> Optional[User]:
-    """Ambil satu user berdasarkan UUID."""
+def get_user(db: Session, user_id: int) -> Optional[User]:
+    """Ambil satu user berdasarkan ID."""
     return db.query(User).filter(User.user_id == user_id).first()
+
+
+def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[User]:
+    """
+    Update data user — hanya field yang dikirim yang diubah (partial update).
+    Bisa digunakan admin untuk mengubah role, nama, atau email user.
+    """
+    user = get_user(db, user_id)
+    if not user:
+        return None
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def delete_user(db: Session, user_id: int) -> bool:
+    """
+    Hapus user dari sistem.
+    Return False jika user tidak ditemukan.
+    """
+    user = get_user(db, user_id)
+    if not user:
+        return False
+    db.delete(user)
+    db.commit()
+    return True
 
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
@@ -235,53 +315,115 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
-    if not _verify_password(password, user.password_hash):
+    if not verify_password(password, user.password_hash):
         return None
     return user
 
 
 # ============================================================
-# BUSINESS LOGIC: TRANSACTION (BORROW)
+# BUSINESS LOGIC: TRANSACTION (BORROW — PENDING)
 # ============================================================
 
 def create_transaction(db: Session, data: TransactionCreate) -> Optional[Transaction]:
     """
-    Proses peminjaman buku (borrow).
+    Ajukan peminjaman buku (status awal: 'pending').
 
     Business rules:
     1. Validasi user dan buku ada
     2. Cek available_stock > 0 — jika habis, return None
-    3. Decrement available_stock
-    4. Buat transaksi baru (status='borrowed')
+    3. Stok BELUM dikurangi (menunggu persetujuan admin)
+    4. Buat transaksi dengan status 'pending'
 
     Return:
-    - Transaction jika berhasil
+    - Transaction berstatus 'pending' jika berhasil
     - None jika stok habis
     - Raise ValueError jika user/buku tidak ditemukan
     """
     user = get_user(db, data.user_id)
     if not user:
-        raise ValueError(f"User {data.user_id} tidak ditemukan")
+        raise ValueError(f"User id={data.user_id} tidak ditemukan")
 
     book = get_book(db, data.book_id)
     if not book:
-        raise ValueError(f"Buku {data.book_id} tidak ditemukan")
+        raise ValueError(f"Buku id={data.book_id} tidak ditemukan")
 
-    # Cek stok — jika habis, tolak peminjaman
+    # Cek stok — jika habis, tolak pengajuan
     if book.available_stock <= 0:
         return None   # Caller akan raise HTTP 400
 
-    # Decrement stok
-    book.available_stock -= 1
-
-    # Buat transaksi
+    # Buat transaksi berstatus pending (stok belum berkurang)
     trx = Transaction(
         user_id  = data.user_id,
         book_id  = data.book_id,
         due_date = data.due_date,
-        status   = "borrowed",
+        status   = "pending",
     )
     db.add(trx)
+    db.commit()
+    db.refresh(trx)
+    return trx
+
+
+# ============================================================
+# BUSINESS LOGIC: TRANSACTION — APPROVE (Admin)
+# ============================================================
+
+def approve_transaction(db: Session, transaction_id: int) -> Optional[Transaction]:
+    """
+    Admin menyetujui pengajuan peminjaman (pending → borrowed).
+
+    Business rules:
+    1. Cek transaksi ada dan statusnya 'pending'
+    2. Decrement available_stock buku
+    3. Ubah status menjadi 'borrowed'
+
+    Return:
+    - Transaction berstatus 'borrowed' jika berhasil
+    - None jika transaksi tidak ditemukan atau statusnya bukan 'pending'
+    """
+    trx = get_transaction(db, transaction_id)
+    if not trx:
+        return None
+    if trx.status != "pending":
+        return None   # Hanya bisa approve yang masih pending
+
+    book = get_book(db, trx.book_id)
+    if not book or book.available_stock <= 0:
+        return None   # Stok habis saat akan diapprove
+
+    # Kurangi stok baru setelah diapprove
+    book.available_stock -= 1
+    trx.status = "borrowed"
+
+    db.commit()
+    db.refresh(trx)
+    return trx
+
+
+# ============================================================
+# BUSINESS LOGIC: TRANSACTION — REJECT (Admin)
+# ============================================================
+
+def reject_transaction(db: Session, transaction_id: int) -> Optional[Transaction]:
+    """
+    Admin menolak pengajuan peminjaman (pending → rejected).
+
+    Business rules:
+    1. Cek transaksi ada dan statusnya 'pending'
+    2. Ubah status menjadi 'rejected'
+    3. Stok tidak berubah (karena memang belum dikurangi)
+
+    Return:
+    - Transaction berstatus 'rejected' jika berhasil
+    - None jika transaksi tidak ditemukan atau statusnya bukan 'pending'
+    """
+    trx = get_transaction(db, transaction_id)
+    if not trx:
+        return None
+    if trx.status != "pending":
+        return None   # Hanya bisa reject yang masih pending
+
+    trx.status = "rejected"
     db.commit()
     db.refresh(trx)
     return trx
@@ -291,7 +433,7 @@ def create_transaction(db: Session, data: TransactionCreate) -> Optional[Transac
 # BUSINESS LOGIC: TRANSACTION (RETURN)
 # ============================================================
 
-def return_book(db: Session, transaction_id: uuid.UUID) -> Optional[Transaction]:
+def return_book(db: Session, transaction_id: int) -> Optional[Transaction]:
     """
     Proses pengembalian buku (return).
 
@@ -306,17 +448,13 @@ def return_book(db: Session, transaction_id: uuid.UUID) -> Optional[Transaction]
 
     Return:
     - Transaction yang sudah di-update
-    - None jika transaksi tidak ditemukan atau sudah dikembalikan
+    - None jika transaksi tidak ditemukan atau belum berstatus 'borrowed'
     """
-    trx = (
-        db.query(Transaction)
-        .filter(Transaction.transaction_id == transaction_id)
-        .first()
-    )
+    trx = get_transaction(db, transaction_id)
     if not trx:
         return None
     if trx.status != "borrowed":
-        return None   # Sudah dikembalikan / overdue / lost
+        return None   # Hanya bisa return yang sedang dipinjam
 
     # Set return_date
     now = datetime.now(timezone.utc)
@@ -334,9 +472,9 @@ def return_book(db: Session, transaction_id: uuid.UUID) -> Optional[Transaction]
 
     if now > due:
         # Terlambat
-        trx.status   = "overdue"
-        days_late     = (now - due).days or 1   # minimal 1 hari
-        fine_amount   = days_late * FINE_PER_DAY
+        trx.status  = "overdue"
+        days_late   = (now - due).days or 1   # minimal 1 hari
+        fine_amount = days_late * FINE_PER_DAY
 
         fine = Fine(
             transaction_id = trx.transaction_id,
@@ -360,7 +498,7 @@ def get_transactions(
 ) -> dict:
     """
     Ambil daftar transaksi dengan filter opsional berdasarkan status.
-    Status: 'borrowed' | 'returned' | 'overdue' | 'lost'
+    Status: 'pending' | 'borrowed' | 'returned' | 'overdue' | 'rejected' | 'lost'
     """
     query = db.query(Transaction)
     if status:
@@ -370,8 +508,8 @@ def get_transactions(
     return {"total": total, "transactions": trxs}
 
 
-def get_transaction(db: Session, transaction_id: uuid.UUID) -> Optional[Transaction]:
-    """Ambil satu transaksi berdasarkan UUID."""
+def get_transaction(db: Session, transaction_id: int) -> Optional[Transaction]:
+    """Ambil satu transaksi berdasarkan ID."""
     return (
         db.query(Transaction)
         .filter(Transaction.transaction_id == transaction_id)
@@ -401,7 +539,7 @@ def get_fines(
     return {"total": total, "fines": fines}
 
 
-def pay_fine(db: Session, fine_id: uuid.UUID) -> Optional[Fine]:
+def pay_fine(db: Session, fine_id: int) -> Optional[Fine]:
     """Tandai denda sebagai lunas."""
     fine = db.query(Fine).filter(Fine.fine_id == fine_id).first()
     if not fine:
