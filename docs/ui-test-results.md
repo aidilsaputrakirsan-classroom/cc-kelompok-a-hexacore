@@ -51,4 +51,6 @@ Melakukan aksi (Simpan/Hapus/Update). Muncul komponen Toast (Notifikasi) di pojo
 ![TC-09](test/TC-09.png)
 
 ### TC-10: -
+Melakukan pengisian password pada form pendaftaran. Sistem memvalidasi kriteria (min. 8 karakter, campuran kapital, huruf kecil, dan karakter spesial). Muncul pesan peringatan jika input tidak sesuai.
 
+![TC-10](test/TC-10.png)

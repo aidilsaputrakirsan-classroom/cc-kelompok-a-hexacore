@@ -69,6 +69,7 @@ Frontend
 ```
 cd frontend
 npm install
+npm install recharts
 npm run dev
 ```
 
@@ -96,17 +97,18 @@ Access
 ```
 CC-KELOMPOK-A-HEXACORE/
 ├── backend/
-│   ├── crud.py              ← Baru
-│   ├── database.py          ← Baru
+│   ├── crud.py              ← Updated
+│   ├── database.py          
 │   ├── main.py
-│   ├── models.py            ← Baru
+│   ├── models.py            ← Updated
 │   ├── requirements.txt     ← Updated
-│   ├── schemas.py           ← Baru
+│   ├── schemas.py           
 │   ├── .env                 
 │   └── .env.example         ← Update
 ├── docs/ 
-│   ├── test/                ← Baru
-│   ├── api-test-results.md  ← Baru
+│   ├── test/                ← Update
+│   ├── api-test-results.md   
+│   ├── schemadatabase.md    
 │   ├── schemadatabase.md    ← Baru
 │   ├── member-aqila.md
 │   ├── member-Khanza_Nabila_Tsabita.md
@@ -116,9 +118,18 @@ CC-KELOMPOK-A-HEXACORE/
 │   ├── frontend/
 │   ├── node_modules/
 │   ├── public/    
-│   └── src/   
+│   └── src/                ← Update
+│        ├── App.jsx                  ← Diupdate total
+│        ├── App.css                  ← Diupdate
+│        ├── main.jsx                 ← Tidak berubah
+│        └── components/
+│            ├── Header.jsx           ← Baru
+│            ├── SearchBar.jsx        ← Baru
+│            ├── ItemForm.jsx         ← Baru
+│            ├── ItemList.jsx         ← Baru
+│            └── ItemCard.jsx         ← Baru
 ├── .gitignore            
-├── setup.sh                 ← Baru
+├── setup.sh                
 └── README.md
 ```
 
