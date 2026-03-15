@@ -16,7 +16,7 @@ from schemas import (
     # Book
     BookCreate, BookUpdate, BookResponse, BookListResponse, BookStatsResponse,
     # User
-    UserCreate, UserUpdate, UserResponse,
+    UserCreate, UserUpdate, UserResponse, AdminResetPasswordRequest, MemberChangePasswordRequest,
     # Auth
     LoginRequest, TokenResponse,
     # Transaction
@@ -122,6 +122,20 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def get_me(current_user: User = Depends(get_current_user)):
     """Ambil data profil user yang sedang login."""
     return current_user
+
+@app.put("/auth/me/change-password", response_model=UserResponse, tags=["Auth"])
+def change_my_password(data: MemberChangePasswordRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Member mengubah password mereka sendiri; wajib disertai verifikasi password asal."""
+    try:
+        updated = crud.member_change_password(
+            db=db, 
+            user_id=current_user.user_id, 
+            current_password=data.current_password, 
+            new_password=data.new_password
+        )
+        return updated
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ============================================================
 # CATEGORIES
@@ -346,6 +360,13 @@ def delete_admin_user(user_id: int, db: Session = Depends(get_db), current_user:
         raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
     return None
 
+@app.put("/users/{user_id}/reset-password", response_model=UserResponse, tags=["Users"])
+def admin_reset_password(user_id: int, data: AdminResetPasswordRequest, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
+    """Admin mereset paksa password spesifik user manapun tanpa proteksi gembok lama."""
+    updated = crud.admin_reset_password(db=db, user_id=user_id, new_password=data.new_password)
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
+    return updated
 
 # ============================================================
 # TRANSACTIONS (BORROW & RETURN)

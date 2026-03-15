@@ -320,6 +320,30 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     return user
 
 
+def admin_reset_password(db: Session, user_id: int, new_password: str) -> Optional[User]:
+    """Admin mereset paksa password user manapun tanpa validasi sandi lama."""
+    user = get_user(db, user_id)
+    if not user:
+        return None
+    user.password_hash = hash_password(new_password)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def member_change_password(db: Session, user_id: int, current_password: str, new_password: str) -> Optional[User]:
+    """Member ganti sandi sendiri dengan wajib mengisi sandi lama secara akurat."""
+    user = get_user(db, user_id)
+    if not user:
+        return None
+    if not verify_password(current_password, user.password_hash):
+        raise ValueError("Password saat ini tidak cocok dengan database")
+    user.password_hash = hash_password(new_password)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 # ============================================================
 # BUSINESS LOGIC: TRANSACTION (BORROW — PENDING)
 # ============================================================

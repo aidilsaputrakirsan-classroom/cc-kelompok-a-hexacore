@@ -44,6 +44,43 @@ class UserUpdate(BaseModel):
     role      : Optional[str]      = None   # 'admin' | 'member'
 
 
+class AdminResetPasswordRequest(BaseModel):
+    """Schema untuk Admin saat mereset paksa password user manapun."""
+    new_password: str = Field(..., min_length=8, examples=["BaruSekali123!"])
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password wajib mengandung minimal 1 huruf besar')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password wajib mengandung minimal 1 huruf kecil')
+        if not re.search(r'\d', v):
+            raise ValueError('Password wajib mengandung minimal 1 angka')
+        if not re.search(r'[@$!%*?&]', v):
+            raise ValueError('Password wajib mengandung minimal 1 karakter spesial (@$!%*?&)')
+        return v
+
+
+class MemberChangePasswordRequest(BaseModel):
+    """Schema untuk Member saat mengganti passwordnya sendiri."""
+    current_password: str = Field(..., description="Password lama/saat ini yang harus diverifikasi")
+    new_password: str = Field(..., min_length=8, examples=["GantiLagi123!"])
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password wajib mengandung minimal 1 huruf besar')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password wajib mengandung minimal 1 huruf kecil')
+        if not re.search(r'\d', v):
+            raise ValueError('Password wajib mengandung minimal 1 angka')
+        if not re.search(r'[@$!%*?&]', v):
+            raise ValueError('Password wajib mengandung minimal 1 karakter spesial (@$!%*?&)')
+        return v
+
+
 class UserResponse(BaseModel):
     """Schema output user — password tidak pernah dikembalikan."""
     user_id    : int
