@@ -16,7 +16,7 @@ from schemas import (
     # Book
     BookCreate, BookUpdate, BookResponse, BookListResponse, BookStatsResponse,
     # User
-    UserCreate, UserUpdate, UserResponse, AdminResetPasswordRequest, MemberChangePasswordRequest,
+    UserCreate, UserUpdate, UserResponse, AdminResetPasswordRequest, MemberChangePasswordRequest, MemberProfileUpdate,
     # Auth
     LoginRequest, TokenResponse,
     # Transaction
@@ -136,6 +136,14 @@ def change_my_password(data: MemberChangePasswordRequest, db: Session = Depends(
         return updated
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/auth/me/profile", response_model=UserResponse, tags=["Auth"])
+def update_my_profile(data: MemberProfileUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Member hanya bisa mengubah Full Name/Username-nya sendiri."""
+    current_user.full_name = data.full_name
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 # ============================================================
 # CATEGORIES

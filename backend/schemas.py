@@ -44,6 +44,11 @@ class UserUpdate(BaseModel):
     role      : Optional[str]      = None   # 'admin' | 'member'
 
 
+class MemberProfileUpdate(BaseModel):
+    """Schema khusus Member saat ingin mengubah profilnya (Email dan Role terkunci)."""
+    full_name: str = Field(..., min_length=2, max_length=150, examples=["Nama Baru"])
+
+
 class AdminResetPasswordRequest(BaseModel):
     """Schema untuk Admin saat mereset paksa password user manapun."""
     new_password: str = Field(..., min_length=8, examples=["BaruSekali123!"])
