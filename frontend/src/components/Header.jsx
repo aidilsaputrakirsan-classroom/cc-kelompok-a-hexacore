@@ -1,99 +1,146 @@
 // ============================================================
-// components/Header.jsx — Sidebar navigasi & branding
-// Peran di modul 3: menampilkan judul & statistik
+// components/Header.jsx
+// TopNav  → Guest & Member
+// Sidebar → Admin
 // ============================================================
 
-export const NAV_ITEMS = [
-  { id: "dashboard",    icon: "🏠", label: "Dashboard"  },
-  { id: "books",        icon: "📚", label: "Buku"       },
-  { id: "categories",   icon: "🏷️", label: "Kategori"   },
-  { id: "transactions", icon: "🔄", label: "Transaksi"  },
-  { id: "fines",        icon: "💰", label: "Denda"      },
-  { id: "users",        icon: "👥", label: "Pengguna"   },
+const GUEST_LINKS = [
+  { id: 'home',       label: 'Beranda'  },
+  { id: 'categories', label: 'Kategori' },
+  { id: 'genres',     label: 'Genre'    },
 ]
 
-export const PAGE_ACCENT = {
-  dashboard:    "#FFD93D",
-  books:        "#4D96FF",
-  categories:   "#C77DFF",
-  transactions: "#6BCB77",
-  fines:        "#FF6B6B",
-  users:        "#FFB347",
-}
+const MEMBER_LINKS = [
+  { id: 'home',         label: 'Beranda'   },
+  { id: 'categories',   label: 'Kategori'  },
+  { id: 'genres',       label: 'Genre'     },
+  { id: 'transactions', label: 'Transaksi' },
+  { id: 'fines',        label: 'Denda'     },
+]
 
-// ── Sidebar Header ────────────────────────────────────────────
-function Header({ currentPage, onNavigate }) {
+const ADMIN_GROUPS = [
+  {
+    label: 'Utama',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: '▦' },
+      { id: 'profile',   label: 'Profil',    icon: '◉' },
+    ],
+  },
+  {
+    label: 'Manajemen',
+    items: [
+      { id: 'books',      label: 'Buku',     icon: '◫' },
+      { id: 'categories', label: 'Kategori', icon: '⊟' },
+      { id: 'genres',     label: 'Genre',    icon: '◈' },
+      { id: 'users',      label: 'Pengguna', icon: '◎' },
+    ],
+  },
+  {
+    label: 'Review',
+    items: [
+      { id: 'transactions', label: 'Transaksi', icon: '⇄' },
+      { id: 'fines',        label: 'Denda',     icon: '◈' },
+    ],
+  },
+]
+
+function TopNav({ page, onNav, user, onLogout }) {
+  const links = user ? MEMBER_LINKS : GUEST_LINKS
   return (
-    <aside style={{
-      width: 220,
-      background: "#1A1A2E",
-      color: "#fff",
-      display: "flex",
-      flexDirection: "column",
-      position: "sticky",
-      top: 0,
-      height: "100vh",
-      boxShadow: "4px 0 24px rgba(0,0,0,.18)",
-      flexShrink: 0,
-    }}>
-      {/* Branding / Logo */}
-      <div style={{ padding: "28px 20px 20px" }}>
-        <div style={{
-          fontFamily: "'Fredoka One',cursive",
-          fontSize: 22,
-          background: "linear-gradient(135deg,#FFD93D,#FF6B6B)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          marginBottom: 4,
-        }}>
-          📚 LenteraPustaka
-        </div>
-        <div style={{ fontSize: 11, color: "#ffffff55", fontWeight: 600 }}>
-          HEXACORE · SI ITK
-        </div>
-      </div>
+    <header className="topnav">
+      <button className="topnav-brand" onClick={() => onNav('home')}>
+        <div className="topnav-brand-mark">📚</div>
+        <span className="topnav-brand-text">
+          Lentera<span>Pustaka</span>
+        </span>
+      </button>
 
-      <div style={{ height: 1, background: "#ffffff15", margin: "0 20px 16px" }} />
-
-      {/* Nav links */}
-      <nav style={{ flex: 1 }}>
-        {NAV_ITEMS.map(n => {
-          const active = currentPage === n.id
-          const accent = PAGE_ACCENT[n.id]
-          return (
-            <button
-              key={n.id}
-              onClick={() => onNavigate(n.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                width: "100%",
-                padding: "13px 20px",
-                background: active ? `${accent}22` : "transparent",
-                color: active ? accent : "#ffffff88",
-                fontWeight: active ? 800 : 600,
-                fontSize: 14,
-                border: "none",
-                borderLeft: active ? `3px solid ${accent}` : "3px solid transparent",
-                cursor: "pointer",
-                transition: "all .2s",
-                textAlign: "left",
-              }}
-            >
-              <span style={{ fontSize: 18 }}>{n.icon}</span>
-              {n.label}
-            </button>
-          )
-        })}
+      <nav className="topnav-nav">
+        {links.map(l => (
+          <button
+            key={l.id}
+            className={`topnav-link${page === l.id ? ' active' : ''}`}
+            onClick={() => onNav(l.id)}
+          >
+            {l.label}
+          </button>
+        ))}
       </nav>
 
-      {/* Footer versi */}
-      <div style={{ padding: "16px 20px", fontSize: 11, color: "#ffffff33" }}>
-        v0.3.0
+      <div className="topnav-right">
+        {user ? (
+          <>
+            <button className="topnav-user-btn" onClick={() => onNav('profile')}>
+              <div className="avatar avatar-sm">{user.full_name?.[0]?.toUpperCase()}</div>
+              <span>{user.full_name?.split(' ')[0]}</span>
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={onLogout}
+              style={{ color: 'var(--c-text3)', fontSize: 13 }}>
+              Keluar
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="btn btn-ghost btn-sm" onClick={() => onNav('login')}>Masuk</button>
+            <button className="btn btn-primary btn-sm" onClick={() => onNav('login')}>Daftar</button>
+          </>
+        )}
       </div>
+    </header>
+  )
+}
+
+function Sidebar({ page, onNav, user, onLogout }) {
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <div className="sidebar-brand-mark">📚</div>
+        <div>
+          <div className="sidebar-brand-title">LenteraPustaka</div>
+          <div className="sidebar-brand-sub">HEXACORE · SI ITK</div>
+        </div>
+      </div>
+
+      <nav className="sidebar-nav">
+        {ADMIN_GROUPS.map(g => (
+          <div key={g.label}>
+            <div className="sidebar-section-label">{g.label}</div>
+            {g.items.map(item => (
+              <button
+                key={item.id}
+                className={`sidebar-link${page === item.id ? ' active' : ''}`}
+                onClick={() => onNav(item.id)}
+              >
+                <span className="sidebar-link-icon">{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
+
+      {user && (
+        <div className="sidebar-footer">
+          <div className="sidebar-user" onClick={() => onNav('profile')}>
+            <div className="avatar avatar-md">{user.full_name?.[0]?.toUpperCase()}</div>
+            <div style={{ overflow: 'hidden', flex: 1 }}>
+              <div className="sidebar-user-name">{user.full_name}</div>
+              <div className="sidebar-user-role">Administrator</div>
+            </div>
+          </div>
+          <button className="sidebar-logout" onClick={onLogout}>
+            <span>↩</span> Keluar
+          </button>
+        </div>
+      )}
     </aside>
   )
+}
+
+function Header({ page, onNav, user, onLogout }) {
+  return user?.role === 'admin'
+    ? <Sidebar page={page} onNav={onNav} user={user} onLogout={onLogout} />
+    : <TopNav  page={page} onNav={onNav} user={user} onLogout={onLogout} />
 }
 
 export default Header

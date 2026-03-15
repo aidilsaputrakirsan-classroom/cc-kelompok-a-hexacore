@@ -1,51 +1,81 @@
 // ============================================================
-// components/ItemCard.jsx — Card satu buku
-// Sesuai peran modul 3: menampilkan 1 item dengan aksi edit/hapus
+// components/ItemCard.jsx
 // ============================================================
-import { Badge, Btn } from "./ui/Common"
-import { C } from "./ui/tokens"
+import { Badge } from './ui/Common'
 
-function ItemCard({ book, onEdit, onDelete }) {
+const COVERS = ['cover-0','cover-1','cover-2','cover-3','cover-4','cover-5','cover-6','cover-7']
+
+function getCover(title = '') {
+  let h = 0
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) & 0xffffffff
+  return COVERS[Math.abs(h) % COVERS.length]
+}
+
+function ItemCard({ book, onEdit, onDelete, isAdmin }) {
+  const cover    = getCover(book.title)
+  const stockOk  = book.available_stock > 5
+  const stockLow = book.available_stock > 0 && book.available_stock <= 5
+  const stockOut = book.available_stock === 0
+
   return (
-    <div className="anim-pop" style={{
-      background: C.card,
-      borderRadius: 20,
-      padding: 20,
-      boxShadow: "0 4px 24px rgba(0,0,0,.07)",
-      borderLeft: `4px solid ${book.available_stock > 0 ? C.mint : C.coral}`,
-      display: "flex", flexDirection: "column", gap: 10,
-      transition: "transform .2s, box-shadow .2s",
-    }}
-      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-3px)"}
-      onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
-    >
-      {/* Baris atas: badge stok + ISBN */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Badge color={book.available_stock > 0 ? C.mint : C.coral}>
-          {book.available_stock > 0 ? `✅ ${book.available_stock} tersedia` : "❌ Habis"}
-        </Badge>
-        <span style={{ fontSize: 11, color: C.muted }}>{book.isbn}</span>
+    <div className="book-card">
+      {/* Cover */}
+      <div className="book-cover">
+        <div className={`book-cover-bg ${cover}`}>
+          <span className="book-cover-title">{book.title}</span>
+          <span className="book-cover-author">{book.author}</span>
+        </div>
+
+        {/* Stock badge */}
+        <div className="book-cover-badge">
+          {stockOk  && <span className="badge badge-white">✓ {book.available_stock}</span>}
+          {stockLow && <span className="badge badge-white" style={{ background: 'rgba(245,158,11,.4)' }}>⚠ {book.available_stock}</span>}
+          {stockOut && <span className="badge badge-white" style={{ background: 'rgba(239,68,68,.45)' }}>Habis</span>}
+        </div>
+
+        {/* Admin hover overlay */}
+        {isAdmin && (
+          <div className="book-cover-overlay">
+            <button
+              onClick={() => onEdit(book)}
+              style={{
+                padding: '6px 14px', borderRadius: 8,
+                background: 'rgba(255,255,255,.15)', color: '#fff',
+                border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete(book.book_id)}
+              style={{
+                padding: '6px 14px', borderRadius: 8,
+                background: 'rgba(239,68,68,.35)', color: '#fff',
+                border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              Hapus
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Judul & pengarang */}
+      {/* Info */}
       <div>
-        <h3 style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.3, marginBottom: 4 }}>
-          {book.title}
-        </h3>
-        <p style={{ color: C.muted, fontSize: 13 }}>✍️ {book.author}</p>
-      </div>
-
-      {/* Meta info */}
-      <div style={{ display: "flex", gap: 8, fontSize: 12, color: C.muted, flexWrap: "wrap" }}>
-        {book.publisher      && <span>🏢 {book.publisher}</span>}
-        {book.publication_year && <span>📅 {book.publication_year}</span>}
-        <span>📦 {book.available_stock}/{book.total_stock} stok</span>
-      </div>
-
-      {/* Aksi */}
-      <div style={{ display: "flex", gap: 8, paddingTop: 8, borderTop: `1px solid ${C.cream}` }}>
-        <Btn small color={C.sky}  onClick={() => onEdit(book)}>✏️ Edit</Btn>
-        <Btn small danger          onClick={() => onDelete(book.book_id)}>🗑️ Hapus</Btn>
+        <div className="book-info-title">{book.title}</div>
+        <div className="book-info-author">{book.author}</div>
+        {book.genres?.length > 0 && (
+          <div className="book-info-genres">
+            {book.genres.slice(0, 2).map(g => (
+              <Badge key={g.genre_id} cls="badge-blue">{g.name}</Badge>
+            ))}
+            {book.genres.length > 2 && (
+              <Badge cls="badge-slate">+{book.genres.length - 2}</Badge>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

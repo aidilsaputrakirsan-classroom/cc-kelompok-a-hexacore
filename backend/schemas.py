@@ -225,6 +225,10 @@ class FineResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class FinePaymentSubmit(BaseModel):
+    """Schema dari Form Member saat membayar bukti transfer. Status denda berubah ke pending_verification."""
+    payment_proof_url: str = Field(..., description="URL gambar bukti transfer / struk pembayaran fisik")
+
 class FineRejectRequest(BaseModel):
     """Schema dari Form Admin saat me-reject bukti pembayaran."""
     rejection_note    : str = Field(..., description="Alasan mengapa bukti ditolak")

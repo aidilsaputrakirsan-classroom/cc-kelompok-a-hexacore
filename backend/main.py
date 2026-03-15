@@ -137,8 +137,7 @@ def create_category(data: CategoryCreate, db: Session = Depends(get_db), current
 def list_categories(
     skip:  int = Query(0,   ge=0,  description="Offset pagination"),
     limit: int = Query(100, ge=1, le=200, description="Jumlah data"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """Ambil semua kategori buku."""
     return crud.get_categories(db=db, skip=skip, limit=limit)
@@ -185,8 +184,7 @@ def create_genre(data: GenreCreate, db: Session = Depends(get_db), current_user:
 def list_genres(
     skip:  int = Query(0,   ge=0,  description="Offset pagination"),
     limit: int = Query(100, ge=1, le=200, description="Jumlah data"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """Ambil semua genre (untuk opsi filter dropdown)."""
     return crud.get_genres(db=db, skip=skip, limit=limit)
@@ -240,7 +238,7 @@ def create_book(data: BookCreate, db: Session = Depends(get_db), current_user: U
 
 @app.get("/books", response_model=BookListResponse, tags=["Books"])
 def list_books(
-    skip:   int        = Query(0,    ge=0,       description="Offset pagination"),
+  skip:   int        = Query(0,    ge=0,       description="Offset pagination"),
     limit:  int        = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
     search: str | None = Query(None,             description="Cari berdasarkan judul, pengarang, atau ISBN"),
     db: Session = Depends(get_db)
