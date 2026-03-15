@@ -83,7 +83,7 @@ Access
 |--------|--------|--------|
 | 1 | Setup & Hello World | ✅ |
 | 2 | REST API + Database | ✅ |
-| 3 | React Frontend | ⬜ |
+| 3 | React Frontend | ✅ |
 | 4 | Full-Stack Integration | ⬜ |
 | 5-7 | Docker & Compose | ⬜ |
 | 8 | UTS Demo | ⬜ |
@@ -264,3 +264,7 @@ Berikut adalah daftar *endpoint* beserta bukti pengujian menggunakan Swagger/Thu
 | **27** | `GET` | `/fines` | Parameter: `lunas`<br><img src="docs/test/getfines2.png" width="300"> | Menampilkan riwayat denda lunas<br><img src="docs/test/responsgetfines2.png" width="300"> |
 
 _Sources:_ [docs/api-test-results.md](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/blob/main/docs/api-test-results.md) | [setup.sh](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/blob/main/setup.sh)
+
+## 🧪 Hasil Pengujian (UI & API)
+* [Laporan Pengujian API (Swagger) - Modul 2](docs/api-test-results.md)
+* [Laporan Pengujian UI (React) - Modul 3](docs/ui-test-results.md)
