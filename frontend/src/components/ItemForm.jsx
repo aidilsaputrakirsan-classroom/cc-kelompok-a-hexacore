@@ -62,7 +62,7 @@ function ItemForm({ editingItem, categories, onSave, onCancel, isOpen, onClose }
       <Field label="Judul *">
         <Input value={form.title} onChange={f("title")} placeholder="Judul buku" />
       </Field>
-      <Field label="ISBN *">
+      <Field label="ISBN">
         <Input value={form.isbn} onChange={f("isbn")} placeholder="978-xxx-xxx" />
       </Field>
       <Field label="Pengarang *">
