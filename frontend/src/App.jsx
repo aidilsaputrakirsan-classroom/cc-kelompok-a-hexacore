@@ -1017,16 +1017,22 @@ export default function App() {
     <><LoginPage onLogin={handleLogin} toast={toast} /><ToastContainer toasts={toasts} /></>
   )
 
-  const PAGES = {
-    home:         <HomePage         user={user}   onNav={nav} toast={toast} />,
-    books:        isAdmin ? <BooksAdminPage toast={toast} /> : <HomePage user={user} onNav={nav} toast={toast} />,
-    categories:   <CategoriesPage   isAdmin={isAdmin} toast={toast} />,
-    genres:       <GenresPage       isAdmin={isAdmin} toast={toast} />,
-    transactions: <TransactionsPage user={user}   toast={toast} />,
-    fines:        <FinesPage        user={user}   toast={toast} />,
-    users:        <UsersPage        toast={toast} />,
-    dashboard:    <DashboardPage    toast={toast} />,
-    profile:      <ProfilePage      user={user} />,
+  // ── Render halaman aktif saja — mencegah re-render loop ───────
+  // Pola PAGES object (merender semua komponen sekaligus) diganti
+  // dengan switch agar React hanya mount 1 halaman per siklus render.
+  const renderPage = (p) => {
+    switch (p) {
+      case 'dashboard':    return <DashboardPage    toast={toast} />
+      case 'books':        return isAdmin ? <BooksAdminPage toast={toast} /> : <HomePage user={user} onNav={nav} toast={toast} />
+      case 'categories':   return <CategoriesPage   isAdmin={isAdmin} toast={toast} />
+      case 'genres':       return <GenresPage       isAdmin={isAdmin} toast={toast} />
+      case 'transactions': return <TransactionsPage user={user}   toast={toast} />
+      case 'fines':        return <FinesPage        user={user}   toast={toast} />
+      case 'users':        return <UsersPage        toast={toast} />
+      case 'profile':      return <ProfilePage      user={user} />
+      case 'home':
+      default:             return <HomePage         user={user} onNav={nav} toast={toast} />
+    }
   }
 
   // ── Admin layout (sidebar kiri) ──────────────────────────────
@@ -1036,7 +1042,7 @@ export default function App() {
         <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} />
         <main className="layout-side-main">
           <div className="layout-side-inner">
-            {PAGES[safePage] || PAGES.dashboard}
+            {renderPage(safePage)}
           </div>
         </main>
       </div>
@@ -1050,10 +1056,10 @@ export default function App() {
       <div className="layout-top">
         <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} />
         {safePage === 'home' || safePage === 'books'
-          ? PAGES[safePage]
+          ? renderPage(safePage)
           : (
             <div className="layout-top-content">
-              {PAGES[safePage] || PAGES.home}
+              {renderPage(safePage)}
             </div>
           )
         }

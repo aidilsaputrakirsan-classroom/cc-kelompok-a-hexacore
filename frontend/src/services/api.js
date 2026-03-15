@@ -19,7 +19,7 @@ async function req(url, opts = {}) {
 
   const res = await fetch(`${API_BASE}${url}`, { ...opts, headers })
 
-  if (res.status === 401) { token.remove(); window.location.reload(); return }
+  if (res.status === 401) { token.remove(); throw new Error("Sesi berakhir (401)") }
   if (res.status === 204) return true
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
