@@ -1,508 +1,968 @@
 // ============================================================
-// App.jsx — Root component
-// State management, navigasi, CRUD handlers, halaman
+// App.jsx — LenteraPustaka v0.4.0
+// Pure CSS · No Tailwind · No injectCSS · Vite + React
+//
+// Struktur import:
+//   hooks/useToast.js      → useToast()
+//   hooks/useBooks.js      → useBooks(search)
+//   data/seedBooks.js      → SEED_BOOKS (dipakai di useBooks, bukan di sini)
+//   utils/formatters.js    → fmt, fmtDate, validatePassword, pwStrength, trxBadge, fineBadge
 // ============================================================
-import { useState, useEffect, useCallback } from "react"
-
-// Komponen struktur modul 3
-import Header            from "./components/Header"
-import SearchBar         from "./components/SearchBar"
-import ItemForm          from "./components/ItemForm"
-import ItemList          from "./components/ItemList"
-import { Toast, StatCard, Card, Badge, Btn, Spinner, Empty, Modal, Field, Input, Select } from "./components/ui/Common"
-import { C, fmt, fmtDate, statusColor, statusLabel } from "./components/ui/tokens"
-
-// API service
+import { useState, useEffect, useCallback } from 'react'
 import {
-  checkHealth, fetchBookStats,
-  fetchCategories, createCategory, updateCategory, deleteCategory,
-  fetchBooks, createBook, updateBook, deleteBook,
-  fetchUsers, createUser,
-  fetchTransactions, borrowBook, returnBook,
-  fetchFines, payFine,
-} from "./services/api"
+  BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts'
 
-// ── CSS Inject (sekali saja) ──────────────────────────────────
-function injectCSS() {
-  if (document.getElementById("lp-global")) return
-  const s = document.createElement("style")
-  s.id = "lp-global"
-  s.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Nunito', sans-serif; background: #FFF8F0; color: #1A1A2E; }
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #FFF8F0; }
-    ::-webkit-scrollbar-thumb { background: #C77DFF; border-radius: 99px; }
-    @keyframes pop   { 0%{transform:scale(.9);opacity:0} 100%{transform:scale(1);opacity:1} }
-    @keyframes slide { 0%{transform:translateY(16px);opacity:0} 100%{transform:translateY(0);opacity:1} }
-    @keyframes spin  { to { transform: rotate(360deg); } }
-    .anim-pop   { animation: pop   .3s cubic-bezier(.34,1.56,.64,1) both; }
-    .anim-slide { animation: slide .35s ease both; }
-    button { cursor: pointer; border: none; font-family: inherit; }
-    input, select, textarea { font-family: inherit; }
-  `
-  document.head.appendChild(s)
+// ── Komponen ────────────────────────────────────────────────
+import Header    from './components/Header'
+import ItemForm  from './components/ItemForm'
+import SearchBar from './components/SearchBar'
+import ItemList  from './components/ItemList'
+import {
+  Spinner, Empty, Modal, Field, Input, Select, Textarea,
+  StatCard, ToastContainer, Confirm,
+} from './components/ui/Common'
+
+// ── Custom hooks (dipindah dari App.jsx) ─────────────────────
+import { useToast } from './hooks/useToast'
+import { useBooks } from './hooks/useBooks'
+
+// ── Utility functions (dipindah dari tokens.js & App.jsx) ────
+import {
+  fmt, fmtDate, validatePassword, pwStrength,
+  trxBadge, fineBadge,
+} from './utils/formatters'
+
+// ── API ──────────────────────────────────────────────────────
+import {
+  login, register, logout, getMe, token,
+  fetchCategories, createCategory, updateCategory, deleteCategory,
+  fetchGenres, createGenre, updateGenre, deleteGenre,
+  fetchBooks, fetchBookStats, createBook, updateBook, deleteBook,
+  fetchUsers, createUser, deleteUser,
+  fetchTransactions, borrowBook, approveTransaction, rejectTransaction, returnBook,
+  fetchFines, submitFinePayment, approveFine, rejectFine,
+} from './services/api'
+
+// ══════════════════════════════════════════════════════════════
+//  LOGIN PAGE
+// ══════════════════════════════════════════════════════════════
+function LoginPage({ onLogin, toast }) {
+  const [tab, setTab]         = useState('login')
+  const [form, setForm]       = useState({ email: '', password: '', full_name: '' })
+  const [errors, setErrors]   = useState({})
+  const [loading, setLoading] = useState(false)
+
+  const f = k => e => { setForm(p => ({ ...p, [k]: e.target.value })); setErrors(p => ({ ...p, [k]: '' })) }
+  const strength = pwStrength(form.password)
+
+  const submit = async () => {
+    const e = {}
+    if (!form.email)    e.email    = 'Email wajib diisi'
+    if (!form.password) e.password = 'Password wajib diisi'
+    if (tab === 'register') {
+      if (!form.full_name) e.full_name = 'Nama wajib diisi'
+      const pe = validatePassword(form.password)
+      if (pe.length) e.password = pe[0]
+    }
+    if (Object.keys(e).length) { setErrors(e); return }
+
+    setLoading(true)
+    try {
+      if (tab === 'register') {
+        await register({ email: form.email, password: form.password, full_name: form.full_name })
+        toast('Akun berhasil dibuat! Silakan masuk.')
+        setTab('login'); setForm(p => ({ ...p, password: '' }))
+      } else {
+        const data = await login(form.email, form.password)
+        onLogin(data.user)
+      }
+    } catch (err) { setErrors({ submit: err.message }) }
+    finally { setLoading(false) }
+  }
+
+  return (
+    <div className="login-page">
+      {/* Left panel */}
+      <div className="login-left">
+        <div className="login-left-inner">
+          <h1 className="login-left-title">
+            Temukan Buku<br /><span>Favoritmu</span><br />Di Sini
+          </h1>
+          <p className="login-left-desc">
+            Sistem perpustakaan digital untuk meminjam, mengelola koleksi, dan melacak transaksi secara efisien.
+          </p>
+          {['Manajemen buku & kategori lengkap', 'Alur peminjaman dengan approval admin', 'Pelacakan denda otomatis', 'Akses sesuai peran pengguna'].map(t => (
+            <div key={t} className="login-feature">
+              <div className="login-feature-dot" />
+              {t}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div className="login-right">
+        <div className="login-card">
+          <h2 className="login-brand-title">LenteraPustaka</h2>
+          <p className="login-brand-sub">HEXACORE · Institut Teknologi Kalimantan</p>
+
+          <div className="login-tabs">
+            {['login', 'register'].map(t => (
+              <button
+                key={t}
+                className={`login-tab${tab === t ? ' active' : ''}`}
+                onClick={() => { setTab(t); setErrors({}) }}
+              >
+                {t === 'login' ? 'Masuk' : 'Daftar'}
+              </button>
+            ))}
+          </div>
+
+          {errors.submit && (
+            <div className="alert alert-error" style={{ marginBottom: 16 }}>{errors.submit}</div>
+          )}
+
+          {tab === 'register' && (
+            <Field label="Nama Lengkap" error={errors.full_name}>
+              <Input value={form.full_name} onChange={f('full_name')} placeholder="Nama lengkap" error={errors.full_name} />
+            </Field>
+          )}
+
+          <Field label="Email" error={errors.email}>
+            <Input type="email" value={form.email} onChange={f('email')} placeholder="nama@student.itk.ac.id" error={errors.email} />
+          </Field>
+
+          <Field label="Password" error={errors.password}
+            hint={tab === 'register' ? 'Min. 8 karakter, huruf besar+kecil+angka+spesial' : undefined}>
+            <Input type="password" value={form.password} onChange={f('password')} placeholder="Password" error={errors.password} />
+            {tab === 'register' && form.password && (
+              <div style={{ marginTop: 6 }}>
+                <div className="pw-bars">
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} className="pw-bar" style={{ background: i <= strength.score ? strength.color : undefined }} />
+                  ))}
+                </div>
+                <span className="pw-label" style={{ color: strength.color }}>{strength.label}</span>
+              </div>
+            )}
+          </Field>
+
+          <button className="btn btn-primary btn-full btn-lg" style={{ marginTop: 8 }}
+            onClick={submit} disabled={loading}>
+            {loading ? 'Memproses…' : tab === 'login' ? 'Masuk' : 'Buat Akun'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ══════════════════════════════════════════════════════════════
-//  HALAMAN — Dashboard
+//  HOME PAGE — iPusnas style
 // ══════════════════════════════════════════════════════════════
-function Dashboard({ showToast }) {
+function HomePage({ user, onNav, toast }) {
+  const [search, setSearch]    = useState('')
+  const [inputVal, setInput]   = useState('')
+  const [sortBy, setSortBy]    = useState('default')
+  const [cats, setCats]        = useState([])
+  const [activeCat, setActive] = useState(null)
+  const { books, total, loading } = useBooks(search)
+
+  useEffect(() => { fetchCategories().then(d => setCats(d || [])) }, [])
+
+  const sorted = [...books]
+    .filter(b => !activeCat || b.category_id === activeCat)
+    .sort((a, b) => {
+      if (sortBy === 'title') return a.title.localeCompare(b.title, 'id')
+      if (sortBy === 'stock') return b.available_stock - a.available_stock
+      return 0
+    })
+
+  return (
+    <div>
+      {/* Hero */}
+      <div className="hero">
+        <div className="hero-inner">
+          <div className="hero-label">
+            <span>📚</span> LenteraPustaka — HEXACORE · SI ITK
+          </div>
+          <h1 className="hero-title">
+            Temukan Buku<br /><span>Favoritmu</span>
+          </h1>
+          <p className="hero-sub">
+            Koleksi lengkap buku perpustakaan digital. Cari, pinjam, dan nikmati bacaanmu.
+          </p>
+
+          <div className="hero-search">
+            <span className="hero-search-icon">⌕</span>
+            <input
+              className="hero-search-input"
+              placeholder="Cari judul, pengarang, atau ISBN…"
+              value={inputVal}
+              onChange={e => { setInput(e.target.value); if (!e.target.value) setSearch('') }}
+              onKeyDown={e => e.key === 'Enter' && setSearch(inputVal)}
+            />
+            {inputVal && (
+              <button className="hero-search-clear" onClick={() => { setInput(''); setSearch('') }}>✕</button>
+            )}
+            <button className="hero-search-btn" onClick={() => setSearch(inputVal)}>
+              Cari Buku
+            </button>
+          </div>
+
+          {cats.length > 0 && (
+            <div className="cat-chips">
+              <button className={`cat-chip${activeCat === null ? ' active' : ''}`} onClick={() => setActive(null)}>
+                Semua
+              </button>
+              {cats.slice(0, 8).map(c => (
+                <button
+                  key={c.category_id}
+                  className={`cat-chip${activeCat === c.category_id ? ' active' : ''}`}
+                  onClick={() => setActive(activeCat === c.category_id ? null : c.category_id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="section" style={{ paddingBottom: 64 }}>
+        <div className="section-head">
+          <h2 className="section-title">
+            {activeCat
+              ? cats.find(c => c.category_id === activeCat)?.name ?? 'Koleksi'
+              : search ? `Hasil: "${search}"` : 'Semua Koleksi'}
+          </h2>
+          {user && (
+            <button className="btn btn-primary btn-sm" onClick={() => onNav('transactions')}>
+              + Pinjam Buku
+            </button>
+          )}
+        </div>
+
+        <ItemList
+          books={sorted} total={sorted.length}
+          onEdit={() => {}} onDelete={() => {}}
+          loading={loading} searchQuery={search}
+          sortBy={sortBy} onSortChange={setSortBy}
+          isAdmin={false}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DASHBOARD (Admin)
+// ══════════════════════════════════════════════════════════════
+function DashboardPage({ toast }) {
   const [stats, setStats]     = useState(null)
-  const [health, setHealth]   = useState(null)
+  const [trxs, setTrxs]       = useState([])
+  const [fines, setFines]     = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      fetchBookStats(),
-      checkHealth().then(ok => ok ? { status: "healthy" } : null),
-    ]).then(([s, h]) => { setStats(s); setHealth(h); setLoading(false) })
+    Promise.all([fetchBookStats(), fetchTransactions('', 100), fetchFines(null, 100)])
+      .then(([s, t, f]) => {
+        setStats(s); setTrxs(t?.transactions || []); setFines(f?.fines || [])
+        setLoading(false)
+      })
   }, [])
 
   if (loading) return <Spinner />
 
-  const NAV_ITEMS_PREVIEW = [
-    { id:"books",icon:"📚",label:"Buku" },
-    { id:"categories",icon:"🏷️",label:"Kategori" },
-    { id:"transactions",icon:"🔄",label:"Transaksi" },
-    { id:"fines",icon:"💰",label:"Denda" },
-    { id:"users",icon:"👥",label:"Pengguna" },
-  ]
+  const CHART_COLORS = ['#22c55e', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#94a3b8']
+
+  const stockData = stats ? [
+    { name: 'Tersedia',  value: stats.available_stock, fill: '#22c55e' },
+    { name: 'Dipinjam',  value: stats.borrowed_count,  fill: '#3b82f6' },
+    { name: 'Terlambat', value: stats.overdue_count,   fill: '#ef4444' },
+  ].filter(d => d.value > 0) : []
+
+  const trxCount = {}
+  trxs.forEach(t => { trxCount[t.status] = (trxCount[t.status] || 0) + 1 })
+  const trxData = Object.entries(trxCount).map(([k, v]) => ({ status: trxBadge[k]?.label || k, count: v }))
+
+  const fineCount = {}
+  fines.forEach(f => { fineCount[f.status] = (fineCount[f.status] || 0) + 1 })
+  const fineData = Object.entries(fineCount).map(([k, v]) => ({ status: fineBadge[k]?.label || k, count: v }))
 
   return (
-    <div className="anim-slide">
-      {/* Hero banner */}
-      <div style={{
-        background: `linear-gradient(135deg, ${C.sun} 0%, ${C.peach} 100%)`,
-        borderRadius: 24, padding: "32px 32px 28px",
-        marginBottom: 28, position: "relative", overflow: "hidden",
-      }}>
-        <div style={{ position:"absolute", right:-20, top:-20, fontSize:120, opacity:.18, userSelect:"none" }}>📚</div>
-        <h1 style={{ fontFamily:"'Fredoka One',cursive", fontSize:32, color:C.dark, marginBottom:8 }}>
-          Selamat Datang di LenteraPustaka! 🌟
-        </h1>
-        <p style={{ color:`${C.dark}99`, fontWeight:600 }}>Sistem Informasi Perpustakaan — HEXACORE · SI ITK</p>
-        {health && <Badge color={C.mint}>● API {health.status} · v0.3.0</Badge>}
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-sub">Ringkasan statistik sistem perpustakaan</p>
+        </div>
       </div>
 
-      {/* Stats */}
       {stats && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:16, marginBottom:28 }}>
-          <StatCard emoji="📖" label="Total Judul"  value={stats.total_titles}    color={C.sky}   />
-          <StatCard emoji="📦" label="Total Stok"   value={stats.total_stock}     color={C.grape} />
-          <StatCard emoji="🟢" label="Tersedia"     value={stats.available_stock} color={C.mint}  />
-          <StatCard emoji="🔄" label="Dipinjam"     value={stats.borrowed_count}  color={C.peach} />
-          <StatCard emoji="⚠️" label="Terlambat"    value={stats.overdue_count}   color={C.coral} />
+        <div className="grid-stats">
+          <StatCard label="Total Judul"   value={stats.total_titles}    accentColor="#3b82f6" />
+          <StatCard label="Total Stok"    value={stats.total_stock}     accentColor="#8b5cf6" />
+          <StatCard label="Tersedia"      value={stats.available_stock} accentColor="#22c55e" />
+          <StatCard label="Dipinjam"      value={stats.borrowed_count}  accentColor="#f59e0b" />
+          <StatCard label="Terlambat"     value={stats.overdue_count}   accentColor="#ef4444" />
+          <StatCard label="Total Denda"   value={fines.length}          accentColor="#94a3b8" />
         </div>
       )}
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-        <Card accent={C.sky}>
-          <h3 style={{ fontFamily:"'Fredoka One',cursive", fontSize:18, marginBottom:12, color:C.sky }}>🚀 Menu</h3>
-          {NAV_ITEMS_PREVIEW.map(n => (
-            <div key={n.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:`1px solid ${C.cream}`, fontWeight:600, fontSize:14 }}>
-              <span style={{ fontSize:18 }}>{n.icon}</span>{n.label}
-            </div>
-          ))}
-        </Card>
-        <Card accent={C.grape}>
-          <h3 style={{ fontFamily:"'Fredoka One',cursive", fontSize:18, marginBottom:12, color:C.grape }}>👥 Tim Hexacore</h3>
-          {[
-            { name:"Maulana Malik Ibrahim", nim:"10231051", role:"Lead Backend",   color:C.sky   },
-            { name:"Micka Mayulia Utama",   nim:"10231053", role:"Lead Frontend",  color:C.coral },
-            { name:"Khanza Nabila Tsabita", nim:"10231049", role:"Lead DevOps",    color:C.mint  },
-            { name:"Muhammad Aqila Ardhi",  nim:"10231057", role:"Lead QA & Docs", color:C.grape },
-          ].map(m => (
-            <div key={m.nim} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:`1px solid ${C.cream}`, fontSize:13 }}>
-              <div>
-                <div style={{ fontWeight:700 }}>{m.name}</div>
-                <div style={{ color:C.muted, fontSize:11 }}>{m.nim}</div>
-              </div>
-              <Badge color={m.color}>{m.role}</Badge>
-            </div>
-          ))}
-        </Card>
+      <div className="grid-2" style={{ marginBottom: 16 }}>
+        <div className="chart-card">
+          <div className="chart-card-title">Distribusi Stok Buku</div>
+          {stockData.length ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie data={stockData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                  {stockData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                </Pie>
+                <Tooltip formatter={v => [v, 'Buku']} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : <Empty icon="📊" title="Belum ada data" />}
+        </div>
+
+        <div className="chart-card">
+          <div className="chart-card-title">Status Transaksi</div>
+          {trxData.length ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={trxData} margin={{ left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="status" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="count" name="Jumlah" radius={[4, 4, 0, 0]}>
+                  {trxData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <Empty icon="📊" title="Belum ada transaksi" />}
+        </div>
+      </div>
+
+      <div className="chart-card">
+        <div className="chart-card-title">Status Denda</div>
+        {fineData.length ? (
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={fineData} layout="vertical" margin={{ left: 100, right: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+              <YAxis type="category" dataKey="status" tick={{ fontSize: 11 }} width={100} />
+              <Tooltip />
+              <Bar dataKey="count" name="Jumlah" radius={[0, 4, 4, 0]}>
+                {fineData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : <Empty icon="💰" title="Belum ada denda" />}
       </div>
     </div>
   )
 }
 
 // ══════════════════════════════════════════════════════════════
-//  HALAMAN — Buku (menggunakan ItemList, ItemForm, SearchBar)
+//  BOOKS ADMIN
 // ══════════════════════════════════════════════════════════════
-function BooksPage({ showToast }) {
-  const [books, setBooks]       = useState([])
+function BooksAdminPage({ toast }) {
+  const [search, setSearch]     = useState('')
+  const [sortBy, setSortBy]     = useState('default')
   const [cats, setCats]         = useState([])
-  const [total, setTotal]       = useState(0)
-  const [search, setSearch]     = useState("")
-  const [sortBy, setSortBy]     = useState("terbaru")   // "nama" | "harga" | "terbaru"
-  const [loading, setLoading]   = useState(true)
+  const [genres, setGenres]     = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing]   = useState(null)
+  const [confirm, setConfirm]   = useState(null)
+  const { books, total, loading, reload } = useBooks(search)
 
-  const load = useCallback(() => {
-    setLoading(true)
-    fetchBooks(search).then(d => { setBooks(d.books || []); setTotal(d.total || 0); setLoading(false) })
-  }, [search])
+  useEffect(() => { fetchCategories().then(setCats); fetchGenres().then(setGenres) }, [])
 
-  useEffect(() => { fetchCategories().then(setCats) }, [])
-  useEffect(() => { load() }, [load])
-
-  // ── Sorting di frontend ─────────────────────────────────────
-  const sortedBooks = [...books].sort((a, b) => {
-    if (sortBy === "nama")    return a.title.localeCompare(b.title, "id")
-    if (sortBy === "harga")   return a.available_stock - b.available_stock  // stok tersedia (relevan utk pustaka)
-    if (sortBy === "terbaru") return 0   // urutan dari API (sudah newest-first)
+  const sorted = [...books].sort((a, b) => {
+    if (sortBy === 'title') return a.title.localeCompare(b.title, 'id')
+    if (sortBy === 'stock') return b.available_stock - a.available_stock
     return 0
   })
 
   const handleSave = async (data, editId) => {
-    if (editId) { await updateBook(editId, data); showToast("Buku diperbarui!") }
-    else        { await createBook(data);          showToast("Buku ditambahkan!") }
-    setEditing(null)
-    load()
+    if (editId) { await updateBook(editId, data); toast('Buku diperbarui') }
+    else        { await createBook(data);         toast('Buku ditambahkan') }
+    setEditing(null); reload()
   }
 
-  const handleEdit = (book) => { setEditing(book); setShowForm(true) }
-
-  const handleDelete = (id) => {
-    if (!confirm("Yakin hapus buku ini?")) return
-    deleteBook(id).then(() => { showToast("Buku dihapus!"); load() })
-      .catch(e => showToast(e.message, "error"))
-  }
+  const handleDelete = id => setConfirm({
+    title: 'Hapus Buku', message: 'Yakin ingin menghapus buku ini?',
+    onConfirm: async () => { await deleteBook(id); toast('Buku dihapus'); setConfirm(null); reload() },
+  })
 
   return (
-    <div className="anim-slide">
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-        <h2 style={{ fontFamily:"'Fredoka One',cursive", fontSize:26, color:C.sky }}>📚 Manajemen Buku</h2>
-        <Btn color={C.sky} onClick={() => { setEditing(null); setShowForm(true) }}>+ Tambah Buku</Btn>
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Manajemen Buku</h1>
+          <p className="page-sub">{total} judul dalam inventaris</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true) }}>
+          + Tambah Buku
+        </button>
       </div>
 
-      {/* SearchBar — komponen modul 3 */}
       <div style={{ marginBottom: 20 }}>
         <SearchBar onSearch={setSearch} placeholder="Cari judul, pengarang, ISBN…" />
       </div>
 
-      {/* ItemList — komponen modul 3 (sortBy & onSortChange diteruskan sebagai props) */}
       <ItemList
-        books={sortedBooks}
-        total={total}
-        onEdit={handleEdit}
+        books={sorted} total={total}
+        onEdit={b => { setEditing(b); setShowForm(true) }}
         onDelete={handleDelete}
-        loading={loading}
-        searchQuery={search}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
+        loading={loading} searchQuery={search}
+        sortBy={sortBy} onSortChange={setSortBy}
+        isAdmin={true}
       />
 
-      {/* ItemForm — komponen modul 3 */}
       <ItemForm
         isOpen={showForm}
         onClose={() => { setShowForm(false); setEditing(null) }}
-        editingItem={editing}
-        categories={cats}
+        editingItem={editing} categories={cats} genres={genres}
         onSave={handleSave}
       />
+
+      {confirm && <Confirm {...confirm} danger onCancel={() => setConfirm(null)} />}
     </div>
   )
 }
 
 // ══════════════════════════════════════════════════════════════
-//  HALAMAN — Kategori
+//  CATEGORIES
 // ══════════════════════════════════════════════════════════════
-function CategoriesPage({ showToast }) {
-  const [cats, setCats]         = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editing, setEditing]   = useState(null)
-  const [form, setForm]         = useState({ name:"", description:"" })
+function CategoriesPage({ isAdmin, toast }) {
+  const [cats, setCats]       = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal]     = useState(null)
+  const [form, setForm]       = useState({ name: '', description: '' })
+  const [confirm, setConfirm] = useState(null)
 
   const load = () => { setLoading(true); fetchCategories().then(d => { setCats(d); setLoading(false) }) }
   useEffect(() => { load() }, [])
+  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }))
 
-  const openAdd  = () => { setEditing(null); setForm({ name:"", description:"" }); setShowModal(true) }
-  const openEdit = c  => { setEditing(c);    setForm({ name:c.name, description:c.description||"" }); setShowModal(true) }
-
-  const save = () => {
-    const fn = editing ? updateCategory(editing.category_id, form) : createCategory(form)
-    fn.then(() => { showToast(editing ? "Kategori diperbarui!" : "Kategori ditambahkan!"); setShowModal(false); load() })
-      .catch(() => showToast("Gagal menyimpan", "error"))
+  const save = async () => {
+    if (modal === 'add') { await createCategory(form); toast('Kategori ditambahkan') }
+    else { await updateCategory(modal.category_id, form); toast('Kategori diperbarui') }
+    setModal(null); setForm({ name: '', description: '' }); load()
   }
 
-  const del = id => {
-    if (!confirm("Yakin hapus kategori ini?")) return
-    deleteCategory(id).then(() => { showToast("Kategori dihapus!"); load() })
-      .catch(() => showToast("Gagal menghapus", "error"))
-  }
-
-  const EMOJIS = ["📗","📘","📙","📕","📒","📔","📓","📃","📄"]
+  const del = c => setConfirm({
+    title: 'Hapus Kategori', message: `Yakin hapus "${c.name}"?`,
+    onConfirm: async () => { await deleteCategory(c.category_id); toast('Dihapus'); setConfirm(null); load() },
+  })
 
   return (
-    <div className="anim-slide">
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-        <h2 style={{ fontFamily:"'Fredoka One',cursive", fontSize:26, color:C.grape }}>🏷️ Kategori Buku</h2>
-        <Btn color={C.grape} onClick={openAdd}>+ Tambah Kategori</Btn>
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Kategori Buku</h1>
+          <p className="page-sub">{cats.length} kategori terdaftar</p>
+        </div>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => { setModal('add'); setForm({ name: '', description: '' }) }}>
+            + Tambah Kategori
+          </button>
+        )}
       </div>
-      {loading ? <Spinner /> : cats.length === 0 ? <Empty emoji="🏷️" text="Belum ada kategori" /> : (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:16 }}>
-          {cats.map((c,i) => (
-            <Card key={c.category_id} accent={C.grape}>
-              <div style={{ fontSize:36, marginBottom:12 }}>{EMOJIS[i%EMOJIS.length]}</div>
-              <h3 style={{ fontWeight:800, fontSize:17, marginBottom:6 }}>{c.name}</h3>
-              <p style={{ color:C.muted, fontSize:13, marginBottom:16, minHeight:40 }}>{c.description||"Tidak ada deskripsi"}</p>
-              <div style={{ display:"flex", gap:8 }}>
-                <Btn small color={C.grape} onClick={() => openEdit(c)}>✏️ Edit</Btn>
-                <Btn small danger onClick={() => del(c.category_id)}>🗑️</Btn>
-              </div>
-            </Card>
-          ))}
+
+      {loading ? <Spinner /> : cats.length === 0 ? <Empty icon="🏷️" title="Belum ada kategori" /> : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr><th>Nama</th><th>Deskripsi</th>{isAdmin && <th style={{ width: 120 }}>Aksi</th>}</tr>
+            </thead>
+            <tbody>
+              {cats.map(c => (
+                <tr key={c.category_id}>
+                  <td style={{ fontWeight: 600 }}>{c.name}</td>
+                  <td style={{ color: 'var(--c-text2)' }}>{c.description || '—'}</td>
+                  {isAdmin && (
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setModal(c); setForm({ name: c.name, description: c.description || '' }) }}>Edit</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => del(c)}>Hapus</button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-      {showModal && (
-        <Modal title={editing ? "Edit Kategori" : "Tambah Kategori"} onClose={() => setShowModal(false)} accent={C.grape}>
-          <Field label="Nama Kategori *">
-            <Input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="misal: Fiksi, Sains…" />
-          </Field>
-          <Field label="Deskripsi">
-            <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} rows={3}
-              style={{ width:"100%", padding:"10px 14px", borderRadius:12, border:`2px solid ${C.cream}`, background:C.cream, fontSize:14, resize:"vertical", fontFamily:"inherit" }} />
-          </Field>
-          <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
-            <Btn outline color={C.muted} onClick={() => setShowModal(false)}>Batal</Btn>
-            <Btn color={C.grape} onClick={save}>💾 Simpan</Btn>
-          </div>
+
+      {modal && (
+        <Modal title={modal === 'add' ? 'Tambah Kategori' : 'Edit Kategori'} onClose={() => setModal(null)} size="sm"
+          footer={<><button className="btn btn-ghost" onClick={() => setModal(null)}>Batal</button><button className="btn btn-primary" onClick={save}>Simpan</button></>}>
+          <Field label="Nama *"><Input value={form.name} onChange={f('name')} placeholder="misal: Fiksi, Sains…" /></Field>
+          <Field label="Deskripsi" optional><Textarea value={form.description} onChange={f('description')} rows={3} /></Field>
         </Modal>
       )}
+      {confirm && <Confirm {...confirm} danger onCancel={() => setConfirm(null)} />}
     </div>
   )
 }
 
 // ══════════════════════════════════════════════════════════════
-//  HALAMAN — Transaksi
+//  GENRES
 // ══════════════════════════════════════════════════════════════
-function TransactionsPage({ showToast }) {
-  const [trxs, setTrxs]         = useState([])
-  const [total, setTotal]        = useState(0)
-  const [statusF, setStatusF]    = useState("")
-  const [loading, setLoading]    = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [users, setUsers]        = useState([])
-  const [books, setBooks]        = useState([])
-  const [form, setForm]          = useState({ user_id:"", book_id:"", due_date:"" })
+function GenresPage({ isAdmin, toast }) {
+  const [genres, setGenres]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal]     = useState(null)
+  const [form, setForm]       = useState({ name: '', description: '' })
+  const [confirm, setConfirm] = useState(null)
+
+  const load = () => { setLoading(true); fetchGenres().then(d => { setGenres(d); setLoading(false) }) }
+  useEffect(() => { load() }, [])
+  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }))
+
+  const save = async () => {
+    if (modal === 'add') { await createGenre(form); toast('Genre ditambahkan') }
+    else { await updateGenre(modal.genre_id, form); toast('Genre diperbarui') }
+    setModal(null); setForm({ name: '', description: '' }); load()
+  }
+
+  const del = g => setConfirm({
+    title: 'Hapus Genre', message: `Yakin hapus "${g.name}"?`,
+    onConfirm: async () => { await deleteGenre(g.genre_id); toast('Dihapus'); setConfirm(null); load() },
+  })
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Genre Buku</h1>
+          <p className="page-sub">{genres.length} genre terdaftar</p>
+        </div>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => { setModal('add'); setForm({ name: '', description: '' }) }}>
+            + Tambah Genre
+          </button>
+        )}
+      </div>
+
+      {loading ? <Spinner /> : genres.length === 0 ? <Empty icon="🎭" title="Belum ada genre" /> : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead><tr><th>Nama</th><th>Deskripsi</th>{isAdmin && <th style={{ width: 120 }}>Aksi</th>}</tr></thead>
+            <tbody>
+              {genres.map(g => (
+                <tr key={g.genre_id}>
+                  <td style={{ fontWeight: 600 }}>{g.name}</td>
+                  <td style={{ color: 'var(--c-text2)' }}>{g.description || '—'}</td>
+                  {isAdmin && (
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setModal(g); setForm({ name: g.name, description: g.description || '' }) }}>Edit</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => del(g)}>Hapus</button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modal && (
+        <Modal title={modal === 'add' ? 'Tambah Genre' : 'Edit Genre'} onClose={() => setModal(null)} size="sm"
+          footer={<><button className="btn btn-ghost" onClick={() => setModal(null)}>Batal</button><button className="btn btn-primary" onClick={save}>Simpan</button></>}>
+          <Field label="Nama *"><Input value={form.name} onChange={f('name')} placeholder="misal: Horor, Romance…" /></Field>
+          <Field label="Deskripsi" optional><Textarea value={form.description} onChange={f('description')} rows={3} /></Field>
+        </Modal>
+      )}
+      {confirm && <Confirm {...confirm} danger onCancel={() => setConfirm(null)} />}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TRANSACTIONS
+// ══════════════════════════════════════════════════════════════
+function TransactionsPage({ user, toast }) {
+  const isAdmin = user?.role === 'admin'
+  const [trxs, setTrxs]        = useState([])
+  const [total, setTotal]       = useState(0)
+  const [statusF, setStatusF]   = useState('')
+  const [loading, setLoading]   = useState(true)
+  const [modal, setModal]       = useState(false)
+  const [users, setUsers]       = useState([])
+  const [bookList, setBookList] = useState([])
+  const [form, setForm]         = useState({ user_id: '', book_id: '', due_date: '' })
+  const [confirm, setConfirm]   = useState(null)
 
   const load = useCallback(() => {
     setLoading(true)
-    fetchTransactions(statusF).then(d => { setTrxs(d.transactions||[]); setTotal(d.total||0); setLoading(false) })
+    fetchTransactions(statusF).then(d => { setTrxs(d.transactions || []); setTotal(d.total || 0); setLoading(false) })
   }, [statusF])
 
-  useEffect(() => { fetchUsers().then(d=>setUsers(Array.isArray(d)?d:[])); fetchBooks("",200).then(d=>setBooks(d.books||[])) }, [])
+  useEffect(() => {
+    fetchUsers().then(d => setUsers(Array.isArray(d) ? d : []))
+    fetchBooks('', 200).then(d => setBookList(d.books || []))
+  }, [])
   useEffect(() => { load() }, [load])
 
-  const borrow = () => {
-    borrowBook(form)
-      .then(() => { showToast("Peminjaman berhasil!"); setShowModal(false); load() })
-      .catch(e => showToast(e.message, "error"))
-  }
+  const doAction = (action, id, label) => setConfirm({
+    title: label, message: `Konfirmasi ${label.toLowerCase()} transaksi #${id}?`,
+    onConfirm: async () => { await action(id); toast(`${label} berhasil`); setConfirm(null); load() },
+  })
 
-  const doReturn = (id) => {
-    if (!confirm("Konfirmasi pengembalian buku ini?")) return
-    returnBook(id)
-      .then(d => { showToast(d.status==="overdue" ? "⚠️ Terlambat! Denda otomatis dibuat." : "Buku dikembalikan!", d.status==="overdue"?"error":"success"); load() })
-      .catch(e => showToast(e.message, "error"))
-  }
+  const STATUS_TABS = [
+    { v: '', l: 'Semua' }, { v: 'pending', l: 'Menunggu' }, { v: 'borrowed', l: 'Dipinjam' },
+    { v: 'returned', l: 'Dikembalikan' }, { v: 'overdue', l: 'Terlambat' }, { v: 'rejected', l: 'Ditolak' },
+  ]
 
   return (
-    <div className="anim-slide">
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-        <h2 style={{ fontFamily:"'Fredoka One',cursive", fontSize:26, color:C.mint }}>🔄 Transaksi Peminjaman</h2>
-        <Btn color={C.mint} onClick={() => { setForm({ user_id:"", book_id:"", due_date:"" }); setShowModal(true) }}>+ Pinjam Buku</Btn>
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Transaksi Peminjaman</h1>
+          <p className="page-sub">{total} transaksi total</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setModal(true)}>+ Ajukan Pinjam</button>
       </div>
-      <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {["","borrowed","returned","overdue","lost"].map(s => (
-          <button key={s} onClick={() => setStatusF(s)} style={{
-            padding:"7px 16px", borderRadius:99, fontWeight:700, fontSize:13,
-            border:`2px solid ${s===""?C.dark:(statusColor[s]||C.dark)}`,
-            background: statusF===s ? (s===""?C.dark:(statusColor[s]||C.dark)) : "transparent",
-            color: statusF===s ? "#fff" : (s===""?C.dark:(statusColor[s]||C.dark)),
-            cursor:"pointer", fontFamily:"inherit",
-          }}>
-            {s===""?"Semua":(statusLabel[s]||s)}
-          </button>
+
+      <div className="filter-pills" style={{ marginBottom: 20 }}>
+        {STATUS_TABS.map(s => (
+          <button key={s.v} className={`filter-pill${statusF === s.v ? ' active' : ''}`}
+            onClick={() => setStatusF(s.v)}>{s.l}</button>
         ))}
       </div>
-      <p style={{ color:C.muted, fontSize:13, marginBottom:16 }}>Total: {total} transaksi</p>
-      {loading ? <Spinner /> : trxs.length===0 ? <Empty emoji="📋" text="Belum ada transaksi" /> : (
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          {trxs.map(t => (
-            <Card key={t.transaction_id} style={{ borderLeft:`4px solid ${statusColor[t.status]||C.muted}` }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8 }}>
-                <div>
-                  <Badge color={statusColor[t.status]||C.muted}>{statusLabel[t.status]||t.status}</Badge>
-                  <div style={{ marginTop:8, fontSize:13, color:C.muted, display:"flex", flexDirection:"column", gap:2 }}>
-                    <span>👤 User: <code style={{ fontSize:11 }}>{t.user_id.slice(0,8)}…</code></span>
-                    <span>📖 Buku: <code style={{ fontSize:11 }}>{t.book_id.slice(0,8)}…</code></span>
-                    <span>📅 Pinjam: {fmtDate(t.borrow_date)}</span>
-                    <span>⏰ Jatuh tempo: {fmtDate(t.due_date)}</span>
-                    {t.return_date && <span>✅ Dikembalikan: {fmtDate(t.return_date)}</span>}
-                  </div>
-                </div>
-                {t.status==="borrowed" && <Btn small color={C.mint} onClick={() => doReturn(t.transaction_id)}>↩️ Kembalikan</Btn>}
-              </div>
-            </Card>
-          ))}
+
+      {loading ? <Spinner /> : trxs.length === 0 ? <Empty icon="📋" title="Tidak ada transaksi" /> : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>User</th><th>Buku</th>
+                <th>Pinjam</th><th>Jatuh Tempo</th><th>Kembali</th>
+                <th>Status</th>{isAdmin && <th>Aksi</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {trxs.map(t => {
+                const b = trxBadge[t.status] || { cls: 'badge-slate', label: t.status }
+                return (
+                  <tr key={t.transaction_id}>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--c-text3)' }}>{t.transaction_id}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{t.user_id}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{t.book_id}</td>
+                    <td style={{ fontSize: 12, color: 'var(--c-text2)' }}>{fmtDate(t.borrow_date)}</td>
+                    <td style={{ fontSize: 12, color: 'var(--c-text2)' }}>{fmtDate(t.due_date)}</td>
+                    <td style={{ fontSize: 12, color: 'var(--c-text2)' }}>{t.return_date ? fmtDate(t.return_date) : '—'}</td>
+                    <td><span className={`badge ${b.cls}`}>{b.label}</span></td>
+                    {isAdmin && (
+                      <td>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {t.status === 'pending' && (
+                            <>
+                              <button className="btn btn-primary btn-sm" onClick={() => doAction(approveTransaction, t.transaction_id, 'Setujui')}>Setujui</button>
+                              <button className="btn btn-danger btn-sm"  onClick={() => doAction(rejectTransaction,  t.transaction_id, 'Tolak')}>Tolak</button>
+                            </>
+                          )}
+                          {t.status === 'borrowed' && (
+                            <button className="btn btn-secondary btn-sm" onClick={() => doAction(returnBook, t.transaction_id, 'Kembalikan')}>Kembalikan</button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-      {showModal && (
-        <Modal title="Pinjam Buku" onClose={() => setShowModal(false)} accent={C.mint}>
-          <Field label="Pilih Pengguna *">
-            <Select value={form.user_id} onChange={e=>setForm(p=>({...p,user_id:e.target.value}))}>
-              <option value="">-- Pilih pengguna --</option>
-              {users.map(u => <option key={u.user_id} value={u.user_id}>{u.full_name} ({u.email})</option>)}
+
+      {modal && (
+        <Modal title="Ajukan Peminjaman" onClose={() => setModal(false)} size="sm"
+          footer={<><button className="btn btn-ghost" onClick={() => setModal(false)}>Batal</button><button className="btn btn-primary" onClick={async () => { await borrowBook(form); toast('Pengajuan dikirim'); setModal(false); load() }}>Ajukan</button></>}>
+          <div className="alert alert-info" style={{ marginBottom: 16 }}>
+            Pengajuan akan berstatus <strong>Menunggu</strong> hingga admin menyetujui.
+          </div>
+          <Field label="Pengguna *">
+            <Select value={form.user_id} onChange={e => setForm(p => ({ ...p, user_id: e.target.value }))}>
+              <option value="">Pilih pengguna…</option>
+              {users.map(u => <option key={u.user_id} value={u.user_id}>{u.full_name} — {u.email}</option>)}
             </Select>
           </Field>
-          <Field label="Pilih Buku *">
-            <Select value={form.book_id} onChange={e=>setForm(p=>({...p,book_id:e.target.value}))}>
-              <option value="">-- Pilih buku --</option>
-              {books.filter(b=>b.available_stock>0).map(b => <option key={b.book_id} value={b.book_id}>{b.title} (stok: {b.available_stock})</option>)}
+          <Field label="Buku *">
+            <Select value={form.book_id} onChange={e => setForm(p => ({ ...p, book_id: e.target.value }))}>
+              <option value="">Pilih buku…</option>
+              {bookList.filter(b => b.available_stock > 0).map(b => <option key={b.book_id} value={b.book_id}>{b.title} (stok: {b.available_stock})</option>)}
             </Select>
           </Field>
           <Field label="Tanggal Jatuh Tempo *">
-            <Input type="date" value={form.due_date} onChange={e=>setForm(p=>({...p,due_date:e.target.value}))} />
+            <Input type="date" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))} />
           </Field>
-          <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
-            <Btn outline color={C.muted} onClick={() => setShowModal(false)}>Batal</Btn>
-            <Btn color={C.mint} onClick={borrow}>📚 Pinjam</Btn>
-          </div>
         </Modal>
       )}
+      {confirm && <Confirm {...confirm} onCancel={() => setConfirm(null)} />}
     </div>
   )
 }
 
 // ══════════════════════════════════════════════════════════════
-//  HALAMAN — Denda
+//  FINES
 // ══════════════════════════════════════════════════════════════
-function FinesPage({ showToast }) {
-  const [fines, setFines]   = useState([])
-  const [total, setTotal]   = useState(0)
-  const [paidF, setPaidF]   = useState(null)
-  const [loading, setLoading] = useState(true)
+function FinesPage({ user, toast }) {
+  const isAdmin = user?.role === 'admin'
+  const [fines, setFines]           = useState([])
+  const [total, setTotal]           = useState(0)
+  const [statusF, setStatusF]       = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [proofModal, setProofModal] = useState(null)
+  const [proofUrl, setProofUrl]     = useState('')
+  const [rejectModal, setRejectModal] = useState(null)
+  const [rejectNote, setRejectNote] = useState('')
 
   const load = useCallback(() => {
     setLoading(true)
-    fetchFines(paidF).then(d => { setFines(d.fines||[]); setTotal(d.total||0); setLoading(false) })
-  }, [paidF])
-
+    fetchFines(statusF).then(d => { setFines(d.fines || []); setTotal(d.total || 0); setLoading(false) })
+  }, [statusF])
   useEffect(() => { load() }, [load])
 
-  const pay = id => {
-    if (!confirm("Tandai denda ini sebagai lunas?")) return
-    payFine(id).then(() => { showToast("Denda ditandai lunas! 🎉"); load() }).catch(() => showToast("Gagal", "error"))
-  }
+  const totalUnpaid = fines.filter(f => f.status === 'unpaid').reduce((a, f) => a + f.amount, 0)
 
-  const totalUnpaid = fines.filter(f=>!f.is_paid).reduce((a,f)=>a+f.amount, 0)
+  const TABS = [
+    { v: null, l: 'Semua' }, { v: 'unpaid', l: 'Belum Bayar' },
+    { v: 'pending_verification', l: 'Verifikasi' }, { v: 'paid', l: 'Lunas' }, { v: 'rejected', l: 'Ditolak' },
+  ]
 
   return (
-    <div className="anim-slide">
-      <h2 style={{ fontFamily:"'Fredoka One',cursive", fontSize:26, color:C.coral, marginBottom:20 }}>💰 Denda Keterlambatan</h2>
-      <div style={{ background:`linear-gradient(135deg,${C.coral}22,${C.peach}22)`, border:`2px solid ${C.coral}30`, borderRadius:16, padding:"16px 20px", marginBottom:20, display:"flex", gap:24, flexWrap:"wrap" }}>
-        <div><div style={{ fontSize:11, color:C.muted, fontWeight:700 }}>BELUM LUNAS</div><div style={{ fontSize:24, fontWeight:800, color:C.coral }}>{fmt(totalUnpaid)}</div></div>
-        <div><div style={{ fontSize:11, color:C.muted, fontWeight:700 }}>TOTAL DENDA</div><div style={{ fontSize:24, fontWeight:800 }}>{total}</div></div>
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Denda Keterlambatan</h1>
+          <p className="page-sub">{total} denda tercatat</p>
+        </div>
       </div>
-      <div style={{ display:"flex", gap:8, marginBottom:20 }}>
-        {[{v:null,l:"Semua"},{v:false,l:"⏳ Belum Lunas"},{v:true,l:"✅ Lunas"}].map(opt => (
-          <button key={String(opt.v)} onClick={() => setPaidF(opt.v)} style={{
-            padding:"7px 16px", borderRadius:99, fontWeight:700, fontSize:13, cursor:"pointer",
-            border:`2px solid ${C.coral}`,
-            background: paidF===opt.v ? C.coral : "transparent",
-            color: paidF===opt.v ? "#fff" : C.coral,
-            fontFamily:"inherit",
-          }}>{opt.l}</button>
+
+      <div className="fine-banner">
+        <div><div className="fine-banner-val" style={{ color: 'var(--c-red)' }}>{fmt(totalUnpaid)}</div><div className="fine-banner-lbl">Belum Bayar</div></div>
+        <div><div className="fine-banner-val">{fines.filter(f => f.status === 'paid').length}</div><div className="fine-banner-lbl">Lunas</div></div>
+        <div><div className="fine-banner-val">{fines.filter(f => f.status === 'pending_verification').length}</div><div className="fine-banner-lbl">Verifikasi</div></div>
+        <div><div className="fine-banner-val">{total}</div><div className="fine-banner-lbl">Total</div></div>
+      </div>
+
+      <div className="filter-pills" style={{ marginBottom: 20 }}>
+        {TABS.map(s => (
+          <button key={String(s.v)} className={`filter-pill${statusF === s.v ? ' active' : ''}`}
+            onClick={() => setStatusF(s.v)}>{s.l}</button>
         ))}
       </div>
-      {loading ? <Spinner /> : fines.length===0 ? <Empty emoji="🎉" text="Tidak ada denda!" /> : (
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {fines.map(f => (
-            <Card key={f.fine_id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderLeft:`4px solid ${f.is_paid?C.mint:C.coral}`, flexWrap:"wrap", gap:12 }}>
-              <div>
-                <Badge color={f.is_paid?C.mint:C.coral}>{f.is_paid?"✅ Lunas":"⏳ Belum Lunas"}</Badge>
-                <div style={{ marginTop:8, fontSize:13, color:C.muted }}>
-                  <div>📋 Transaksi: <code style={{ fontSize:11 }}>{f.transaction_id.slice(0,8)}…</code></div>
-                </div>
-              </div>
-              <div style={{ textAlign:"right" }}>
-                <div style={{ fontWeight:800, fontSize:22, color:f.is_paid?C.mint:C.coral }}>{fmt(f.amount)}</div>
-                {!f.is_paid && <Btn small color={C.mint} onClick={() => pay(f.fine_id)} style={{ marginTop:8 }}>💳 Bayar</Btn>}
-              </div>
-            </Card>
-          ))}
+
+      {loading ? <Spinner /> : fines.length === 0 ? <Empty icon="🎉" title="Tidak ada denda!" /> : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead><tr><th>ID</th><th>Transaksi</th><th>Jumlah</th><th>Status</th><th>Bukti</th><th>Catatan</th><th>Aksi</th></tr></thead>
+            <tbody>
+              {fines.map(f => {
+                const fb = fineBadge[f.status] || { cls: 'badge-slate', label: f.status }
+                return (
+                  <tr key={f.fine_id}>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--c-text3)' }}>{f.fine_id}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{f.transaction_id}</td>
+                    <td style={{ fontWeight: 700 }}>{fmt(f.amount)}</td>
+                    <td><span className={`badge ${fb.cls}`}>{fb.label}</span></td>
+                    <td>{f.payment_proof_url ? <a href={f.payment_proof_url} target="_blank" rel="noreferrer" style={{ color: 'var(--c-accent)', fontSize: 12 }}>Lihat</a> : <span style={{ color: 'var(--c-text3)', fontSize: 12 }}>—</span>}</td>
+                    <td style={{ fontSize: 12, color: 'var(--c-red)', maxWidth: 160 }}>{f.rejection_note || '—'}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {!isAdmin && (f.status === 'unpaid' || f.status === 'rejected') && (
+                          <button className="btn btn-primary btn-sm" onClick={() => { setProofModal(f); setProofUrl('') }}>Bayar</button>
+                        )}
+                        {isAdmin && f.status === 'pending_verification' && (
+                          <>
+                            <button className="btn btn-primary btn-sm" onClick={async () => { await approveFine(f.fine_id); toast('Denda lunas'); load() }}>Lunas</button>
+                            <button className="btn btn-danger btn-sm"  onClick={() => { setRejectModal(f); setRejectNote('') }}>Tolak</button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
+      )}
+
+      {proofModal && (
+        <Modal title="Kirim Bukti Pembayaran" onClose={() => setProofModal(null)} size="sm"
+          footer={<><button className="btn btn-ghost" onClick={() => setProofModal(null)}>Batal</button><button className="btn btn-primary" onClick={async () => { await submitFinePayment(proofModal.fine_id, proofUrl.trim()); toast('Bukti dikirim'); setProofModal(null); load() }} disabled={!proofUrl.trim()}>Kirim</button></>}>
+          <div className="alert alert-info" style={{ marginBottom: 16 }}>Denda: <strong>{fmt(proofModal.amount)}</strong></div>
+          <Field label="URL Bukti Transfer *" hint="Upload ke Google Drive / Imgur, paste link di sini">
+            <Input value={proofUrl} onChange={e => setProofUrl(e.target.value)} placeholder="https://drive.google.com/…" />
+          </Field>
+        </Modal>
+      )}
+
+      {rejectModal && (
+        <Modal title="Tolak Bukti Pembayaran" onClose={() => setRejectModal(null)} size="sm"
+          footer={<><button className="btn btn-ghost" onClick={() => setRejectModal(null)}>Batal</button><button className="btn btn-danger" onClick={async () => { await rejectFine(rejectModal.fine_id, rejectNote.trim()); toast('Ditolak'); setRejectModal(null); load() }} disabled={!rejectNote.trim()}>Tolak</button></>}>
+          <Field label="Alasan Penolakan *">
+            <Textarea value={rejectNote} onChange={e => setRejectNote(e.target.value)} rows={3} placeholder="misal: foto buram, nominal kurang…" />
+          </Field>
+        </Modal>
       )}
     </div>
   )
 }
 
 // ══════════════════════════════════════════════════════════════
-//  HALAMAN — Pengguna
+//  USERS
 // ══════════════════════════════════════════════════════════════
-function UsersPage({ showToast }) {
-  const [users, setUsers]       = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [form, setForm]         = useState({ full_name:"", email:"", password:"", role:"member" })
+function UsersPage({ toast }) {
+  const [users, setUsers]     = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal]     = useState(false)
+  const [form, setForm]       = useState({ full_name: '', email: '', password: '', role: 'member' })
+  const [pwErrs, setPwErrs]   = useState([])
+  const [confirm, setConfirm] = useState(null)
 
-  const load = () => { setLoading(true); fetchUsers().then(d => { setUsers(Array.isArray(d)?d:[]); setLoading(false) }) }
+  const load = () => { setLoading(true); fetchUsers().then(d => { setUsers(Array.isArray(d) ? d : []); setLoading(false) }) }
   useEffect(() => { load() }, [])
 
-  const save = () => {
-    createUser(form)
-      .then(() => { showToast("Pengguna ditambahkan!"); setShowModal(false); load() })
-      .catch(e => showToast(e.message, "error"))
+  const f = k => e => {
+    const v = e.target.value
+    setForm(p => ({ ...p, [k]: v }))
+    if (k === 'password') setPwErrs(v ? validatePassword(v) : [])
+  }
+  const strength = pwStrength(form.password)
+
+  const save = async () => {
+    const e = validatePassword(form.password)
+    if (e.length) { setPwErrs(e); return }
+    await createUser(form); toast('Pengguna ditambahkan'); setModal(false); load()
   }
 
-  const roleColor = { admin: C.coral, member: C.sky }
-  const f = k => e => setForm(p=>({...p,[k]:e.target.value}))
+  const del = u => setConfirm({
+    title: 'Hapus Pengguna', message: `Yakin hapus "${u.full_name}"?`,
+    onConfirm: async () => { await deleteUser(u.user_id); toast('Dihapus'); setConfirm(null); load() },
+  })
 
   return (
-    <div className="anim-slide">
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-        <h2 style={{ fontFamily:"'Fredoka One',cursive", fontSize:26, color:C.peach }}>👥 Pengguna</h2>
-        <Btn color={C.peach} onClick={() => { setForm({ full_name:"", email:"", password:"", role:"member" }); setShowModal(true) }}>+ Tambah Pengguna</Btn>
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Manajemen Pengguna</h1>
+          <p className="page-sub">{users.length} pengguna terdaftar</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => { setModal(true); setForm({ full_name: '', email: '', password: '', role: 'member' }); setPwErrs([]) }}>
+          + Tambah Pengguna
+        </button>
       </div>
-      {loading ? <Spinner /> : users.length===0 ? <Empty emoji="👤" text="Belum ada pengguna" /> : (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:16 }}>
-          {users.map(u => (
-            <Card key={u.user_id} accent={roleColor[u.role]||C.peach}>
-              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
-                <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg,${C.peach},${C.coral})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, color:"#fff", fontWeight:800 }}>
-                  {u.full_name[0]}
-                </div>
-                <div>
-                  <div style={{ fontWeight:800, fontSize:15 }}>{u.full_name}</div>
-                  <div style={{ fontSize:12, color:C.muted }}>{u.email}</div>
-                </div>
-              </div>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <Badge color={roleColor[u.role]||C.peach}>{u.role==="admin"?"👑 Admin":"👤 Member"}</Badge>
-                <span style={{ fontSize:11, color:C.muted }}>{fmtDate(u.created_at)}</span>
-              </div>
-            </Card>
-          ))}
+
+      {loading ? <Spinner /> : users.length === 0 ? <Empty icon="👤" title="Belum ada pengguna" /> : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Bergabung</th><th style={{ width: 80 }}>Aksi</th></tr></thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.user_id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div className="avatar avatar-md">{u.full_name?.[0]}</div>
+                      <span style={{ fontWeight: 600 }}>{u.full_name}</span>
+                    </div>
+                  </td>
+                  <td style={{ color: 'var(--c-text2)' }}>{u.email}</td>
+                  <td><span className={`badge ${u.role === 'admin' ? 'badge-blue' : 'badge-slate'}`}>{u.role === 'admin' ? 'Admin' : 'Member'}</span></td>
+                  <td style={{ color: 'var(--c-text3)', fontSize: 12 }}>{fmtDate(u.created_at)}</td>
+                  <td><button className="btn btn-danger btn-sm" onClick={() => del(u)}>Hapus</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-      {showModal && (
-        <Modal title="Tambah Pengguna" onClose={() => setShowModal(false)} accent={C.peach}>
-          <Field label="Nama Lengkap *"><Input value={form.full_name} onChange={f("full_name")} placeholder="Nama pengguna" /></Field>
-          <Field label="Email *"><Input type="email" value={form.email} onChange={f("email")} placeholder="email@example.com" /></Field>
-          <Field label="Password *"><Input type="password" value={form.password} onChange={f("password")} placeholder="Min. 8 karakter" /></Field>
-          <Field label="Role"><Select value={form.role} onChange={f("role")}><option value="member">👤 Member</option><option value="admin">👑 Admin</option></Select></Field>
-          <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
-            <Btn outline color={C.muted} onClick={() => setShowModal(false)}>Batal</Btn>
-            <Btn color={C.peach} onClick={save}>💾 Simpan</Btn>
-          </div>
+
+      {modal && (
+        <Modal title="Tambah Pengguna" onClose={() => setModal(false)} size="sm"
+          footer={<><button className="btn btn-ghost" onClick={() => setModal(false)}>Batal</button><button className="btn btn-primary" onClick={save} disabled={pwErrs.length > 0 && form.password.length > 0}>Simpan</button></>}>
+          <Field label="Nama Lengkap *"><Input value={form.full_name} onChange={f('full_name')} placeholder="Nama lengkap" /></Field>
+          <Field label="Email *"><Input type="email" value={form.email} onChange={f('email')} placeholder="email@student.itk.ac.id" /></Field>
+          <Field label="Password *" hint="Min. 8 karakter, huruf besar+kecil+angka+spesial">
+            <Input type="password" value={form.password} onChange={f('password')} />
+            {form.password && (
+              <div style={{ marginTop: 6 }}>
+                <div className="pw-bars">
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} className="pw-bar" style={{ background: i <= strength.score ? strength.color : undefined }} />
+                  ))}
+                </div>
+                <span className="pw-label" style={{ color: strength.color }}>{strength.label}</span>
+              </div>
+            )}
+            {pwErrs.map(e => <span key={e} style={{ display: 'block', fontSize: 11, color: 'var(--c-red)', fontWeight: 600 }}>• {e}</span>)}
+          </Field>
+          <Field label="Role">
+            <Select value={form.role} onChange={f('role')}>
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </Select>
+          </Field>
         </Modal>
       )}
+      {confirm && <Confirm {...confirm} danger onCancel={() => setConfirm(null)} />}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PROFILE
+// ══════════════════════════════════════════════════════════════
+function ProfilePage({ user }) {
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Profil Saya</h1>
+          <p className="page-sub">Informasi akun Anda</p>
+        </div>
+      </div>
+
+      <div className="card" style={{ maxWidth: 560 }}>
+        <div className="profile-header">
+          <div className="avatar avatar-lg">{user?.full_name?.[0]?.toUpperCase()}</div>
+          <div>
+            <div className="profile-name">{user?.full_name}</div>
+            <span className={`badge ${user?.role === 'admin' ? 'badge-blue' : 'badge-slate'}`}>
+              {user?.role === 'admin' ? 'Administrator' : 'Member'}
+            </span>
+          </div>
+        </div>
+
+        <div className="profile-grid">
+          {[
+            ['Nama Lengkap', user?.full_name, false],
+            ['Email', user?.email, false],
+            ['Role', user?.role === 'admin' ? 'Administrator' : 'Member', false],
+            ['ID Pengguna', user?.user_id, true],
+          ].map(([label, val, mono]) => (
+            <div key={label}>
+              <div className="profile-lbl">{label}</div>
+              <div className="profile-val" style={mono ? { fontFamily: 'monospace', fontSize: 13 } : {}}>{val ?? '—'}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--c-border)', background: 'var(--c-bg)', borderRadius: '0 0 var(--r-lg) var(--r-lg)' }}>
+          <p style={{ fontSize: 12, color: 'var(--c-text3)' }}>Untuk mengubah data profil, hubungi administrator sistem.</p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -511,36 +971,94 @@ function UsersPage({ showToast }) {
 //  ROOT APP
 // ══════════════════════════════════════════════════════════════
 export default function App() {
-  injectCSS()
-  const [page, setPage]   = useState("dashboard")
-  const [toast, setToast] = useState(null)
+  const [page, setPage]               = useState('home')
+  const [user, setUser]               = useState(null)
+  const [authChecked, setAuthChecked] = useState(false)
+  const { toasts, toast }             = useToast()  // ← dari hooks/useToast.js
 
-  const showToast = useCallback((msg, type = "success") => {
-    setToast({ msg, type })
+  // Cek token saat mount
+  useEffect(() => {
+    const t = token.get()
+    if (t) {
+      getMe()
+        .then(u => { setUser(u); setAuthChecked(true) })
+        .catch(() => { token.remove(); setAuthChecked(true) })
+    } else {
+      setAuthChecked(true)
+    }
   }, [])
 
+  const handleLogin  = useCallback(u => { setUser(u); setPage(u.role === 'admin' ? 'dashboard' : 'home') }, [])
+  const handleLogout = useCallback(() => { logout(); setUser(null); setPage('home'); toast('Berhasil keluar', 'info') }, [toast])
+  const nav          = useCallback(p => setPage(p), [])
+
+  // Loading awal
+  if (!authChecked) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--c-slate9)' }}>
+      <Spinner text="Memeriksa sesi…" />
+    </div>
+  )
+
+  // Halaman login
+  if (page === 'login' && !user) return (
+    <><LoginPage onLogin={handleLogin} toast={toast} /><ToastContainer toasts={toasts} /></>
+  )
+
+  const isAdmin = user?.role === 'admin'
+
+  // Route guard
+  const safePage = (() => {
+    if (['dashboard', 'users'].includes(page) && !isAdmin) return 'home'
+    if (['transactions', 'fines', 'profile'].includes(page) && !user) return 'login'
+    return page
+  })()
+
+  if (safePage === 'login') return (
+    <><LoginPage onLogin={handleLogin} toast={toast} /><ToastContainer toasts={toasts} /></>
+  )
+
   const PAGES = {
-    dashboard:    <Dashboard        showToast={showToast} />,
-    books:        <BooksPage        showToast={showToast} />,
-    categories:   <CategoriesPage   showToast={showToast} />,
-    transactions: <TransactionsPage showToast={showToast} />,
-    fines:        <FinesPage        showToast={showToast} />,
-    users:        <UsersPage        showToast={showToast} />,
+    home:         <HomePage         user={user}   onNav={nav} toast={toast} />,
+    books:        isAdmin ? <BooksAdminPage toast={toast} /> : <HomePage user={user} onNav={nav} toast={toast} />,
+    categories:   <CategoriesPage   isAdmin={isAdmin} toast={toast} />,
+    genres:       <GenresPage       isAdmin={isAdmin} toast={toast} />,
+    transactions: <TransactionsPage user={user}   toast={toast} />,
+    fines:        <FinesPage        user={user}   toast={toast} />,
+    users:        <UsersPage        toast={toast} />,
+    dashboard:    <DashboardPage    toast={toast} />,
+    profile:      <ProfilePage      user={user} />,
   }
 
+  // ── Admin layout (sidebar kiri) ──────────────────────────────
+  if (isAdmin) return (
+    <>
+      <div className="layout-side">
+        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} />
+        <main className="layout-side-main">
+          <div className="layout-side-inner">
+            {PAGES[safePage] || PAGES.dashboard}
+          </div>
+        </main>
+      </div>
+      <ToastContainer toasts={toasts} />
+    </>
+  )
+
+  // ── Guest / Member layout (topnav atas) ──────────────────────
   return (
-    <div style={{ display:"flex", minHeight:"100vh" }}>
-
-      {/* Header = Sidebar navigasi (sesuai modul 3: Header.jsx) */}
-      <Header currentPage={page} onNavigate={setPage} />
-
-      {/* Main content */}
-      <main style={{ flex:1, padding:"32px 32px 48px", overflowY:"auto" }}>
-        {PAGES[page] || PAGES.dashboard}
-      </main>
-
-      {/* Toast notifikasi */}
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-    </div>
+    <>
+      <div className="layout-top">
+        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} />
+        {safePage === 'home' || safePage === 'books'
+          ? PAGES[safePage]
+          : (
+            <div className="layout-top-content">
+              {PAGES[safePage] || PAGES.home}
+            </div>
+          )
+        }
+      </div>
+      <ToastContainer toasts={toasts} />
+    </>
   )
 }

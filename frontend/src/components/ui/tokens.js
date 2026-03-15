@@ -1,41 +1,45 @@
-// ============================================================
-// components/ui/tokens.js — Design tokens bersama
-// Warna, formatter, dan konstanta visual
-// ============================================================
-
-export const C = {
-  sun:   "#FFD93D",
-  coral: "#FF6B6B",
-  mint:  "#6BCB77",
-  sky:   "#4D96FF",
-  grape: "#C77DFF",
-  peach: "#FFB347",
-  cream: "#FFF8F0",
-  dark:  "#1A1A2E",
-  card:  "#FFFFFF",
-  muted: "#6B7280",
+export const trxBadge = {
+  pending:  { cls: 'badge-amber', label: 'Menunggu'     },
+  borrowed: { cls: 'badge-blue',  label: 'Dipinjam'     },
+  returned: { cls: 'badge-green', label: 'Dikembalikan' },
+  overdue:  { cls: 'badge-red',   label: 'Terlambat'    },
+  rejected: { cls: 'badge-slate', label: 'Ditolak'      },
+  lost:     { cls: 'badge-slate', label: 'Hilang'       },
 }
 
-export const statusColor = {
-  borrowed: C.sky,
-  returned: C.mint,
-  overdue:  C.coral,
-  lost:     C.muted,
-}
-
-export const statusLabel = {
-  borrowed: "📚 Dipinjam",
-  returned: "✅ Dikembalikan",
-  overdue:  "⚠️ Terlambat",
-  lost:     "❌ Hilang",
+export const fineBadge = {
+  unpaid:               { cls: 'badge-red',   label: 'Belum Dibayar'       },
+  pending_verification: { cls: 'badge-amber', label: 'Menunggu Verifikasi' },
+  paid:                 { cls: 'badge-green', label: 'Lunas'               },
+  rejected:             { cls: 'badge-slate', label: 'Bukti Ditolak'       },
 }
 
 export const fmt = (n) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency", currency: "IDR", maximumFractionDigits: 0,
-  }).format(n)
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 
 export const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString("id-ID", {
-    day: "2-digit", month: "short", year: "numeric",
-  }) : "-"
+  d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+
+export function validatePassword(pw) {
+  const e = []
+  if (pw.length < 8)         e.push('Minimal 8 karakter')
+  if (!/[A-Z]/.test(pw))     e.push('Minimal 1 huruf besar')
+  if (!/[a-z]/.test(pw))     e.push('Minimal 1 huruf kecil')
+  if (!/\d/.test(pw))        e.push('Minimal 1 angka')
+  if (!/[@$!%*?&]/.test(pw)) e.push('Minimal 1 karakter spesial (@$!%*?&)')
+  return e
+}
+
+export function pwStrength(pw) {
+  if (!pw) return { score: 0, label: '', color: '' }
+  const score = 5 - validatePassword(pw).length
+  const map = [
+    { label: '',             color: '' },
+    { label: 'Sangat lemah', color: '#ef4444' },
+    { label: 'Lemah',        color: '#f97316' },
+    { label: 'Cukup',        color: '#f59e0b' },
+    { label: 'Kuat',         color: '#22c55e' },
+    { label: 'Sangat kuat',  color: '#16a34a' },
+  ]
+  return { score, ...map[score] }
+}
