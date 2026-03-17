@@ -527,14 +527,18 @@ def get_transactions(
     skip: int = 0,
     limit: int = 20,
     status: Optional[str] = None,
+    user_id: Optional[int] = None,
 ) -> dict:
     """
     Ambil daftar transaksi dengan filter opsional berdasarkan status.
+    Jika user_id diberikan, hanya kembalikan transaksi milik user tersebut (untuk member).
     Status: 'pending' | 'borrowed' | 'returned' | 'overdue' | 'rejected' | 'lost'
     """
     query = db.query(Transaction)
     if status:
         query = query.filter(Transaction.status == status)
+    if user_id is not None:
+        query = query.filter(Transaction.user_id == user_id)
     total = query.count()
     trxs  = query.offset(skip).limit(limit).all()
     return {"total": total, "transactions": trxs}
@@ -558,14 +562,18 @@ def get_fines(
     skip: int = 0,
     limit: int = 50,
     status_filter: Optional[str] = None,
+    user_id: Optional[int] = None,
 ) -> dict:
     """
     Ambil daftar denda.
     Filter opsional: status (unpaid, pending_verification, paid, rejected).
+    Jika user_id diberikan, hanya kembalikan denda milik user tersebut (untuk member).
     """
-    query = db.query(Fine)
+    query = db.query(Fine).join(Transaction, Fine.transaction_id == Transaction.transaction_id)
     if status_filter is not None:
         query = query.filter(Fine.status == status_filter)
+    if user_id is not None:
+        query = query.filter(Transaction.user_id == user_id)
     total = query.count()
     fines = query.offset(skip).limit(limit).all()
     return {"total": total, "fines": fines}

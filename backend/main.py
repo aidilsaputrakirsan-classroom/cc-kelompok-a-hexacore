@@ -153,7 +153,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user:
         raise HTTPException(status_code=401, detail="Email atau password salah")
 
-    token = create_access_token(data={"sub": user.user_id})
+    token = create_access_token(data={"sub": str(user.user_id)})
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -375,15 +375,17 @@ def list_users(
     skip:  int = Query(0,  ge=0,       description="Offset pagination"),
     limit: int = Query(50, ge=1, le=200, description="Jumlah data"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_admin_user),
 ):
-    """Ambil daftar semua user."""
+    """Ambil daftar semua user. **Hanya Admin.**"""
     return crud.get_users(db=db, skip=skip, limit=limit)
 
 
 @app.get("/users/{user_id}", response_model=UserResponse, tags=["Users"])
 def get_user_detail(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Ambil detail satu user berdasarkan ID."""
+    """Ambil detail user. Admin bisa lihat siapa saja; Member hanya bisa lihat profilnya sendiri."""
+    if current_user.role != "admin" and current_user.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Akses ditolak: Anda hanya dapat melihat profil Anda sendiri")
     user = crud.get_user(db=db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
@@ -428,10 +430,16 @@ def borrow_book(data: TransactionCreate, db: Session = Depends(get_db), current_
     Ajukan peminjaman buku (status awal: 'pending').
 
     Business rules:
+    - Member hanya dapat mengajukan peminjaman atas nama dirinya sendiri
     - Stok tersedia harus > 0
     - Stok belum dikurangi — menunggu persetujuan admin
     - Gunakan `PUT /transactions/{id}/approve` untuk menyetujui
     """
+    if current_user.role != "admin" and data.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Akses ditolak: Member hanya dapat mengajukan peminjaman atas nama dirinya sendiri",
+        )
     try:
         trx = crud.create_transaction(db=db, data=data)
     except ValueError as e:
@@ -489,18 +497,21 @@ def list_transactions(
     limit:  int        = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
     status: str | None = Query(None,             description="Filter status: pending | borrowed | returned | overdue | rejected | lost"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Ambil daftar transaksi, opsional filter berdasarkan status."""
-    return crud.get_transactions(db=db, skip=skip, limit=limit, status=status)
+    """Ambil daftar transaksi. Admin melihat semua; Member hanya melihat transaksi miliknya."""
+    user_id_filter = None if current_user.role == "admin" else current_user.user_id
+    return crud.get_transactions(db=db, skip=skip, limit=limit, status=status, user_id=user_id_filter)
 
 
 @app.get("/transactions/{transaction_id}", response_model=TransactionResponse, tags=["Transactions"])
 def get_transaction_detail(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Ambil detail satu transaksi berdasarkan ID."""
+    """Ambil detail transaksi. Admin bisa lihat semua; Member hanya bisa lihat miliknya."""
     trx = crud.get_transaction(db=db, transaction_id=transaction_id)
     if not trx:
         raise HTTPException(status_code=404, detail=f"Transaksi id={transaction_id} tidak ditemukan")
+    if current_user.role != "admin" and trx.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Akses ditolak: Anda hanya dapat melihat transaksi milik Anda sendiri")
     return trx
 
 
@@ -533,18 +544,22 @@ def list_fines(
     limit:         int        = Query(50,   ge=1, le=200, description="Jumlah data"),
     status_filter: str | None = Query(None,             description="Filter: unpaid | pending_verification | paid | rejected"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Ambil daftar denda keterlambatan, opsional filter berdasarkan status lunas."""
-    return crud.get_fines(db=db, skip=skip, limit=limit, status_filter=status_filter)
+    """Ambil daftar denda. Admin melihat semua denda; Member hanya melihat denda miliknya."""
+    user_id_filter = None if current_user.role == "admin" else current_user.user_id
+    return crud.get_fines(db=db, skip=skip, limit=limit, status_filter=status_filter, user_id=user_id_filter)
 
 
 @app.post("/fines/{fine_id}/submit-payment", response_model=FineResponse, tags=["Fines"])
 def submit_fine_payment_endpoint(fine_id: int, data: FinePaymentSubmit, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Member mengirimkan file bukti pembayaran denda."""
-    fine = crud.submit_fine_payment(db=db, fine_id=fine_id, proof_url=data.payment_proof_url)
+    """Member mengirimkan bukti pembayaran denda miliknya. Admin dapat submit untuk denda siapa saja."""
+    fine = crud.get_fine(db=db, fine_id=fine_id)
     if not fine:
         raise HTTPException(status_code=404, detail=f"Denda id={fine_id} tidak ditemukan")
+    if current_user.role != "admin" and fine.transaction.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Akses ditolak: Anda hanya dapat membayar denda milik Anda sendiri")
+    fine = crud.submit_fine_payment(db=db, fine_id=fine_id, proof_url=data.payment_proof_url)
     return fine
 
 

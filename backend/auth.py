@@ -4,6 +4,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -17,7 +18,7 @@ load_dotenv()
 # Konfigurasi dari environment variables
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key-for-development")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -53,10 +54,16 @@ def decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token sudah kadaluarsa, silakan login kembali",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token tidak valid atau sudah expired",
+            detail="Token tidak valid",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -72,7 +79,7 @@ def get_current_user(
     Gunakan di endpoint yang butuh autentikasi.
     """
     payload = decode_token(token)
-    user_id: Optional[int] = payload.get("sub")
+    user_id: Optional[int] = int(payload.get("sub")) if payload.get("sub") is not None else None
 
     if user_id is None:
         raise HTTPException(
