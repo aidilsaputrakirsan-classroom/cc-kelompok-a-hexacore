@@ -417,8 +417,11 @@ def approve_transaction(db: Session, transaction_id: int) -> Optional[Transactio
         return None   # Hanya bisa approve yang masih pending
 
     book = get_book(db, trx.book_id)
-    if not book or book.available_stock <= 0:
-        return None   # Stok habis saat akan diapprove
+    if not book:
+        return None  # Buku hilang/dihapus (kasus sangat jarang)
+
+    if book.available_stock <= 0:
+        raise ValueError("Stok buku ini sudah habis — tidak dapat disetujui")
 
     # Kurangi stok baru setelah diapprove
     book.available_stock -= 1

@@ -2,7 +2,8 @@ import os
 from dotenv import load_dotenv
 
 import uuid
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -44,6 +45,13 @@ app = FastAPI(
     version="0.4.0",
 )
 
+# ==================== STATIC FILES ====================
+# Pastikan folder static/fines ada
+os.makedirs("static/fines", exist_ok=True)
+
+# Mount folder static agar bisa diakses via URL /static
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # ==================== CORS ====================
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
 origins_list = [o.strip() for o in allowed_origins.split(",") if o.strip()]
@@ -55,6 +63,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ============================================================
+# UPLOAD (HELPER)
+# ============================================================
+
+@app.post("/upload/fines", tags=["Upload"])
+async def upload_fine_proof(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """
+    Upload bukti pembayaran denda (Image only).
+    File akan disimpan di folder 'static/fines'.
+    Return: URL file yang bisa diakses publik.
+    """
+    # Validasi tipe file (hanya gambar)
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File harus berupa gambar (jpg, png, jpeg)")
+
+    # Buat nama file unik agar tidak tertimpa
+    file_ext = file.filename.split(".")[-1]
+    unique_filename = f"{uuid.uuid4()}.{file_ext}"
+    file_path = f"static/fines/{unique_filename}"
+
+    # Simpan file ke disk
+    try:
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal menyimpan file: {str(e)}")
+
+    # Kembalikan URL lengkap (sesuaikan dengan domain/IP server nanti)
+    # Untuk local dev & docker, path relatif '/static/...' sudah cukup jika frontend pintar handle base URL,
+    # tapi agar aman kita kembalikan path absolut dari root server.
+    return {"url": f"/static/fines/{unique_filename}"}
 
 
 # ============================================================
@@ -411,7 +453,11 @@ def approve_transaction_admin(transaction_id: int, db: Session = Depends(get_db)
     - Stok buku otomatis berkurang 1 setelah disetujui
     - Hanya transaksi berstatus 'pending' yang bisa di-approve
     """
-    trx = crud.approve_transaction(db=db, transaction_id=transaction_id)
+    try:
+        trx = crud.approve_transaction(db=db, transaction_id=transaction_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     if not trx:
         raise HTTPException(
             status_code=404,
