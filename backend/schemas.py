@@ -220,10 +220,10 @@ class TransactionCreate(BaseModel):
     """
     Schema untuk mengajukan peminjaman buku.
     Status awal otomatis 'pending' — menunggu verifikasi admin.
+    Tanggal jatuh tempo (due_date) dihitung otomatis oleh sistem (7 hari).
     """
     user_id  : int
     book_id  : int
-    due_date : datetime = Field(..., examples=["2026-03-18T00:00:00+08:00"])
 
 
 class TransactionUpdate(BaseModel):

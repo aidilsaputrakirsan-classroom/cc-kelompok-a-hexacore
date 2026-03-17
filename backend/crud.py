@@ -1,5 +1,5 @@
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from sqlalchemy import or_
@@ -375,11 +375,16 @@ def create_transaction(db: Session, data: TransactionCreate) -> Optional[Transac
     if book.available_stock <= 0:
         return None   # Caller akan raise HTTP 400
 
+    # Hitung due_date otomatis (7 hari dari sekarang)
+    borrow_date = datetime.now(timezone.utc)
+    due_date = borrow_date + timedelta(days=7)
+
     # Buat transaksi berstatus pending (stok belum berkurang)
     trx = Transaction(
         user_id  = data.user_id,
         book_id  = data.book_id,
-        due_date = data.due_date,
+        borrow_date = borrow_date,
+        due_date = due_date,
         status   = "pending",
     )
     db.add(trx)
