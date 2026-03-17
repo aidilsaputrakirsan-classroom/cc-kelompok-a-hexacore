@@ -36,7 +36,11 @@ function GenreChips({ genres, selected, onChange }) {
 function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) {
   const [form, setForm]       = useState(EMPTY)
   const [loading, setLoading] = useState(false)
-  const [isbnErr, setIsbnErr] = useState('')
+  const [errors, setErrors]   = useState({})   // validasi per-field
+
+  // Bug fix: isEdit harus dideklarasikan di level komponen,
+  // bukan di dalam JSX setelah handleSave — supaya handleSave bisa pakai
+  const isEdit = Boolean(editingItem)
 
   useEffect(() => {
     if (!isOpen) return
@@ -55,15 +59,25 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
     } else {
       setForm(EMPTY)
     }
-    setIsbnErr('')
+    setErrors({})
   }, [editingItem, isOpen])
 
-  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }))
+  const f = k => e => { setForm(p => ({ ...p, [k]: e.target.value })); setErrors(p => ({ ...p, [k]: '' })) }
 
   const handleSave = async () => {
-    if (!isEdit && form.isbn.trim() && form.isbn.trim().length < 10) {
-      setIsbnErr('ISBN minimal 10 karakter'); return
-    }
+    // Validasi field wajib
+    const e = {}
+    if (!form.title.trim())           e.title      = 'Judul wajib diisi'
+    if (!form.author.trim())          e.author     = 'Pengarang wajib diisi'
+    if (!form.category_id)            e.category_id = 'Kategori wajib dipilih'
+    if (!isEdit && form.isbn.trim() && form.isbn.trim().length < 10)
+                                      e.isbn       = 'ISBN minimal 10 karakter'
+    if (Number(form.total_stock) < 1) e.total_stock = 'Minimal 1'
+    if (Number(form.available_stock) > Number(form.total_stock))
+                                      e.available_stock = 'Tidak boleh melebihi total stok'
+
+    if (Object.keys(e).length) { setErrors(e); return }
+
     setLoading(true)
     try {
       const base = {
@@ -79,11 +93,15 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
       }
       await onSave(isEdit ? base : { ...base, isbn: form.isbn.trim() || null }, editingItem?.book_id ?? null)
       onClose()
-    } finally { setLoading(false) }
+    } catch (err) {
+      // Tampilkan error dari backend di atas form
+      setErrors({ _submit: err.message || 'Gagal menyimpan buku' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!isOpen) return null
-  const isEdit = Boolean(editingItem)
 
   return (
     <Modal
@@ -99,6 +117,13 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
         </>
       }
     >
+      {/* Error dari backend */}
+      {errors._submit && (
+        <div className="alert alert-error" style={{ marginBottom: 16 }}>
+          {errors._submit}
+        </div>
+      )}
+
       {isEdit ? (
         <div className="isbn-info">
           <span style={{ color: 'var(--c-text3)' }}>🔒</span>
@@ -111,31 +136,45 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
           </div>
         </div>
       ) : (
-        <Field label="ISBN" optional hint="Min. 10 karakter — contoh: 978-602-03-3446-5" error={isbnErr}>
-          <Input value={form.isbn} onChange={e => { f('isbn')(e); setIsbnErr('') }} placeholder="978-xxx-xxx-xxx-x" error={isbnErr} />
+        <Field label="ISBN" optional hint="Min. 10 karakter — contoh: 978-602-03-3446-5" error={errors.isbn}>
+          <Input value={form.isbn} onChange={e => { f('isbn')(e) }} placeholder="978-xxx-xxx-xxx-x" error={errors.isbn} />
         </Field>
       )}
 
       <div className="form-row">
-        <Field label="Judul *"><Input value={form.title} onChange={f('title')} placeholder="Judul buku" /></Field>
-        <Field label="Pengarang *"><Input value={form.author} onChange={f('author')} placeholder="Nama pengarang" /></Field>
+        <Field label="Judul *" error={errors.title}>
+          <Input value={form.title} onChange={f('title')} placeholder="Judul buku" error={errors.title}
+            onKeyDown={e => { if (e.key === 'Enter') handleSave() }} />
+        </Field>
+        <Field label="Pengarang *" error={errors.author}>
+          <Input value={form.author} onChange={f('author')} placeholder="Nama pengarang" error={errors.author}
+            onKeyDown={e => { if (e.key === 'Enter') handleSave() }} />
+        </Field>
       </div>
 
       <div className="form-row">
-        <Field label="Penerbit" optional><Input value={form.publisher} onChange={f('publisher')} placeholder="Nama penerbit" /></Field>
-        <Field label="Tahun Terbit" optional><Input value={form.publication_year} onChange={f('publication_year')} type="number" placeholder="2024" /></Field>
+        <Field label="Penerbit" optional>
+          <Input value={form.publisher} onChange={f('publisher')} placeholder="Nama penerbit" />
+        </Field>
+        <Field label="Tahun Terbit" optional>
+          <Input value={form.publication_year} onChange={f('publication_year')} type="number" placeholder="2024" />
+        </Field>
       </div>
 
       <div className="form-row">
-        <Field label="Kategori *">
-          <Select value={form.category_id} onChange={f('category_id')}>
+        <Field label="Kategori *" error={errors.category_id}>
+          <Select value={form.category_id} onChange={f('category_id')} error={errors.category_id}>
             <option value="">Pilih kategori…</option>
             {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
           </Select>
         </Field>
         <div className="form-row" style={{ gap: 8 }}>
-          <Field label="Total Stok"><Input value={form.total_stock} onChange={f('total_stock')} type="number" min="1" /></Field>
-          <Field label="Tersedia"><Input value={form.available_stock} onChange={f('available_stock')} type="number" min="0" /></Field>
+          <Field label="Total Stok" error={errors.total_stock}>
+            <Input value={form.total_stock} onChange={f('total_stock')} type="number" min="1" error={errors.total_stock} />
+          </Field>
+          <Field label="Tersedia" error={errors.available_stock}>
+            <Input value={form.available_stock} onChange={f('available_stock')} type="number" min="0" error={errors.available_stock} />
+          </Field>
         </div>
       </div>
 

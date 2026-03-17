@@ -4,18 +4,16 @@
 // Sidebar → Admin
 // ============================================================
 
+// Poin 2: kategori+genre sudah digabung di HomePage — cukup satu link 'Beranda'
 const GUEST_LINKS = [
-  { id: 'home',       label: 'Beranda'  },
-  { id: 'categories', label: 'Kategori' },
-  { id: 'genres',     label: 'Genre'    },
+  { id: 'home', label: 'Beranda' },
 ]
 
 const MEMBER_LINKS = [
   { id: 'home',         label: 'Beranda'   },
-  { id: 'categories',   label: 'Kategori'  },
-  { id: 'genres',       label: 'Genre'     },
   { id: 'transactions', label: 'Transaksi' },
   { id: 'fines',        label: 'Denda'     },
+  { id: 'profile',      label: 'Profil'    },
 ]
 
 const ADMIN_GROUPS = [
@@ -81,8 +79,8 @@ function TopNav({ page, onNav, user, onLogout }) {
           </>
         ) : (
           <>
-            <button className="btn btn-ghost btn-sm" onClick={() => onNav('login')}>Masuk</button>
-            <button className="btn btn-primary btn-sm" onClick={() => onNav('login')}>Daftar</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => onNav('login', { tab: 'login' })}>Masuk</button>
+            <button className="btn btn-primary btn-sm" onClick={() => onNav('login', { tab: 'register' })}>Daftar</button>
           </>
         )}
       </div>
