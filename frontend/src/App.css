@@ -397,7 +397,19 @@ button { cursor: pointer; }
 
 .hero-search-btn:hover { background: var(--c-accent2); }
 
-.cat-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+.cat-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin-top: 16px;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cat-chips::-webkit-scrollbar { display: none; }
+
+.cat-chip { flex-shrink: 0; }
 
 .cat-chip {
   padding: 6px 16px;
@@ -490,7 +502,82 @@ button { cursor: pointer; }
 .cat-chip.genre { border-color: #5EEAD4; color: #0F766E; }
 .cat-chip.genre:hover  { background: #F0FDFA; border-color: #0D9488; }
 .cat-chip.genre.active { background: #0D9488; border-color: #0D9488; color: #fff; }
-/* ── Search field dropdown ── */
+/* ================================================================
+   BOOK SELECT + BORROW CART (Member beranda)
+   ================================================================ */
+.book-select-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.6);
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--t);
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.book-select-btn:hover:not(:disabled) {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  transform: scale(1.1);
+}
+
+.book-select-btn.selected {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+}
+
+.book-select-btn:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+}
+
+.borrow-cart {
+  position: sticky;
+  top: calc(var(--topnav-h) + 52px);
+  z-index: 89;
+  background: var(--c-accent2);
+  color: #fff;
+  border-radius: var(--r-lg);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(59,130,246,.3);
+  flex-wrap: wrap;
+}
+
+.borrow-cart-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.borrow-cart-count {
+  background: rgba(255,255,255,.25);
+  border-radius: 99px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ================================================================
+   BOOK DETAIL MODAL (override ukuran)
+   ================================================================ */
+.modal-lg { max-width: 560px !important; }
 .hero-search-field {
   background: transparent;
   border: none;
@@ -804,7 +891,7 @@ textarea.input      { resize: vertical; min-height: 72px; }
    TOAST
    ================================================================ */
 /* ── Poin 6: Toast di kanan ATAS ── */
-.toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast-container { position: fixed; top: calc(var(--topnav-h) + 12px); right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 
 .toast {
   display: flex; align-items: center; gap: 10px;

@@ -1,20 +1,11 @@
 // ============================================================
 // src/hooks/useBooks.js
-// Custom hook untuk fetch buku dari API
+// Fetch buku dari API — public endpoint, tidak butuh token
 // ============================================================
 import { useState, useEffect, useCallback } from 'react'
 import { fetchBooks } from '../services/api'
 
-/**
- * useBooks — hook untuk memuat daftar buku dari API
- *
- * - Jika API error atau DB kosong → tampilkan empty state (books = [])
- * - `reload` bisa dipanggil manual setelah operasi CRUD
- *
- * @param {string} search - kata kunci pencarian (reactive)
- * @returns {{ books, total, loading, error, reload }}
- */
-export function useBooks(search) {
+export function useBooks(search = '') {
   const [books, setBooks]     = useState([])
   const [total, setTotal]     = useState(0)
   const [loading, setLoading] = useState(true)
@@ -30,9 +21,9 @@ export function useBooks(search) {
         setLoading(false)
       })
       .catch(err => {
+        setError(err.message)
         setBooks([])
         setTotal(0)
-        setError(err.message || 'Gagal memuat data buku')
         setLoading(false)
       })
   }, [search])
