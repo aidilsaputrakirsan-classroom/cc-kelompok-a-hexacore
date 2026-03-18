@@ -241,6 +241,10 @@ class TransactionResponse(BaseModel):
     return_date    : Optional[datetime]
     status         : str   # pending | borrowed | returned | overdue | rejected | lost
 
+    # Relasi Objek (Agar Frontend bisa akses trx.book.title & trx.user.full_name)
+    book           : Optional[BookResponse] = None
+    user           : Optional[UserResponse] = None
+
     class Config:
         from_attributes = True
 
