@@ -354,18 +354,28 @@ def create_transaction(db: Session, data: TransactionCreate) -> Optional[Transac
 
     Business rules:
     1. Validasi user dan buku ada
-    2. Cek available_stock > 0 — jika habis, return None
-    3. Stok BELUM dikurangi (menunggu persetujuan admin)
-    4. Buat transaksi dengan status 'pending'
+    2. Cek denda: Tolak jika user punya denda belum lunas (unpaid/pending/rejected)
+    3. Cek available_stock > 0 — jika habis, return None
+    4. Stok BELUM dikurangi (menunggu persetujuan admin)
+    5. Buat transaksi dengan status 'pending'
 
     Return:
     - Transaction berstatus 'pending' jika berhasil
     - None jika stok habis
-    - Raise ValueError jika user/buku tidak ditemukan
+    - Raise ValueError jika user/buku tidak ditemukan atau ada denda
     """
     user = get_user(db, data.user_id)
     if not user:
         raise ValueError(f"User id={data.user_id} tidak ditemukan")
+
+    # VALIDASI BARU: Blokir jika punya denda belum lunas
+    unpaid_fine = db.query(Fine).join(Transaction).filter(
+        Transaction.user_id == data.user_id,
+        Fine.status.in_(["unpaid", "pending_verification", "rejected"])
+    ).first()
+    
+    if unpaid_fine:
+        raise ValueError("Gagal meminjam: Anda masih memiliki denda yang belum dilunasi. Harap lunasi denda Anda terlebih dahulu.")
 
     book = get_book(db, data.book_id)
     if not book:

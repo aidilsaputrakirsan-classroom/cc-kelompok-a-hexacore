@@ -443,7 +443,7 @@ def borrow_book(data: TransactionCreate, db: Session = Depends(get_db), current_
     try:
         trx = crud.create_transaction(db=db, data=data)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
     if trx is None:
         raise HTTPException(
