@@ -420,6 +420,27 @@ def admin_reset_password(user_id: int, data: AdminResetPasswordRequest, db: Sess
         raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
     return updated
 
+@app.post("/transactions/{transaction_id}/simulate-overdue", response_model=TransactionResponse, tags=["Testing"])
+def simulate_overdue_admin(
+    transaction_id: int,
+    days_late: int = Query(3, description="Berapa hari telatnya?"),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user),
+):
+    """
+    [TESTING ONLY] Simulasi buku terlambat dikembalikan.
+    Mengubah due_date menjadi masa lalu.
+    Setelah dipanggil, lakukan proses Return (PUT /transactions/return) untuk melihat denda muncul.
+    """
+    try:
+        trx = crud.simulate_overdue(db, transaction_id, days_late)
+        if not trx:
+            raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
+        return trx
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # ============================================================
 # TRANSACTIONS (BORROW & RETURN)
 # ============================================================
@@ -516,20 +537,35 @@ def get_transaction_detail(transaction_id: int, db: Session = Depends(get_db), c
 
 
 @app.put("/transactions/{transaction_id}/return", response_model=TransactionResponse, tags=["Transactions"])
-def return_book_endpoint(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
+def return_book_endpoint(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Kembalikan buku (borrowed → returned/overdue).
+    - Admin: Bisa mengembalikan buku siapa saja.
+    - Member: Hanya bisa mengembalikan buku miliknya sendiri.
 
     Business rules:
     - `available_stock` buku otomatis bertambah 1
     - Jika terlambat: status → `overdue`, denda dibuat otomatis (Rp 1.000/hari)
     - Jika tepat waktu: status → `returned`
     """
+    # 1. Cek dulu transaksinya ada atau tidak
+    trx_check = crud.get_transaction(db=db, transaction_id=transaction_id)
+    if not trx_check:
+        raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
+
+    # 2. Validasi Hak Akses (Member vs Admin)
+    if current_user.role != "admin" and trx_check.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="Akses ditolak: Anda hanya bisa mengembalikan buku yang Anda pinjam sendiri"
+        )
+
+    # 3. Proses Return
     trx = crud.return_book(db=db, transaction_id=transaction_id)
     if not trx:
         raise HTTPException(
-            status_code=404,
-            detail=f"Transaksi id={transaction_id} tidak ditemukan atau tidak berstatus 'borrowed'",
+            status_code=400, # Bad Request karena statusnya mungkin bukan 'borrowed'
+            detail=f"Transaksi id={transaction_id} tidak berstatus 'borrowed' (mungkin sudah dikembalikan atau masih pending)",
         )
     return trx
 

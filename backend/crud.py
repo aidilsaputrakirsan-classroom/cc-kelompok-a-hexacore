@@ -404,6 +404,30 @@ def create_transaction(db: Session, data: TransactionCreate) -> Optional[Transac
 
 
 # ============================================================
+# TESTING HELPER: TIME TRAVEL (Simulasi Terlambat)
+# ============================================================
+
+def simulate_overdue(db: Session, transaction_id: int, days_late: int = 3) -> Optional[Transaction]:
+    """
+    HANYA UNTUK TESTING: Memundurkan due_date ke masa lalu agar saat
+    buku di-return, sistem mendeteksi keterlambatan dan membuat denda.
+    """
+    trx = get_transaction(db, transaction_id)
+    if not trx:
+        return None
+    if trx.status != "borrowed":
+        raise ValueError("Hanya transaksi 'borrowed' yang bisa disimulasikan telat")
+    
+    # Mundurkan due_date ke (hari ini - days_late)
+    now = datetime.now(timezone.utc)
+    trx.due_date = now - timedelta(days=days_late)
+    
+    db.commit()
+    db.refresh(trx)
+    return trx
+
+
+# ============================================================
 # BUSINESS LOGIC: TRANSACTION — APPROVE (Admin)
 # ============================================================
 
