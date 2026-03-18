@@ -53,19 +53,20 @@ Prasyarat
 - Node.js 18+
 - Git
 
-Setup.sh
-```
-./setup.sh
-```
+Kami telah menyediakan panduan langkah-demi-langkah yang lengkap untuk menjalankan proyek ini di berbagai perangkat.
 
-Backend
+👉 BACA DI SINI: [Panduan Instalasi & Setup Lengkap](docs/setup-guide.md)
+
+#### Quick Start :
+- Automated Setup: `./setup.sh`
+- Backend
 ```
 cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Frontend
+- Frontend
 ```
 cd frontend
 npm install
@@ -276,6 +277,7 @@ Berikut adalah daftar *endpoint* beserta bukti pengujian menggunakan Swagger/Thu
 
 _Sources:_ [docs/api-test-results.md](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/blob/main/docs/api-test-results.md) | [setup.sh](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/blob/main/setup.sh)
 
-## 🧪 Hasil Pengujian (UI & API)
+## 🧪 Hasil Pengujian (UI & API) & Panduan
 * [Laporan Pengujian API (Swagger) - Modul 2](docs/api-test-results.md)
 * [Laporan Pengujian UI (React) - Modul 3](docs/ui-test-results.md)
+* [Panduan Konfigurasi Environment - Modul 4](docs/setup-guide.md)
