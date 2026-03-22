@@ -98,37 +98,41 @@ Access
 ```
 CC-KELOMPOK-A-HEXACORE/
 ├── backend/
+│   ├── static/              ← Baru (bukti upload pembayaran)
 │   ├── crud.py              ← Updated
-│   ├── database.py          
-│   ├── main.py
+│   ├── database.py
+│   ├── main.py              ← Updated
 │   ├── models.py            ← Updated
-│   ├── requirements.txt     ← Updated
-│   ├── schemas.py           
+│   ├── requirements.txt     
+│   ├── schemas.py           ← Updated
 │   ├── .env                 
-│   └── .env.example         ← Update
+│   └── .env.example         
 ├── docs/ 
 │   ├── test/                ← Update
+│   ├── api-documentation.md ← Baru
 │   ├── api-test-results.md   
 │   ├── schemadatabase.md    
-│   ├── schemadatabase.md    ← Baru
+│   ├── schemadatabase.md    
 │   ├── member-aqila.md
 │   ├── member-Khanza_Nabila_Tsabita.md
 │   ├── member-Maulana_Malik_Ibrahim.md
 │   ├── member-Micka_Mayulia_Utama.md
+│   ├── setup-guide.md      ← Baru
+│   ├── ui-test-result.md
 ├── frontend/  
 │   ├── frontend/
 │   ├── node_modules/
 │   ├── public/    
 │   └── src/                ← Update
-│        ├── App.jsx                  ← Diupdate total
-│        ├── App.css                  ← Diupdate
-│        ├── main.jsx                 ← Tidak berubah
+│        ├── App.jsx                  ← Update
+│        ├── App.css                  ← Update
+│        ├── main.jsx                 ← Update
 │        └── components/
-│            ├── Header.jsx           ← Baru
-│            ├── SearchBar.jsx        ← Baru
-│            ├── ItemForm.jsx         ← Baru
-│            ├── ItemList.jsx         ← Baru
-│            └── ItemCard.jsx         ← Baru
+│            ├── Header.jsx           ← Update
+│            ├── SearchBar.jsx        ← Update
+│            ├── ItemForm.jsx         ← Update
+│            ├── ItemList.jsx         ← Update
+│            └── ItemCard.jsx         ← Update
 ├── .gitignore            
 ├── setup.sh                
 └── README.md
@@ -281,3 +285,4 @@ _Sources:_ [docs/api-test-results.md](https://github.com/aidilsaputrakirsan-clas
 * [Laporan Pengujian API (Swagger) - Modul 2](docs/api-test-results.md)
 * [Laporan Pengujian UI (React) - Modul 3](docs/ui-test-results.md)
 * [Panduan Konfigurasi Environment - Modul 4](docs/setup-guide.md)
+* [API Documentation - Modul 4](docs/api-documentation.md)

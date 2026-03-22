@@ -14,6 +14,12 @@ pip install -r requirements.txt
 # 4. Copy file environment
 cp .env.example .env
 
+echo "🚀 Starting frontend setup..."
+cd ../frontend
+npm install
+npm install recharts
+cp .env.example .env
+
 echo "✅ Setup complete!"
 echo "⚠️  Note: Sesuaikan DATABASE_URL di file .env dengan password PostgreSQL-mu dan buat database 'hexacore' di PostgreSQL. Jika belum, jalankan: psql -U postgres -c 'CREATE DATABASE hexacore;'"
 echo ""
