@@ -20,6 +20,7 @@ from auth import hash_password, verify_password
 # KONSTANTA
 # ============================================================
 FINE_PER_DAY = 1_000   # Rp 1.000 per hari keterlambatan
+LOST_BOOK_FINE = 100_000 # Rp 100.000 denda fix buku hilang
 
 
 # ============================================================
@@ -551,6 +552,55 @@ def return_book(db: Session, transaction_id: int) -> Optional[Transaction]:
     else:
         trx.status = "returned"
 
+    db.commit()
+    db.refresh(trx)
+    return trx
+
+
+# ============================================================
+# BUSINESS LOGIC: TRANSACTION (LOST BOOK)
+# ============================================================
+
+def report_book_lost(db: Session, transaction_id: int) -> Optional[Transaction]:
+    """
+    Proses pelaporan buku hilang (lost).
+
+    Business rules:
+    1. Cek transaksi ada dan statusnya 'borrowed' atau 'overdue'.
+    2. Ubah status transaksi menjadi 'lost'.
+    3. Kurangi total_stock buku sebanyak 1 (buku fisik lenyap).
+    4. Tambahkan denda:
+       - Jika belum ada denda, buat Fine baru senilai LOST_BOOK_FINE.
+       - Jika sudah ada denda (akibat overdue), tambahkan amount dengan LOST_BOOK_FINE.
+    """
+    trx = get_transaction(db, transaction_id)
+    if not trx:
+        return None
+    if trx.status not in ["borrowed", "overdue"]:
+        raise ValueError("Hanya buku yang sedang dipinjam (borrowed/overdue) yang bisa dilaporkan hilang.")
+    
+    # Kurangi total_stock buku karena buku fisik hilang permanen
+    book = get_book(db, trx.book_id)
+    if book and book.total_stock > 0:
+        book.total_stock -= 1
+        # Catatan: available_stock tidak ditambah karena bukunya tidak pernah kembali
+    
+    # Tambah / Buat denda
+    fine = db.query(Fine).filter(Fine.transaction_id == transaction_id).first()
+    if fine:
+        # Jika sebelumnya sudah overdue dan denda sudah terbentuk, tambahkan denda buku hilang
+        fine.amount += LOST_BOOK_FINE
+        fine.status = "unpaid"  # Pastikan reset ke unpaid jika member belum melunasi
+    else:
+        # Jika buku masih berstatus borrowed dan lapor hilang
+        fine = Fine(
+            transaction_id = trx.transaction_id,
+            amount         = LOST_BOOK_FINE,
+            status         = "unpaid",
+        )
+        db.add(fine)
+
+    trx.status = "lost"
     db.commit()
     db.refresh(trx)
     return trx

@@ -570,6 +570,40 @@ def return_book_endpoint(transaction_id: int, db: Session = Depends(get_db), cur
     return trx
 
 
+@app.post("/transactions/{transaction_id}/lost", response_model=TransactionResponse, tags=["Transactions"])
+def report_lost_book_endpoint(transaction_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Laporkan buku hilang (borrowed/overdue → lost).
+    - Member: Hanya bisa melaporkan buku miliknya sendiri yang sedang dipinjam.
+    - Admin: Bisa melaporkan buku siapa saja yang sedang dipinjam.
+
+    Business rules:
+    - Status transaksi menjadi 'lost'.
+    - Stok total (total_stock) buku dikurangi 1.
+    - Denda otomatis bertambah Rp 100.000 (Terakumulasi jika sudah ada denda keterlambatan).
+    """
+    trx_check = crud.get_transaction(db=db, transaction_id=transaction_id)
+    if not trx_check:
+        raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
+
+    if current_user.role != "admin" and trx_check.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="Akses ditolak: Anda hanya bisa melaporkan buku yang Anda pinjam sendiri"
+        )
+    
+    try:
+        trx = crud.report_book_lost(db=db, transaction_id=transaction_id)
+        if not trx:
+            raise HTTPException(
+                status_code=404,
+                detail="Transaksi tidak ditemukan"
+            )
+        return trx
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 # ============================================================
 # FINES (DENDA)
 # ============================================================
