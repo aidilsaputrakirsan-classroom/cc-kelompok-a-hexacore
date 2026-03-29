@@ -1,5 +1,5 @@
 // ============================================================
-// App.jsx — LenteraPustaka v0.4.0
+// App.jsx — LenteraPustaka v0.4.1
 // Pure CSS · No Tailwind · No injectCSS · Vite + React
 // Disinkronkan dengan backend/main.py
 // ============================================================
@@ -28,18 +28,18 @@ import {
 
 import {
   login, register, logout, getMe, token, userCache,
+  changePassword, updateMyProfile,
   fetchCategories, createCategory, updateCategory, deleteCategory,
   fetchGenres,     createGenre,    updateGenre,    deleteGenre,
   fetchBooks, fetchBookStats, createBook, updateBook, deleteBook,
-  fetchUsers,      createUser,     deleteUser,
-  fetchTransactions, borrowBook, approveTransaction, rejectTransaction, returnBook,
+  fetchUsers,      createUser,     deleteUser,     adminResetPassword,
+  fetchTransactions, borrowBook, approveTransaction, rejectTransaction, returnBook, reportBookLost,
   fetchFines, submitFinePayment, approveFine, rejectFine,
+  API_BASE,
 } from './services/api'
 
 // ══════════════════════════════════════════════════════════════
 //  LOGIN PAGE
-//  Poin 7: tombol ← kembali ke beranda
-//  Poin 8: prop initialTab agar bisa langsung buka tab 'register'
 // ══════════════════════════════════════════════════════════════
 function LoginPage({ onLogin, toast, initialTab = 'login', onBack }) {
   const [tab, setTab]         = useState(initialTab)
@@ -66,9 +66,7 @@ function LoginPage({ onLogin, toast, initialTab = 'login', onBack }) {
     try {
       if (tab === 'register') {
         await register({ email: form.email, password: form.password, full_name: form.full_name })
-        // Poin 6: toast di kanan atas setelah daftar berhasil
         toast('Akun berhasil dibuat! Sedang masuk…')
-        // Langsung login otomatis setelah daftar
         const data = await login(form.email, form.password)
         onLogin(data.user)
       } else {
@@ -105,7 +103,6 @@ function LoginPage({ onLogin, toast, initialTab = 'login', onBack }) {
           <h2 className="login-brand-title">LenteraPustaka</h2>
           <p className="login-brand-sub">HEXACORE · Institut Teknologi Kalimantan</p>
 
-          {/* Poin 7: tombol kembali ke beranda */}
           {onBack && (
             <button
               onClick={onBack}
@@ -160,20 +157,6 @@ function LoginPage({ onLogin, toast, initialTab = 'login', onBack }) {
             onClick={submit} disabled={loading}>
             {loading ? 'Memproses…' : tab === 'login' ? 'Masuk' : 'Buat Akun'}
           </button>
-
-          {/* Info cara login admin */}
-          {tab === 'login' && (
-            <div style={{ marginTop: 20, padding: '12px 14px', background: 'var(--c-accentbg)', borderRadius: 'var(--r-md)', border: '1px solid #BFDBFE' }}>
-              <p style={{ fontSize: 12, color: '#1D4ED8', fontWeight: 600, marginBottom: 6 }}>🔐 Akun Admin</p>
-              <p style={{ fontSize: 11.5, color: '#1e40af', lineHeight: 1.6, margin: 0 }}>
-                Buat akun admin via Swagger UI:<br />
-                <code style={{ background: '#dbeafe', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>
-                  localhost:8000/docs → POST /auth/register
-                </code><br />
-                Isi <code style={{ fontSize: 11 }}>role: "admin"</code> di body request.
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -192,7 +175,7 @@ function HomePage({ user, onNav, toast }) {
   const [cats, setCats]               = useState([])
   const [genres, setGenres]           = useState([])
   const [detailBook, setDetailBook]   = useState(null)
-  const [borrowModal, setBorrowModal] = useState(null)  // book object yang mau dipinjam
+  const [borrowModal, setBorrowModal] = useState(null)
   const [borrowing, setBorrowing]     = useState(false)
   const { books, loading, error }     = useBooks(search)
 
@@ -201,7 +184,6 @@ function HomePage({ user, onNav, toast }) {
     fetchGenres().then(d => setGenres(d || []))
   }, [])
 
-  // Filter client-side
   const filtered = books.filter(b => {
     if (filterCat   && b.category_id !== Number(filterCat))                              return false
     if (filterGenre && !b.genres?.some(g => g.genre_id === Number(filterGenre)))         return false
@@ -221,7 +203,6 @@ function HomePage({ user, onNav, toast }) {
   const clearFilter = () => { setFilterCat(''); setFilterGenre(''); setSearch(''); setInput('') }
   const hasFilter   = filterCat || filterGenre || search
 
-  // Submit pinjam 1 buku, due date otomatis 7 hari
   const doSubmitBorrow = async () => {
     if (!borrowModal) return
     setBorrowing(true)
@@ -234,8 +215,6 @@ function HomePage({ user, onNav, toast }) {
     } catch (err) { toast(err.message, 'error') }
     finally { setBorrowing(false) }
   }
-
-  const catName = (id) => cats.find(c => c.category_id === id)?.name || `Kategori #${id}`
 
   const sectionLabel = () => {
     if (filterCat)   return cats.find(c => c.category_id === Number(filterCat))?.name || 'Koleksi'
@@ -253,7 +232,6 @@ function HomePage({ user, onNav, toast }) {
           <h1 className="hero-title">Temukan Buku<br /><span>Favoritmu</span></h1>
           <p className="hero-sub">Koleksi lengkap buku perpustakaan digital. Cari, pinjam, dan nikmati bacaanmu.</p>
 
-          {/* Search bar — tanpa dropdown, plain input saja */}
           <div className="hero-search">
             <span className="hero-search-icon">⌕</span>
             <input
@@ -269,21 +247,12 @@ function HomePage({ user, onNav, toast }) {
             <button className="hero-search-btn" onClick={() => setSearch(inputVal)}>Cari</button>
           </div>
 
-          {/* Chips kategori di bawah search */}
-          {(cats.length > 0 || genres.length > 0) && (
+          {(genres.length > 0) && (
             <div className="cat-chips">
-              <button className={`cat-chip${!filterCat && !filterGenre ? ' active' : ''}`} onClick={clearFilter}>
+              <button className={`cat-chip${!filterGenre ? ' active' : ''}`} onClick={clearFilter}>
                 Semua
               </button>
-              {cats.map(c => (
-                <button key={c.category_id}
-                  className={`cat-chip${filterCat === String(c.category_id) ? ' active' : ''}`}
-                  onClick={() => { setFilterCat(filterCat === String(c.category_id) ? '' : String(c.category_id)); setFilterGenre('') }}>
-                  {c.name}
-                </button>
-              ))}
               {genres.length > 0 && <>
-                <span className="cat-section-label" style={{ color: '#5EEAD4' }}>Genre</span>
                 {genres.map(g => (
                   <button key={g.genre_id}
                     className={`cat-chip genre${filterGenre === String(g.genre_id) ? ' active' : ''}`}
@@ -319,6 +288,22 @@ function HomePage({ user, onNav, toast }) {
             </select>
           </div>
         </div>
+
+        {/* ── Keterangan ikon stok buku ── */}
+        <div className="stock-legend">
+          <span className="stock-legend-item">
+            <span className="stock-legend-badge ok">✓ 6+</span>
+            <span>Stok tersedia</span>
+          </span>
+          <span className="stock-legend-item">
+            <span className="stock-legend-badge low">⚠ 1–5</span>
+            <span>Stok menipis</span>
+          </span>
+          <span className="stock-legend-item">
+            <span className="stock-legend-badge out">Habis</span>
+            <span>Tidak tersedia</span>
+          </span>
+        </div>
       </div>
 
       {/* ── Book grid ─────────────────────────────────────────── */}
@@ -335,7 +320,6 @@ function HomePage({ user, onNav, toast }) {
               <div key={book.book_id} style={{ position: 'relative' }}>
                 <ItemCard book={book} onEdit={() => {}} onDelete={() => {}} isAdmin={false}
                   onClick={() => setDetailBook(book)} />
-                {/* Tombol pinjam langsung (member, 1 buku) */}
                 {user && book.available_stock > 0 && (
                   <button className="book-select-btn"
                     onClick={e => { e.stopPropagation(); setBorrowModal(book) }}
@@ -367,9 +351,6 @@ function HomePage({ user, onNav, toast }) {
               <button className="modal-close" onClick={() => setBorrowModal(null)}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="alert alert-info" style={{ marginBottom: 16 }}>
-                Jatuh tempo otomatis <strong>7 hari</strong> setelah pengajuan disetujui admin.
-              </div>
               <div style={{ padding: '12px 14px', background: 'var(--c-bg)', borderRadius: 10,
                 border: '1px solid var(--c-border)', marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text3)',
@@ -806,8 +787,8 @@ function TransactionsPage({ user, toast }) {
   const [loading, setLoading]         = useState(true)
   const [modal, setModal]             = useState(false)
   const [adminUsers, setAdminUsers]   = useState([])
-  const [bookList, setBookList]       = useState([])   // semua buku (untuk lookup nama)
-  const [bookSearch, setBookSearch]   = useState('')   // search input di form admin
+  const [bookList, setBookList]       = useState([])
+  const [bookSearch, setBookSearch]   = useState('')
   const [form, setForm]               = useState({ user_id: '', book_id: '' })
   const [confirm, setConfirm]         = useState(null)
 
@@ -820,23 +801,20 @@ function TransactionsPage({ user, toast }) {
 
   useEffect(() => {
     if (isAdmin) fetchUsers().then(d => setAdminUsers(Array.isArray(d) ? d : []))
-    // Load semua buku tanpa limit — public endpoint, tidak butuh token
+    // FIX: Fetch buku dengan limit yang cukup besar dan simpan ke state
     fetchBooks('', 500).then(d => setBookList(d.books || [])).catch(() => {})
   }, [isAdmin])
   useEffect(() => { load() }, [load])
 
-  // Resolusi nama buku dari book_id — fallback ke ID kalau belum di-load
   const bookName = (id) => {
     const found = bookList.find(b => b.book_id === Number(id))
     return found ? found.title : `Buku #${id}`
   }
-  // Resolusi nama user dari user_id
   const userName = (id) => {
     const found = adminUsers.find(u => u.user_id === Number(id))
     return found ? found.full_name : `User #${id}`
   }
 
-  // Hitung countdown hari ke deadline
   const countdown = (dueDate) => {
     const now  = new Date()
     const due  = new Date(dueDate)
@@ -846,7 +824,7 @@ function TransactionsPage({ user, toast }) {
     return { text: `${Math.abs(diff)} hari terlambat`, color: '#ef4444', warning: true }
   }
 
-  // Buku tersedia — filter by keyword. Kalau search kosong tampilkan semua (batas 10)
+  // FIX: Filter buku tersedia untuk dropdown — tampilkan semua kalau search kosong
   const filteredBooks = bookList
     .filter(b => b.available_stock > 0)
     .filter(b => {
@@ -861,7 +839,6 @@ function TransactionsPage({ user, toast }) {
     setModal(true)
   }
 
-  // Due date otomatis 7 hari dari sekarang
   const doSubmitBorrow = async () => {
     if (!form.user_id) { toast('Pilih pengguna dulu', 'error'); return }
     if (!form.book_id) { toast('Pilih buku dulu', 'error'); return }
@@ -885,7 +862,8 @@ function TransactionsPage({ user, toast }) {
 
   const STATUS_TABS = [
     { v: '', l: 'Semua' }, { v: 'pending', l: 'Menunggu' }, { v: 'borrowed', l: 'Dipinjam' },
-    { v: 'returned', l: 'Dikembalikan' }, { v: 'overdue', l: 'Terlambat' }, { v: 'rejected', l: 'Ditolak' },
+    { v: 'returned', l: 'Dikembalikan' }, { v: 'overdue', l: 'Terlambat' },
+    { v: 'rejected', l: 'Ditolak' }, { v: 'lost', l: 'Hilang' },
   ]
 
   return (
@@ -919,7 +897,6 @@ function TransactionsPage({ user, toast }) {
                 <th>Buku Dipinjam</th>
                 <th>Tgl Pinjam</th>
                 <th>Jatuh Tempo</th>
-                {/* Kolom countdown hanya untuk status borrowed */}
                 <th>Sisa Waktu</th>
                 <th>Tgl Kembali</th>
                 <th>Status</th>
@@ -932,7 +909,6 @@ function TransactionsPage({ user, toast }) {
                 const cd    = (t.status === 'borrowed' || t.status === 'overdue') ? countdown(t.due_date) : null
                 return (
                   <tr key={t.transaction_id}>
-                    {/* Kolom peminjam — hanya admin */}
                     {isAdmin && (
                       <td>
                         <div style={{ fontWeight: 600, fontSize: 13 }}>{userName(t.user_id)}</div>
@@ -940,7 +916,6 @@ function TransactionsPage({ user, toast }) {
                       </td>
                     )}
 
-                    {/* Nama buku */}
                     <td>
                       <div style={{ fontWeight: 600, fontSize: 13, maxWidth: 200 }}>{bookName(t.book_id)}</div>
                       <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>Trx #{t.transaction_id}</div>
@@ -953,7 +928,6 @@ function TransactionsPage({ user, toast }) {
                       {fmtDate(t.due_date)}
                     </td>
 
-                    {/* Countdown */}
                     <td>
                       {cd ? (
                         <span style={{ fontSize: 12, fontWeight: 700, color: cd.color,
@@ -993,7 +967,6 @@ function TransactionsPage({ user, toast }) {
                             Kembalikan
                           </button>
                         )}
-                        {/* Member: kembalikan sebelum atau sesudah deadline */}
                         {!isAdmin && t.status === 'borrowed' && (
                           <button className="btn btn-secondary btn-sm"
                             onClick={() => setConfirm({
@@ -1006,6 +979,38 @@ function TransactionsPage({ user, toast }) {
                               }
                             })}>
                             Kembalikan
+                          </button>
+                        )}
+                        {/* Gap 5: Laporkan Hilang — admin bisa untuk borrowed/overdue */}
+                        {isAdmin && (t.status === 'borrowed' || t.status === 'overdue') && (
+                          <button className="btn btn-sm"
+                            style={{ background: '#FFF7ED', color: '#9A3412', border: '1px solid #FDBA74' }}
+                            onClick={() => setConfirm({
+                              title: 'Laporkan Buku Hilang',
+                              message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Stok total berkurang 1 dan denda Rp 100.000 otomatis dibuat.`,
+                              onConfirm: async () => {
+                                try { await reportBookLost(t.transaction_id); toast('Buku dilaporkan hilang') }
+                                catch (err) { toast(err.message, 'error') }
+                                finally { setConfirm(null); load() }
+                              },
+                            })}>
+                            📦 Hilang
+                          </button>
+                        )}
+                        {/* Member juga bisa laporkan buku miliknya hilang */}
+                        {!isAdmin && (t.status === 'borrowed' || t.status === 'overdue') && (
+                          <button className="btn btn-sm"
+                            style={{ background: '#FFF7ED', color: '#9A3412', border: '1px solid #FDBA74' }}
+                            onClick={() => setConfirm({
+                              title: 'Laporkan Buku Hilang',
+                              message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Denda Rp 100.000 akan dikenakan.`,
+                              onConfirm: async () => {
+                                try { await reportBookLost(t.transaction_id); toast('Buku dilaporkan hilang') }
+                                catch (err) { toast(err.message, 'error') }
+                                finally { setConfirm(null); load() }
+                              },
+                            })}>
+                            📦 Hilang
                           </button>
                         )}
                       </div>
@@ -1030,10 +1035,7 @@ function TransactionsPage({ user, toast }) {
               </button>
             </>
           }>
-          <div className="alert alert-info" style={{ marginBottom: 16 }}>
-            Jatuh tempo otomatis <strong>7 hari</strong> dari sekarang.
-            Status awal: <strong>Menunggu persetujuan</strong>.
-          </div>
+          
 
           {/* Pilih pengguna */}
           <Field label="Pengguna *">
@@ -1050,37 +1052,44 @@ function TransactionsPage({ user, toast }) {
             )}
           </Field>
 
-          {/* Cari buku dengan search input */}
-          <Field label="Buku *" hint="Ketik nama/pengarang untuk mencari buku tersedia">
+          {/* FIX: Cari buku — dropdown selalu tampil, tidak perlu klik dulu */}
+          <Field label="Buku *" hint="Ketik nama/pengarang untuk menyaring, atau pilih langsung dari daftar">
             <Input
               value={bookSearch}
               onChange={e => {
                 setBookSearch(e.target.value)
-                if (form.book_id) setForm(p => ({ ...p, book_id: '' }))
-              }}
+                // Reset pilihan buku jika user mengetik ulang
+                if (form.book_id) {
+                  const selectedBook = bookList.find(b => b.book_id === form.book_id)
+                  setForm(p => ({ ...p, book_id: '' }))
+                  }
+                }
+              }
               placeholder="Ketik nama buku atau pengarang…"
-              autoFocus
+              autoFocus={false}
             />
 
             {/* Buku terpilih */}
-            {form.book_id && (
-              <div style={{ marginTop: 6, padding: '8px 12px', background: 'var(--c-accentbg)',
-                border: '1px solid var(--c-accent)', borderRadius: 'var(--r-md)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-accent2)' }}>
-                    ✓ {bookList.find(b => b.book_id === form.book_id)?.title}
+            {form.book_id && (() => {
+              const sel = bookList.find(b => b.book_id === form.book_id)
+              return sel ? (
+                <div style={{ marginTop: 6, padding: '8px 12px', background: 'var(--c-accentbg)',
+                  border: '1.5px solid var(--c-accent)', borderRadius: 'var(--r-md)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-accent2)' }}>✓ {sel.title}</div>
+                    <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
+                      {sel.author} · stok: {sel.available_stock}
+                      {sel.available_stock === 0 && <span style={{ color: '#dc2626', fontWeight: 700 }}> ⚠ Habis</span>}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
-                    {bookList.find(b => b.book_id === form.book_id)?.author}
-                  </div>
+                  <button onClick={() => { setForm(p => ({ ...p, book_id: '' })); setBookSearch('') }}
+                    style={{ background: 'none', border: 'none', color: 'var(--c-text3)', cursor: 'pointer', fontSize: 18, padding: '0 4px' }}>✕</button>
                 </div>
-                <button onClick={() => { setForm(p => ({ ...p, book_id: '' })); setBookSearch('') }}
-                  style={{ background: 'none', border: 'none', color: 'var(--c-text3)', cursor: 'pointer', fontSize: 16 }}>✕</button>
-              </div>
-            )}
+              ) : null
+            })()}
 
-            {/* Dropdown hasil — tampil saat belum ada buku terpilih */}
+            {/* Dropdown buku — selalu tampil saat belum ada buku terpilih */}
             {!form.book_id && (
               <div style={{
                 marginTop: 4,
@@ -1090,7 +1099,7 @@ function TransactionsPage({ user, toast }) {
                 maxHeight: 220, overflowY: 'auto',
                 boxShadow: 'var(--sh-sm)',
               }}>
-                {bookList.filter(b => b.available_stock > 0).length === 0 ? (
+                {bookList.length === 0 ? (
                   <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--c-text3)', textAlign: 'center' }}>
                     Memuat daftar buku…
                   </div>
@@ -1140,8 +1149,7 @@ function TransactionsPage({ user, toast }) {
 
 // ══════════════════════════════════════════════════════════════
 //  FINES
-//  Backend: payment_proof_url = URL string (bukan file upload)
-//  Member: upload gambar ke Drive/Imgur → paste URL
+//  Upload file dari device ke /upload/fines
 // ══════════════════════════════════════════════════════════════
 function FinesPage({ user, toast }) {
   const isAdmin = user?.role === 'admin'
@@ -1150,9 +1158,12 @@ function FinesPage({ user, toast }) {
   const [statusF, setStatusF]         = useState(null)
   const [loading, setLoading]         = useState(true)
   const [loadErr, setLoadErr]         = useState(null)
-  const [proofModal, setProofModal]   = useState(null)   // fine object
+  const [proofModal, setProofModal]   = useState(null)
   const [proofUrl, setProofUrl]       = useState('')
-  const [rejectModal, setRejectModal] = useState(null)   // fine object
+  const [proofFile, setProofFile]     = useState(null)
+  const [uploadMode, setUploadMode]   = useState('file') // 'file' | 'url'
+  const [uploading, setUploading]     = useState(false)
+  const [rejectModal, setRejectModal] = useState(null)
   const [rejectNote, setRejectNote]   = useState('')
   const [submitting, setSubmitting]   = useState(false)
 
@@ -1174,16 +1185,46 @@ function FinesPage({ user, toast }) {
     { v: 'rejected',            l: 'Ditolak'     },
   ]
 
+  // Upload file ke backend /upload/fines
+  const uploadFileToServer = async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const t = token.get()
+    const res = await fetch(`${API_BASE}/upload/fines`, {
+      method: 'POST',
+      headers: t ? { Authorization: `Bearer ${t}` } : {},
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.detail || 'Gagal mengupload file')
+    }
+    const data = await res.json()
+    return data.url  // returns /static/fines/uuid.ext
+  }
+
   const doSubmitProof = async () => {
-    const url = proofUrl.trim()
-    if (!url) { toast('URL bukti wajib diisi', 'error'); return }
-    if (!url.startsWith('http')) { toast('URL harus diawali https://...', 'error'); return }
     setSubmitting(true)
     try {
-      await submitFinePayment(proofModal.fine_id, url)
+      let finalUrl = ''
+
+      if (uploadMode === 'file') {
+        if (!proofFile) { toast('Pilih file terlebih dahulu', 'error'); setSubmitting(false); return }
+        setUploading(true)
+        const uploadedPath = await uploadFileToServer(proofFile)
+        setUploading(false)
+        // Buat full URL dari path relatif
+        finalUrl = uploadedPath.startsWith('http') ? uploadedPath : `${API_BASE}${uploadedPath}`
+      } else {
+        finalUrl = proofUrl.trim()
+        if (!finalUrl) { toast('URL bukti wajib diisi', 'error'); setSubmitting(false); return }
+        if (!finalUrl.startsWith('http')) { toast('URL harus diawali https://...', 'error'); setSubmitting(false); return }
+      }
+
+      await submitFinePayment(proofModal.fine_id, finalUrl)
       toast('Bukti pembayaran terkirim! Menunggu verifikasi admin.')
-      setProofModal(null); setProofUrl(''); load()
-    } catch (err) { toast(err.message, 'error') }
+      setProofModal(null); setProofUrl(''); setProofFile(null); load()
+    } catch (err) { toast(err.message, 'error'); setUploading(false) }
     finally { setSubmitting(false) }
   }
 
@@ -1206,7 +1247,6 @@ function FinesPage({ user, toast }) {
         </div>
       </div>
 
-      {/* Ringkasan */}
       <div className="fine-banner">
         <div>
           <div className="fine-banner-val" style={{ color: 'var(--c-red)' }}>{fmt(totalUnpaid)}</div>
@@ -1269,14 +1309,12 @@ function FinesPage({ user, toast }) {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {/* Member: bisa bayar jika unpaid atau rejected */}
                         {!isAdmin && (f.status === 'unpaid' || f.status === 'rejected') && (
                           <button className="btn btn-primary btn-sm"
-                            onClick={() => { setProofModal(f); setProofUrl('') }}>
+                            onClick={() => { setProofModal(f); setProofUrl(''); setProofFile(null); setUploadMode('file') }}>
                             💳 Bayar
                           </button>
                         )}
-                        {/* Admin: approve atau tolak jika pending_verification */}
                         {isAdmin && f.status === 'pending_verification' && (
                           <>
                             <button className="btn btn-primary btn-sm"
@@ -1301,20 +1339,20 @@ function FinesPage({ user, toast }) {
         </div>
       )}
 
-      {/* Modal: Kirim Bukti Pembayaran */}
+      {/* Modal: Kirim Bukti Pembayaran — dengan upload file */}
       {proofModal && (
-        <Modal title="Kirim Bukti Pembayaran" onClose={() => setProofModal(null)} size="sm"
+        <Modal title="Kirim Bukti Pembayaran" onClose={() => { setProofModal(null); setProofFile(null); setProofUrl('') }} size="sm"
           footer={
             <>
-              <button className="btn btn-ghost" onClick={() => setProofModal(null)}>Batal</button>
-              <button className="btn btn-primary" disabled={!proofUrl.trim() || submitting}
+              <button className="btn btn-ghost" onClick={() => { setProofModal(null); setProofFile(null); setProofUrl('') }}>Batal</button>
+              <button className="btn btn-primary"
+                disabled={submitting || uploading || (uploadMode === 'file' ? !proofFile : !proofUrl.trim())}
                 onClick={doSubmitProof}>
-                {submitting ? 'Mengirim…' : 'Kirim Bukti'}
+                {uploading ? 'Mengupload…' : submitting ? 'Mengirim…' : 'Kirim Bukti'}
               </button>
             </>
           }>
 
-          {/* Info denda */}
           <div className="alert alert-error" style={{ marginBottom: 16 }}>
             <strong>Total Denda: {fmt(proofModal.amount)}</strong>
             {proofModal.status === 'rejected' && proofModal.rejection_note && (
@@ -1324,25 +1362,103 @@ function FinesPage({ user, toast }) {
             )}
           </div>
 
-          {/* Panduan upload */}
-          <div className="alert alert-info" style={{ marginBottom: 16, fontSize: 12, lineHeight: 1.6 }}>
-            <strong>Cara kirim bukti:</strong><br />
-            1. Transfer ke rekening yang tertera<br />
-            2. Screenshot/foto struk transfer<br />
-            3. Upload ke <strong>Google Drive</strong> atau <strong>Imgur</strong><br />
-            4. Salin link publik dan paste di bawah
+          {/* Toggle mode upload */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+            <button
+              onClick={() => setUploadMode('file')}
+              style={{
+                flex: 1, padding: '8px 12px', border: '1.5px solid',
+                borderColor: uploadMode === 'file' ? 'var(--c-accent)' : 'var(--c-border)',
+                borderRadius: 'var(--r-md)',
+                background: uploadMode === 'file' ? 'var(--c-accentbg)' : 'var(--c-surface)',
+                color: uploadMode === 'file' ? 'var(--c-accent2)' : 'var(--c-text2)',
+                cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+              }}>
+              📁 Upload File
+            </button>
+            <button
+              onClick={() => setUploadMode('url')}
+              style={{
+                flex: 1, padding: '8px 12px', border: '1.5px solid',
+                borderColor: uploadMode === 'url' ? 'var(--c-accent)' : 'var(--c-border)',
+                borderRadius: 'var(--r-md)',
+                background: uploadMode === 'url' ? 'var(--c-accentbg)' : 'var(--c-surface)',
+                color: uploadMode === 'url' ? 'var(--c-accent2)' : 'var(--c-text2)',
+                cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+              }}>
+              🔗 Tempel URL
+            </button>
           </div>
 
-          <Field label="URL Bukti Transfer *"
-            hint="Contoh: https://drive.google.com/file/d/... atau https://imgur.com/...">
-            <Input
-              value={proofUrl}
-              onChange={e => setProofUrl(e.target.value)}
-              placeholder="https://drive.google.com/file/d/..."
-              autoFocus
-              onKeyDown={e => { if (e.key === 'Enter' && proofUrl.trim()) doSubmitProof() }}
-            />
-          </Field>
+          {uploadMode === 'file' ? (
+            <Field label="Upload Bukti Transfer *" hint="Format: JPG, PNG, JPEG (maks. 5MB)">
+              <div style={{
+                border: '2px dashed var(--c-border)',
+                borderRadius: 'var(--r-md)',
+                padding: '20px 16px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'border-color var(--t), background var(--t)',
+                background: proofFile ? 'var(--c-green-bg)' : 'var(--c-bg)',
+                borderColor: proofFile ? 'var(--c-green)' : 'var(--c-border)',
+              }}
+                onClick={() => document.getElementById('proof-file-input').click()}
+                onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--c-accent)' }}
+                onDragLeave={e => { e.currentTarget.style.borderColor = proofFile ? 'var(--c-green)' : 'var(--c-border)' }}
+                onDrop={e => {
+                  e.preventDefault()
+                  const file = e.dataTransfer.files[0]
+                  if (file && file.type.startsWith('image/')) {
+                    setProofFile(file)
+                    e.currentTarget.style.borderColor = 'var(--c-green)'
+                  } else {
+                    toast('Hanya file gambar yang diizinkan', 'error')
+                  }
+                }}>
+                <input
+                  id="proof-file-input"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) setProofFile(file)
+                  }}
+                />
+                {proofFile ? (
+                  <div>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>✅</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>{proofFile.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
+                      {(proofFile.size / 1024).toFixed(1)} KB
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); setProofFile(null) }}
+                      style={{ marginTop: 8, fontSize: 11, color: 'var(--c-red)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      Ganti file
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 28, marginBottom: 8, opacity: .5 }}>📸</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text2)' }}>Klik atau seret file ke sini</div>
+                    <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 4 }}>JPG, PNG, JPEG</div>
+                  </div>
+                )}
+              </div>
+            </Field>
+          ) : (
+            <Field label="URL Bukti Transfer *"
+              hint="Contoh: https://drive.google.com/file/d/... atau https://imgur.com/...">
+              <Input
+                value={proofUrl}
+                onChange={e => setProofUrl(e.target.value)}
+                placeholder="https://drive.google.com/file/d/..."
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter' && proofUrl.trim()) doSubmitProof() }}
+              />
+            </Field>
+          )}
         </Modal>
       )}
 
@@ -1380,13 +1496,21 @@ function FinesPage({ user, toast }) {
 //  USERS
 // ══════════════════════════════════════════════════════════════
 function UsersPage({ toast }) {
-  const [users, setUsers]     = useState([])
-  const [loading, setLoading] = useState(true)
-  const [loadErr, setLoadErr] = useState(null)
-  const [modal, setModal]     = useState(false)
-  const [form, setForm]       = useState({ full_name: '', email: '', password: '', role: 'member' })
-  const [pwErrs, setPwErrs]   = useState([])
-  const [confirm, setConfirm] = useState(null)
+  const [users, setUsers]         = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [loadErr, setLoadErr]     = useState(null)
+  const [addModal, setAddModal]   = useState(false)
+  const [form, setForm]           = useState({ full_name: '', email: '', password: '', role: 'member' })
+  const [pwErrs, setPwErrs]       = useState([])
+  const [confirm, setConfirm]     = useState(null)
+  // Poin 1: state untuk detail modal dan edit modal
+  const [detailUser, setDetailUser]     = useState(null)
+  const [editUser, setEditUser]         = useState(null)
+  const [editForm, setEditForm]         = useState({ full_name: '', role: 'member' })
+  // Gap 4: state untuk admin reset password
+  const [resetPwModal, setResetPwModal] = useState(null)   // object user { user_id, full_name }
+  const [resetPwForm, setResetPwForm]   = useState('')
+  const [resetPwErrs, setResetPwErrs]   = useState([])
 
   const load = () => {
     setLoading(true); setLoadErr(null)
@@ -1413,9 +1537,22 @@ function UsersPage({ toast }) {
     try {
       await createUser(form)
       toast('Pengguna ditambahkan')
-      setModal(false)
+      setAddModal(false)
       setForm({ full_name: '', email: '', password: '', role: 'member' })
       setPwErrs([])
+      load()
+    } catch (err) { toast(err.message, 'error') }
+  }
+
+  // Poin 1: Simpan edit nama + role
+  const saveEdit = async () => {
+    if (!editForm.full_name.trim()) { toast('Nama wajib diisi', 'error'); return }
+    try {
+      // Import updateUser dari api.js
+      const { updateUser } = await import('./services/api')
+      await updateUser(editUser.user_id, { full_name: editForm.full_name, role: editForm.role })
+      toast('Data pengguna diperbarui')
+      setEditUser(null)
       load()
     } catch (err) { toast(err.message, 'error') }
   }
@@ -1436,7 +1573,7 @@ function UsersPage({ toast }) {
           <p className="page-sub">{users.length} pengguna terdaftar</p>
         </div>
         <button className="btn btn-primary" onClick={() => {
-          setModal(true)
+          setAddModal(true)
           setForm({ full_name: '', email: '', password: '', role: 'member' })
           setPwErrs([])
         }}>
@@ -1449,7 +1586,15 @@ function UsersPage({ toast }) {
       {loading ? <Spinner /> : users.length === 0 ? <Empty icon="👤" title="Belum ada pengguna" /> : (
         <div className="table-wrap">
           <table className="data-table">
-            <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Bergabung</th><th style={{ width: 80 }}>Aksi</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Nama</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Bergabung</th>
+                <th style={{ width: 140, textAlign: 'center' }}>Aksi</th>
+              </tr>
+            </thead>
             <tbody>
               {users.map(u => (
                 <tr key={u.user_id}>
@@ -1462,7 +1607,47 @@ function UsersPage({ toast }) {
                   <td style={{ color: 'var(--c-text2)' }}>{u.email}</td>
                   <td><span className={`badge ${u.role === 'admin' ? 'badge-blue' : 'badge-slate'}`}>{u.role === 'admin' ? 'Admin' : 'Member'}</span></td>
                   <td style={{ color: 'var(--c-text3)', fontSize: 12 }}>{fmtDate(u.created_at)}</td>
-                  <td><button className="btn btn-danger btn-sm" onClick={() => del(u)}>Hapus</button></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                      {/* Tombol detail (icon i) */}
+                      <button
+                        className="btn btn-sm"
+                        title="Detail pengguna"
+                        onClick={() => setDetailUser(u)}
+                        style={{
+                          background: '#EFF6FF', color: '#1D4ED8',
+                          border: '1px solid #BFDBFE',
+                          width: 30, height: 30, padding: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          borderRadius: '50%', fontSize: 13, fontWeight: 700,
+                        }}>
+                        i
+                      </button>
+                      {/* Tombol edit */}
+                      <button
+                        className="btn btn-sm"
+                        title="Edit pengguna"
+                        onClick={() => { setEditUser(u); setEditForm({ full_name: u.full_name, role: u.role }) }}
+                        style={{
+                          background: '#ECFDF5', color: '#065F46',
+                          border: '1px solid #A7F3D0',
+                        }}>
+                        ✏️ Edit
+                      </button>
+                      {/* Gap 4: Tombol reset password */}
+                      <button
+                        className="btn btn-sm"
+                        title="Reset password"
+                        onClick={() => { setResetPwModal(u); setResetPwForm(''); setResetPwErrs([]) }}
+                        style={{
+                          background: '#FFF7ED', color: '#9A3412',
+                          border: '1px solid #FDBA74',
+                        }}>
+                        🔑 Reset PW
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => del(u)}>Hapus</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1470,11 +1655,84 @@ function UsersPage({ toast }) {
         </div>
       )}
 
-      {modal && (
-        <Modal title="Tambah Pengguna" onClose={() => setModal(false)} size="sm"
+      {/* Modal Detail Pengguna */}
+      {detailUser && (
+        <Modal title="Detail Pengguna" onClose={() => setDetailUser(null)} size="sm"
+          footer={
+            <button className="btn btn-ghost" onClick={() => setDetailUser(null)}>Tutup</button>
+          }>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+            <div className="avatar avatar-lg">{detailUser.full_name?.[0]?.toUpperCase()}</div>
+            <div>
+              <div style={{ fontFamily: '"DM Serif Display", Georgia, serif', fontSize: 18, color: 'var(--c-text)' }}>
+                {detailUser.full_name}
+              </div>
+              <span className={`badge ${detailUser.role === 'admin' ? 'badge-blue' : 'badge-slate'}`}>
+                {detailUser.role === 'admin' ? 'Administrator' : 'Member'}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 20px',
+            background: 'var(--c-bg)', borderRadius: 10, padding: '14px 16px' }}>
+            {[
+              ['ID Pengguna', `#${detailUser.user_id}`, true],
+              ['Nama Lengkap', detailUser.full_name, false],
+              ['Email', detailUser.email, false],
+              ['Role', detailUser.role === 'admin' ? 'Administrator' : 'Member', false],
+              ['Bergabung', fmtDate(detailUser.created_at), false],
+            ].map(([label, val, mono]) => (
+              <div key={label} style={{ gridColumn: label === 'Email' ? '1 / -1' : undefined }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--c-text3)',
+                  textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 3 }}>{label}</div>
+                <div style={{ fontSize: 13, color: 'var(--c-text)', fontWeight: 500,
+                  fontFamily: mono ? 'monospace' : undefined }}>{val}</div>
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Edit Pengguna (nama + role) */}
+      {editUser && (
+        <Modal title={`Edit: ${editUser.full_name}`} onClose={() => setEditUser(null)} size="sm"
           footer={
             <>
-              <button className="btn btn-ghost" onClick={() => setModal(false)}>Batal</button>
+              <button className="btn btn-ghost" onClick={() => setEditUser(null)}>Batal</button>
+              <button className="btn btn-primary" onClick={saveEdit}
+                disabled={!editForm.full_name.trim()}>
+                Simpan
+              </button>
+            </>
+          }>
+          <Field label="Nama Lengkap *">
+            <Input
+              value={editForm.full_name}
+              onChange={e => setEditForm(p => ({ ...p, full_name: e.target.value }))}
+              placeholder="Nama lengkap"
+              autoFocus
+              onKeyDown={e => { if (e.key === 'Enter' && editForm.full_name.trim()) saveEdit() }}
+            />
+          </Field>
+          <Field label="Role">
+            <Select
+              value={editForm.role}
+              onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}>
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </Select>
+          </Field>
+          <div className="alert alert-info" style={{ marginTop: 8, fontSize: 12 }}>
+            Email tidak dapat diubah melalui form ini.
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Tambah Pengguna */}
+      {addModal && (
+        <Modal title="Tambah Pengguna" onClose={() => setAddModal(false)} size="sm"
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => setAddModal(false)}>Batal</button>
               <button className="btn btn-primary" onClick={save} disabled={!canSave}>Simpan</button>
             </>
           }>
@@ -1509,6 +1767,59 @@ function UsersPage({ toast }) {
           </Field>
         </Modal>
       )}
+
+      {/* Modal: Reset Password (Admin) — Gap 4 */}
+      {resetPwModal && (
+        <Modal title={`Reset Password: ${resetPwModal.full_name}`} onClose={() => setResetPwModal(null)} size="sm"
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => setResetPwModal(null)}>Batal</button>
+              <button className="btn btn-danger"
+                disabled={!resetPwForm}
+                onClick={async () => {
+                  const errs = validatePassword(resetPwForm)
+                  if (errs.length) { setResetPwErrs(errs); return }
+                  try {
+                    await adminResetPassword(resetPwModal.user_id, resetPwForm)
+                    toast(`Password ${resetPwModal.full_name} berhasil direset`)
+                    setResetPwModal(null)
+                  } catch (err) { toast(err.message, 'error') }
+                }}>
+                Reset Password
+              </button>
+            </>
+          }>
+          <div className="alert alert-warning" style={{ marginBottom: 16, fontSize: 12 }}>
+            ⚠️ Password baru langsung aktif. Informasikan kepada pengguna yang bersangkutan.
+          </div>
+          <Field label="Password Baru *" hint="Min. 8 karakter, huruf besar+kecil+angka+spesial">
+            <Input
+              type="password"
+              value={resetPwForm}
+              onChange={e => { setResetPwForm(e.target.value); setResetPwErrs([]) }}
+              placeholder="Password baru untuk user ini"
+              autoFocus
+            />
+            {resetPwForm && (() => {
+              const s = pwStrength(resetPwForm)
+              return (
+                <div style={{ marginTop: 6 }}>
+                  <div className="pw-bars">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className="pw-bar" style={{ background: i <= s.score ? s.color : undefined }} />
+                    ))}
+                  </div>
+                  <span className="pw-label" style={{ color: s.color }}>{s.label}</span>
+                </div>
+              )
+            })()}
+            {resetPwErrs.map(e => (
+              <span key={e} style={{ display: 'block', fontSize: 11, color: 'var(--c-red)', fontWeight: 600 }}>• {e}</span>
+            ))}
+          </Field>
+        </Modal>
+      )}
+
       {confirm && <Confirm {...confirm} danger onCancel={() => setConfirm(null)} />}
     </div>
   )
@@ -1517,17 +1828,62 @@ function UsersPage({ toast }) {
 
 // ══════════════════════════════════════════════════════════════
 //  PROFILE
-//  Catatan: endpoint PUT /auth/change-password belum ada di
-//  backend v0.4.0. Tombol ganti password ditampilkan sebagai
-//  info saja — hubungi admin untuk reset password.
 // ══════════════════════════════════════════════════════════════
-function ProfilePage({ user, toast }) {
+function ProfilePage({ user, setUser, toast }) {
+  // ── Edit Profil state ──────────────────────────────────────
+  const [editModal, setEditModal]   = useState(false)
+  const [editForm, setEditForm]     = useState({ full_name: user?.full_name || '' })
+  const [editSaving, setEditSaving] = useState(false)
+
+  // ── Ganti Password state ───────────────────────────────────
+  const [pwModal, setPwModal]   = useState(false)
+  const [pwForm, setPwForm]     = useState({ current_password: '', new_password: '' })
+  const [pwErrs, setPwErrs]     = useState([])
+  const [pwSaving, setPwSaving] = useState(false)
+
+  const saveProfile = async () => {
+    if (!editForm.full_name.trim()) { toast('Nama wajib diisi', 'error'); return }
+    setEditSaving(true)
+    try {
+      const updated = await updateMyProfile({ full_name: editForm.full_name })
+      setUser(updated)
+      toast('Profil berhasil diperbarui')
+      setEditModal(false)
+    } catch (err) { toast(err.message, 'error') }
+    finally { setEditSaving(false) }
+  }
+
+  const changePw = async () => {
+    if (!pwForm.current_password) { toast('Password lama wajib diisi', 'error'); return }
+    const errs = validatePassword(pwForm.new_password)
+    if (errs.length) { setPwErrs(errs); return }
+    setPwSaving(true)
+    try {
+      await changePassword({ current_password: pwForm.current_password, new_password: pwForm.new_password })
+      toast('Password berhasil diubah')
+      setPwModal(false)
+      setPwForm({ current_password: '', new_password: '' })
+      setPwErrs([])
+    } catch (err) { toast(err.message, 'error') }
+    finally { setPwSaving(false) }
+  }
+
   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title">Profil Saya</h1>
           <p className="page-sub">Informasi akun Anda</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost"
+            onClick={() => { setPwForm({ current_password: '', new_password: '' }); setPwErrs([]); setPwModal(true) }}>
+            🔒 Ganti Password
+          </button>
+          <button className="btn btn-primary"
+            onClick={() => { setEditForm({ full_name: user?.full_name || '' }); setEditModal(true) }}>
+            ✏️ Edit Profil
+          </button>
         </div>
       </div>
 
@@ -1555,18 +1911,87 @@ function ProfilePage({ user, toast }) {
             </div>
           ))}
         </div>
-
-        <div className="profile-actions">
-          <div className="alert alert-info" style={{ width: '100%', margin: 0 }}>
-            🔑 Untuk mengubah password, hubungi <strong>Administrator sistem</strong> atau gunakan endpoint
-            <code style={{ margin: '0 4px', fontSize: 11, background: '#dbeafe', padding: '1px 5px', borderRadius: 4 }}>PUT /users/{'{id}'}</code>
-            via Swagger UI (<code style={{ fontSize: 11 }}>localhost:8000/docs</code>).
-          </div>
-        </div>
       </div>
+
+      {/* Modal: Edit Profil */}
+      {editModal && (
+        <Modal title="Edit Profil" onClose={() => setEditModal(false)} size="sm"
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => setEditModal(false)}>Batal</button>
+              <button className="btn btn-primary" onClick={saveProfile}
+                disabled={!editForm.full_name.trim() || editSaving}>
+                {editSaving ? 'Menyimpan…' : 'Simpan'}
+              </button>
+            </>
+          }>
+          <Field label="Nama Lengkap *">
+            <Input
+              value={editForm.full_name}
+              onChange={e => setEditForm({ full_name: e.target.value })}
+              placeholder="Nama lengkap"
+              autoFocus
+              onKeyDown={e => { if (e.key === 'Enter' && editForm.full_name.trim()) saveProfile() }}
+            />
+          </Field>
+          <div className="alert alert-info" style={{ marginTop: 8, fontSize: 12 }}>
+            Email tidak dapat diubah. Hubungi admin jika perlu mengubah email.
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Ganti Password */}
+      {pwModal && (
+        <Modal title="Ganti Password" onClose={() => { setPwModal(false); setPwErrs([]) }} size="sm"
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => { setPwModal(false); setPwErrs([]) }}>Batal</button>
+              <button className="btn btn-primary" onClick={changePw}
+                disabled={!pwForm.current_password || !pwForm.new_password || pwSaving}>
+                {pwSaving ? 'Memproses…' : 'Ubah Password'}
+              </button>
+            </>
+          }>
+          <Field label="Password Saat Ini *">
+            <Input
+              type="password"
+              value={pwForm.current_password}
+              onChange={e => setPwForm(p => ({ ...p, current_password: e.target.value }))}
+              placeholder="Masukkan password lama"
+              autoFocus
+            />
+          </Field>
+          <Field label="Password Baru *" hint="Min. 8 karakter, huruf besar+kecil+angka+spesial">
+            <Input
+              type="password"
+              value={pwForm.new_password}
+              onChange={e => { setPwForm(p => ({ ...p, new_password: e.target.value })); setPwErrs([]) }}
+              placeholder="Masukkan password baru"
+              onKeyDown={e => { if (e.key === 'Enter' && pwForm.current_password && pwForm.new_password) changePw() }}
+            />
+            {pwForm.new_password && (() => {
+              const s = pwStrength(pwForm.new_password)
+              return (
+                <div style={{ marginTop: 6 }}>
+                  <div className="pw-bars">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className="pw-bar" style={{ background: i <= s.score ? s.color : undefined }} />
+                    ))}
+                  </div>
+                  <span className="pw-label" style={{ color: s.color }}>{s.label}</span>
+                </div>
+              )
+            })()}
+            {pwErrs.map(e => (
+              <span key={e} style={{ display: 'block', fontSize: 11, color: 'var(--c-red)', fontWeight: 600 }}>• {e}</span>
+            ))}
+          </Field>
+        </Modal>
+      )}
     </div>
   )
 }
+
 
 // ══════════════════════════════════════════════════════════════
 //  ROOT APP
@@ -1681,7 +2106,7 @@ export default function App() {
     </div>
   )
 
-  // Halaman login — poin 7 & 8: pass onBack + loginTab state
+  // Halaman login — pass onBack + loginTab state
   if (page === 'login' && !user) return (
     <><LoginPage onLogin={handleLogin} toast={toast} initialTab={loginTab} onBack={() => { setPage('home'); setLoginTab('login') }} /><ToastContainer toasts={toasts} /></>
   )
@@ -1708,7 +2133,7 @@ export default function App() {
       case 'transactions': return <TransactionsPage user={user}   toast={toast} />
       case 'fines':        return <FinesPage        user={user}   toast={toast} />
       case 'users':        return <UsersPage        toast={toast} />
-      case 'profile':      return <ProfilePage      user={user}   toast={toast} /> 
+      case 'profile':      return <ProfilePage      user={user} setUser={setUser} toast={toast} />
       case 'home':
       default:             return <HomePage         user={user} onNav={nav} toast={toast} />
     }

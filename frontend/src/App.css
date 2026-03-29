@@ -1091,3 +1091,110 @@ textarea.input      { resize: vertical; min-height: 72px; }
   .layout-side-main { margin-left: 0; padding: 20px 16px 48px; }
   .sidebar { transform: translateX(-100%); }
 }
+
+/* ================================================================
+   TAMBAHAN App.css — LenteraPustaka v0.4.1
+   Tambahkan CSS ini ke bagian akhir App.css yang sudah ada
+   ================================================================ */
+
+/* ── Stock Legend (Poin 3) ─────────────────────────────────── */
+.stock-legend {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 32px 10px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--c-border);
+}
+
+.stock-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--c-text3);
+  font-weight: 500;
+}
+
+.stock-legend-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stock-legend-badge.ok {
+  background: rgba(34, 197, 94, .15);
+  color: #15803d;
+}
+
+.stock-legend-badge.low {
+  background: rgba(245, 158, 11, .15);
+  color: #92400e;
+}
+
+.stock-legend-badge.out {
+  background: rgba(239, 68, 68, .15);
+  color: #dc2626;
+}
+
+/* ── Table header center + content alignment (Poin 2) ─────── */
+/* Header semua tabel: teks tengah */
+.data-table th {
+  text-align: center !important;
+}
+
+/* Kolom dengan konten PENDEK — tetap tengah */
+.data-table td.cell-center {
+  text-align: center;
+}
+
+/* Kolom dengan konten panjang (nama, email, deskripsi) — rata kiri */
+/* Override default per-kolom jika diperlukan */
+.data-table td {
+  text-align: left;
+}
+
+/* Kolom aksi & status & badge — tengah */
+.data-table td:last-child,
+.data-table th:last-child {
+  text-align: center;
+}
+
+/* Badge di dalam td: tetap inline agar tidak stretch */
+.data-table td .badge {
+  display: inline-flex;
+}
+
+/* ── Upload drag-drop area ──────────────────────────────────── */
+.upload-dropzone {
+  border: 2px dashed var(--c-border);
+  border-radius: var(--r-md);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--t), background var(--t);
+  background: var(--c-bg);
+}
+
+.upload-dropzone:hover {
+  border-color: var(--c-accent);
+  background: var(--c-accentbg);
+}
+
+.upload-dropzone.has-file {
+  background: var(--c-green-bg);
+  border-color: var(--c-green);
+}
+
+/* ── Responsive untuk stock-legend ────────────────────────── */
+@media (max-width: 768px) {
+  .stock-legend {
+    padding: 8px 20px 10px;
+    gap: 12px;
+  }
+}
