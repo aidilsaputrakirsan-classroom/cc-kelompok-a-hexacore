@@ -155,7 +155,7 @@ export function BookDetailModal({ book, cats = [], onClose, onBorrow, isLoggedIn
           {/* Info peminjaman */}
           {!stockOut && isLoggedIn && (
             <div className="alert alert-info" style={{ marginBottom: 0, fontSize: 12.5 }}>
-              📅 Masa peminjaman <strong>7 hari</strong> dari tanggal pinjam. Maks. <strong>3 buku</strong> per peminjaman.
+              📅 Masa peminjaman <strong>7 hari</strong> dari tanggal pinjam. Maks.
             </div>
           )}
           {stockOut && (

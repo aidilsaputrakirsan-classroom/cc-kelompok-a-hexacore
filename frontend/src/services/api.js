@@ -117,6 +117,11 @@ export async function register({ email, password, full_name, role = 'member' }) 
 export const getMe  = () => req('/auth/me')
 export const logout = () => { token.remove(); userCache.remove(); sessionStorage.removeItem('lp_page') }
 
+// PUT /auth/me/change-password — { current_password, new_password }
+export const changePassword  = (data) => req('/auth/me/change-password', { method: 'PUT', body: JSON.stringify(data) })
+// PUT /auth/me/profile — { full_name }
+export const updateMyProfile = (data) => req('/auth/me/profile',          { method: 'PUT', body: JSON.stringify(data) })
+
 // ── Categories — GET public, CUD = admin ──────────────────────
 export const fetchCategories = (limit = 200) => pub(`/categories?limit=${limit}`)
 export const createCategory  = (d)     => req('/categories',       { method: 'POST',   body: JSON.stringify(d) })
@@ -146,7 +151,9 @@ export const deleteBook = (id)    => req(`/books/${id}`, { method: 'DELETE' })
 export const fetchUsers = (limit = 100) => req(`/users?limit=${limit}`)
 export const fetchUser  = (id)          => req(`/users/${id}`)
 export const updateUser = (id, d)       => req(`/users/${id}`, { method: 'PUT',    body: JSON.stringify(d) })
-export const deleteUser = (id)          => req(`/users/${id}`, { method: 'DELETE' })
+export const deleteUser         = (id)        => req(`/users/${id}`,                { method: 'DELETE' })
+// PUT /users/{id}/reset-password — { new_password } — Admin only
+export const adminResetPassword = (id, newPw) => req(`/users/${id}/reset-password`, { method: 'PUT', body: JSON.stringify({ new_password: newPw }) })
 
 // Admin buat user baru via /auth/register dengan token di header
 export const createUser = async (d) => {
@@ -176,17 +183,20 @@ export const createUser = async (d) => {
 export const fetchTransactions = (status = '', limit = 50, skip = 0) =>
   req(`/transactions?skip=${skip}&limit=${limit}${status ? `&status=${status}` : ''}`)
 
+// TransactionCreate schema hanya butuh user_id + book_id
+// due_date TIDAK diterima backend — dihitung otomatis 7 hari oleh sistem
 export const borrowBook = (d) => req('/transactions', {
   method: 'POST',
   body: JSON.stringify({
-    user_id:  Number(d.user_id),
-    book_id:  Number(d.book_id),
-    due_date: new Date(d.due_date).toISOString(),
+    user_id: Number(d.user_id),
+    book_id: Number(d.book_id),
   }),
 })
 export const approveTransaction = (id) => req(`/transactions/${id}/approve`, { method: 'PUT' })
 export const rejectTransaction  = (id) => req(`/transactions/${id}/reject`,  { method: 'PUT' })
 export const returnBook         = (id) => req(`/transactions/${id}/return`,  { method: 'PUT' })
+// POST /transactions/{id}/lost — laporkan buku hilang (denda Rp 100.000 otomatis)
+export const reportBookLost     = (id) => req(`/transactions/${id}/lost`,    { method: 'POST' })
 
 // ── Fines — butuh token ───────────────────────────────────────
 // GET /fines?status_filter=... (bukan &status=)

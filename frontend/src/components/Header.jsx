@@ -2,17 +2,17 @@
 // components/Header.jsx
 // TopNav  → Guest & Member
 // Sidebar → Admin
+// badges  → { transactions: N, fines: N } untuk notifikasi pending
 // ============================================================
 
-// Poin 2: kategori+genre sudah digabung di HomePage — cukup satu link 'Beranda'
 const GUEST_LINKS = [
   { id: 'home', label: 'Beranda' },
 ]
 
 const MEMBER_LINKS = [
   { id: 'home',         label: 'Beranda'   },
-  { id: 'transactions', label: 'Transaksi' },
-  { id: 'fines',        label: 'Denda'     },
+  { id: 'transactions', label: 'Transaksi', badgeKey: 'transactions' },
+  { id: 'fines',        label: 'Denda',     badgeKey: 'fines'        },
   { id: 'profile',      label: 'Profil'    },
 ]
 
@@ -36,13 +36,28 @@ const ADMIN_GROUPS = [
   {
     label: 'Review',
     items: [
-      { id: 'transactions', label: 'Transaksi', icon: '⇄' },
-      { id: 'fines',        label: 'Denda',     icon: '◈' },
+      { id: 'transactions', label: 'Transaksi', icon: '⇄', badgeKey: 'transactions' },
+      { id: 'fines',        label: 'Denda',     icon: '◈', badgeKey: 'fines'        },
     ],
   },
 ]
 
-function TopNav({ page, onNav, user, onLogout }) {
+function BadgeDot({ count }) {
+  if (!count) return null
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      minWidth: 18, height: 18, padding: '0 5px',
+      background: '#ef4444', color: '#fff',
+      borderRadius: 99, fontSize: 10, fontWeight: 700, lineHeight: 1,
+      marginLeft: 6, flexShrink: 0,
+    }}>
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
+function TopNav({ page, onNav, user, onLogout, badges = {} }) {
   const links = user ? MEMBER_LINKS : GUEST_LINKS
   return (
     <header className="topnav">
@@ -59,8 +74,10 @@ function TopNav({ page, onNav, user, onLogout }) {
             key={l.id}
             className={`topnav-link${page === l.id ? ' active' : ''}`}
             onClick={() => onNav(l.id)}
+            style={{ display: 'inline-flex', alignItems: 'center' }}
           >
             {l.label}
+            {l.badgeKey && <BadgeDot count={badges[l.badgeKey]} />}
           </button>
         ))}
       </nav>
@@ -88,7 +105,7 @@ function TopNav({ page, onNav, user, onLogout }) {
   )
 }
 
-function Sidebar({ page, onNav, user, onLogout }) {
+function Sidebar({ page, onNav, user, onLogout, badges = {} }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -108,9 +125,13 @@ function Sidebar({ page, onNav, user, onLogout }) {
                 key={item.id}
                 className={`sidebar-link${page === item.id ? ' active' : ''}`}
                 onClick={() => onNav(item.id)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
               >
-                <span className="sidebar-link-icon">{item.icon}</span>
-                {item.label}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="sidebar-link-icon">{item.icon}</span>
+                  {item.label}
+                </span>
+                {item.badgeKey && <BadgeDot count={badges[item.badgeKey]} />}
               </button>
             ))}
           </div>
@@ -135,10 +156,10 @@ function Sidebar({ page, onNav, user, onLogout }) {
   )
 }
 
-function Header({ page, onNav, user, onLogout }) {
+function Header({ page, onNav, user, onLogout, badges }) {
   return user?.role === 'admin'
-    ? <Sidebar page={page} onNav={onNav} user={user} onLogout={onLogout} />
-    : <TopNav  page={page} onNav={onNav} user={user} onLogout={onLogout} />
+    ? <Sidebar page={page} onNav={onNav} user={user} onLogout={onLogout} badges={badges} />
+    : <TopNav  page={page} onNav={onNav} user={user} onLogout={onLogout} badges={badges} />
 }
 
 export default Header
