@@ -824,9 +824,9 @@ function TransactionsPage({ user, toast }) {
     return { text: `${Math.abs(diff)} hari terlambat`, color: '#ef4444', warning: true }
   }
 
-  // FIX: Filter buku tersedia untuk dropdown — tampilkan semua kalau search kosong
+  // Tampilkan semua buku (termasuk stock 0 agar admin tahu stok habis)
+  // Dulu filter available_stock > 0 menyebabkan tidak ada buku tampil jika semua stok habis
   const filteredBooks = bookList
-    .filter(b => b.available_stock > 0)
     .filter(b => {
       if (!bookSearch.trim()) return true
       const q = bookSearch.toLowerCase()
@@ -837,6 +837,8 @@ function TransactionsPage({ user, toast }) {
     setForm({ user_id: '', book_id: '' })
     setBookSearch('')
     setModal(true)
+    // Refresh daftar buku setiap kali modal dibuka (pastikan data terkini)
+    fetchBooks('', 500).then(d => setBookList(d.books || [])).catch(() => {})
   }
 
   const doSubmitBorrow = async () => {
@@ -884,6 +886,50 @@ function TransactionsPage({ user, toast }) {
             onClick={() => setStatusF(s.v)}>{s.l}</button>
         ))}
       </div>
+
+      {/* Banner info: admin melihat jumlah pengajuan pending */}
+      {isAdmin && trxs.filter(t => t.status === 'pending').length > 0 && statusF === '' && (
+        <div className="alert alert-warning" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>📋</span>
+          <div>
+            <strong>{trxs.filter(t => t.status === 'pending').length} pengajuan peminjaman</strong> menunggu persetujuan.
+            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 10 }}
+              onClick={() => setStatusF('pending')}>
+              Lihat sekarang →
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Banner info: admin melihat buku terlambat */}
+      {isAdmin && trxs.filter(t => t.status === 'overdue').length > 0 && statusF === '' && (
+        <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>⚠️</span>
+          <div>
+            <strong>{trxs.filter(t => t.status === 'overdue').length} buku terlambat</strong> dikembalikan.
+            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 10 }}
+              onClick={() => setStatusF('overdue')}>
+              Lihat sekarang →
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Banner info: member melihat status pengajuannya */}
+      {!isAdmin && trxs.filter(t => t.status === 'pending').length > 0 && statusF === '' && (
+        <div className="alert alert-warning" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>⏳</span>
+          <div>
+            <strong>{trxs.filter(t => t.status === 'pending').length} pengajuan peminjaman</strong> kamu sedang menunggu persetujuan admin.
+          </div>
+        </div>
+      )}
+      {!isAdmin && trxs.filter(t => t.status === 'overdue').length > 0 && statusF === '' && (
+        <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>🚨</span>
+          <div>
+            <strong>{trxs.filter(t => t.status === 'overdue').length} buku</strong> kamu melewati jatuh tempo! Segera kembalikan untuk menghindari denda tambahan.
+          </div>
+        </div>
+      )}
 
       {loading ? <Spinner /> : trxs.length === 0 ? (
         <Empty icon="📋" title="Tidak ada transaksi"
@@ -949,26 +995,50 @@ function TransactionsPage({ user, toast }) {
 
                     <td>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {/* ADMIN: pending → Setujui + Tolak */}
                         {isAdmin && t.status === 'pending' && (
                           <>
                             <button className="btn btn-primary btn-sm"
                               onClick={() => doAction(approveTransaction, t.transaction_id, 'Setujui')}>
-                              Setujui
+                              ✔ Setujui
                             </button>
                             <button className="btn btn-danger btn-sm"
                               onClick={() => doAction(rejectTransaction, t.transaction_id, 'Tolak')}>
-                              Tolak
+                              ✕ Tolak
                             </button>
                           </>
                         )}
+                        {/* ADMIN: borrowed → hanya Kembalikan */}
                         {isAdmin && t.status === 'borrowed' && (
-                          <button className="btn btn-secondary btn-sm"
+                          <button className="btn btn-ghost btn-sm"
                             onClick={() => doAction(returnBook, t.transaction_id, 'Kembalikan')}>
-                            Kembalikan
+                            ↩ Kembalikan
                           </button>
                         )}
+                        {/* ADMIN: overdue → Kembalikan + Laporkan Hilang */}
+                        {isAdmin && t.status === 'overdue' && (
+                          <>
+                            <button className="btn btn-ghost btn-sm"
+                              onClick={() => doAction(returnBook, t.transaction_id, 'Kembalikan')}>
+                              ↩ Kembalikan
+                            </button>
+                            <button className="btn btn-danger btn-sm"
+                              onClick={() => setConfirm({
+                                title: 'Laporkan Buku Hilang',
+                                message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Stok berkurang 1 dan denda Rp 100.000 dibuat otomatis.`,
+                                onConfirm: async () => {
+                                  try { await reportBookLost(t.transaction_id); toast('Buku dilaporkan hilang') }
+                                  catch (err) { toast(err.message, 'error') }
+                                  finally { setConfirm(null); load() }
+                                },
+                              })}>
+                              📦 Hilang
+                            </button>
+                          </>
+                        )}
+                        {/* MEMBER: borrowed → hanya Kembalikan */}
                         {!isAdmin && t.status === 'borrowed' && (
-                          <button className="btn btn-secondary btn-sm"
+                          <button className="btn btn-ghost btn-sm"
                             onClick={() => setConfirm({
                               title: 'Kembalikan Buku',
                               message: `Konfirmasi pengembalian "${bookName(t.book_id)}"?`,
@@ -978,40 +1048,37 @@ function TransactionsPage({ user, toast }) {
                                 finally { setConfirm(null); load() }
                               }
                             })}>
-                            Kembalikan
+                            ↩ Kembalikan
                           </button>
                         )}
-                        {/* Gap 5: Laporkan Hilang — admin bisa untuk borrowed/overdue */}
-                        {isAdmin && (t.status === 'borrowed' || t.status === 'overdue') && (
-                          <button className="btn btn-sm"
-                            style={{ background: '#FFF7ED', color: '#9A3412', border: '1px solid #FDBA74' }}
-                            onClick={() => setConfirm({
-                              title: 'Laporkan Buku Hilang',
-                              message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Stok total berkurang 1 dan denda Rp 100.000 otomatis dibuat.`,
-                              onConfirm: async () => {
-                                try { await reportBookLost(t.transaction_id); toast('Buku dilaporkan hilang') }
-                                catch (err) { toast(err.message, 'error') }
-                                finally { setConfirm(null); load() }
-                              },
-                            })}>
-                            📦 Hilang
-                          </button>
-                        )}
-                        {/* Member juga bisa laporkan buku miliknya hilang */}
-                        {!isAdmin && (t.status === 'borrowed' || t.status === 'overdue') && (
-                          <button className="btn btn-sm"
-                            style={{ background: '#FFF7ED', color: '#9A3412', border: '1px solid #FDBA74' }}
-                            onClick={() => setConfirm({
-                              title: 'Laporkan Buku Hilang',
-                              message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Denda Rp 100.000 akan dikenakan.`,
-                              onConfirm: async () => {
-                                try { await reportBookLost(t.transaction_id); toast('Buku dilaporkan hilang') }
-                                catch (err) { toast(err.message, 'error') }
-                                finally { setConfirm(null); load() }
-                              },
-                            })}>
-                            📦 Hilang
-                          </button>
+                        {/* MEMBER: overdue → Kembalikan + Laporkan Hilang */}
+                        {!isAdmin && t.status === 'overdue' && (
+                          <>
+                            <button className="btn btn-ghost btn-sm"
+                              onClick={() => setConfirm({
+                                title: 'Kembalikan Buku',
+                                message: `Konfirmasi pengembalian "${bookName(t.book_id)}"? Denda keterlambatan akan dihitung otomatis.`,
+                                onConfirm: async () => {
+                                  try { await returnBook(t.transaction_id); toast('Buku dikembalikan, cek denda') }
+                                  catch (err) { toast(err.message, 'error') }
+                                  finally { setConfirm(null); load() }
+                                }
+                              })}>
+                              ↩ Kembalikan
+                            </button>
+                            <button className="btn btn-danger btn-sm"
+                              onClick={() => setConfirm({
+                                title: 'Laporkan Buku Hilang',
+                                message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Denda Rp 100.000 akan dikenakan.`,
+                                onConfirm: async () => {
+                                  try { await reportBookLost(t.transaction_id); toast('Buku dilaporkan hilang') }
+                                  catch (err) { toast(err.message, 'error') }
+                                  finally { setConfirm(null); load() }
+                                },
+                              })}>
+                              📦 Hilang
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -1609,14 +1676,12 @@ function UsersPage({ toast }) {
                   <td style={{ color: 'var(--c-text3)', fontSize: 12 }}>{fmtDate(u.created_at)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                      {/* Tombol detail (icon i) */}
+                      {/* Tombol detail */}
                       <button
-                        className="btn btn-sm"
+                        className="btn btn-ghost btn-sm"
                         title="Detail pengguna"
                         onClick={() => setDetailUser(u)}
                         style={{
-                          background: '#EFF6FF', color: '#1D4ED8',
-                          border: '1px solid #BFDBFE',
                           width: 30, height: 30, padding: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           borderRadius: '50%', fontSize: 13, fontWeight: 700,
@@ -1625,24 +1690,17 @@ function UsersPage({ toast }) {
                       </button>
                       {/* Tombol edit */}
                       <button
-                        className="btn btn-sm"
+                        className="btn btn-ghost btn-sm"
                         title="Edit pengguna"
-                        onClick={() => { setEditUser(u); setEditForm({ full_name: u.full_name, role: u.role }) }}
-                        style={{
-                          background: '#ECFDF5', color: '#065F46',
-                          border: '1px solid #A7F3D0',
-                        }}>
+                        onClick={() => { setEditUser(u); setEditForm({ full_name: u.full_name, role: u.role }) }}>
                         ✏️ Edit
                       </button>
-                      {/* Gap 4: Tombol reset password */}
+                      {/* Tombol reset password */}
                       <button
-                        className="btn btn-sm"
+                        className="btn btn-ghost btn-sm"
                         title="Reset password"
                         onClick={() => { setResetPwModal(u); setResetPwForm(''); setResetPwErrs([]) }}
-                        style={{
-                          background: '#FFF7ED', color: '#9A3412',
-                          border: '1px solid #FDBA74',
-                        }}>
+                        style={{ color: '#9A3412' }}>
                         🔑 Reset PW
                       </button>
                       <button className="btn btn-danger btn-sm" onClick={() => del(u)}>Hapus</button>
@@ -2002,7 +2060,30 @@ export default function App() {
   const [loginTab, setLoginTab]       = useState('login')
   const [user, setUser]               = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [badges, setBadges]           = useState({ transactions: 0, fines: 0 })
   const { toasts, toast }             = useToast()
+
+  // Fetch notification counts (polling setiap 60 detik)
+  const refreshBadges = useCallback(async (currentUser) => {
+    if (!currentUser) { setBadges({ transactions: 0, fines: 0 }); return }
+    try {
+      if (currentUser.role === 'admin') {
+        // Admin: pending transactions + pending_verification fines
+        const [trx, fin] = await Promise.all([
+          fetchTransactions('pending', 100),
+          fetchFines('pending_verification', 100),
+        ])
+        setBadges({ transactions: trx?.total || 0, fines: fin?.total || 0 })
+      } else {
+        // Member: transaksi pending miliknya + denda unpaid
+        const [trx, fin] = await Promise.all([
+          fetchTransactions('pending', 50),
+          fetchFines('unpaid', 50),
+        ])
+        setBadges({ transactions: trx?.total || 0, fines: fin?.total || 0 })
+      }
+    } catch { /* fail silently */ }
+  }, [])
 
   // Listen show-toast event dari session-expired handler
   useEffect(() => {
@@ -2089,7 +2170,16 @@ export default function App() {
     const dest = u.role === 'admin' ? 'dashboard' : 'home'
     sessionStorage.setItem('lp_page', dest)
     setPage(dest)
-  }, [])
+    refreshBadges(u)
+  }, [refreshBadges])
+
+  // Refresh badges saat user berubah + polling tiap 60 detik
+  useEffect(() => {
+    refreshBadges(user)
+    if (!user) return
+    const id = setInterval(() => refreshBadges(user), 60000)
+    return () => clearInterval(id)
+  }, [user, refreshBadges])
 
   const handleLogout = useCallback(() => {
     logout()
@@ -2143,7 +2233,7 @@ export default function App() {
   if (isAdmin) return (
     <>
       <div className="layout-side">
-        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} />
+        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} />
         <main className="layout-side-main">
           <div className="layout-side-inner">
             {renderPage(safePage)}
@@ -2158,7 +2248,7 @@ export default function App() {
   return (
     <>
       <div className="layout-top">
-        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} />
+        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} />
         {safePage === 'home' || safePage === 'books'
           ? renderPage(safePage)
           : (
