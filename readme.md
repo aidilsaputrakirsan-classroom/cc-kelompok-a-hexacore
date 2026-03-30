@@ -284,5 +284,7 @@ _Sources:_ [docs/api-test-results.md](https://github.com/aidilsaputrakirsan-clas
 ## 🧪 Hasil Pengujian (UI & API) & Panduan
 * [Laporan Pengujian API (Swagger) - Modul 2](docs/api-test-results.md)
 * [Laporan Pengujian UI (React) - Modul 3](docs/ui-test-results.md)
+* [Laporan Pengujian E2E (Autentikasi) - Modul 4](docs/auth-test-results.md) 
 * [Panduan Konfigurasi Environment - Modul 4](docs/setup-guide.md)
 * [API Documentation - Modul 4](docs/api-documentation.md)
+
