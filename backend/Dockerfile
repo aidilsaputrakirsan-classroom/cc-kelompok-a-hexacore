@@ -20,6 +20,14 @@ COPY requirements.txt .
 #    --no-cache-dir: jangan simpan pip cache (hemat space)
 RUN pip install --no-cache-dir -r requirements.txt
 
+# --- TAMBAHAN TUGAS BACKEND (INSTALL CURL untuk HEALTHCHECK) ---
+# python:3.12-slim tidak memiliki curl secara default — perlu diinstall
+# --no-install-recommends: hanya install curl saja (hemat space)
+# rm -rf /var/lib/apt/lists/*: hapus cache apt setelah install (best practice)
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+# ---------------------------------------------------------------
+
 # 5. Copy seluruh kode aplikasi
 #    Layer ini rebuild setiap kali kode berubah
 COPY . .
@@ -31,6 +39,15 @@ USER appuser
 
 # 6. Dokumentasikan port yang digunakan
 EXPOSE 8000
+
+# --- TAMBAHAN TUGAS BACKEND (HEALTHCHECK) ---
+# Docker akan otomatis cek kesehatan container setiap 30 detik
+# --interval=30s  : cek setiap 30 detik
+# --timeout=10s   : jika tidak respons dalam 10 detik, dianggap gagal
+# --retries=3     : baru dinyatakan 'unhealthy' setelah 3 kali gagal berturut-turut
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+# ---------------------------------------------
 
 # 7. Command untuk menjalankan aplikasi
 #    --host 0.0.0.0: agar bisa diakses dari luar container
