@@ -4,6 +4,10 @@ __pycache__/
 .venv/
 venv/
 .env
+# Blokir semua folder yang depannya 'venv'
+venv*/
+# Atau lebih aman lagi, blokir semua yang mengandung kata 'venv'
+*venv*/
 
 # Node
 node_modules/

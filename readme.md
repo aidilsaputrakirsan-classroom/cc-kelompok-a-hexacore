@@ -98,18 +98,20 @@ Access
 ```
 CC-KELOMPOK-A-HEXACORE/
 ├── backend/
-│   ├── static/              ← Baru (bukti upload pembayaran)
-│   ├── crud.py              ← Updated
+│   ├── static/   
+│   ├── Dockerfile           ← BARU
+│   ├── .dockerignore        ← BARU           
+│   ├── crud.py              ← Updated (Fix Lost Buku Status)
 │   ├── database.py
-│   ├── main.py              ← Updated
-│   ├── models.py            ← Updated
+│   ├── main.py              ← Updated (Fix Lost Buku Status)
+│   ├── models.py            
 │   ├── requirements.txt     
-│   ├── schemas.py           ← Updated
-│   ├── .env                 
-│   └── .env.example         
+│   ├── schemas.py           
+│   ├── .env                 ← Updated (host.docker.internal)
+│   └── .env.example         ← Updated
 ├── docs/ 
-│   ├── test/                ← Update
-│   ├── api-documentation.md ← Baru
+│   ├── test/                
+│   ├── api-documentation.md 
 │   ├── api-test-results.md   
 │   ├── schemadatabase.md    
 │   ├── schemadatabase.md    
@@ -117,8 +119,8 @@ CC-KELOMPOK-A-HEXACORE/
 │   ├── member-Khanza_Nabila_Tsabita.md
 │   ├── member-Maulana_Malik_Ibrahim.md
 │   ├── member-Micka_Mayulia_Utama.md
-│   ├── setup-guide.md      ← Baru
-│   ├── ui-test-result.md
+│   ├── setup-guide.md      
+│   └── ui-test-result.md
 ├── frontend/  
 │   ├── frontend/
 │   ├── node_modules/
@@ -279,7 +281,24 @@ Berikut adalah daftar *endpoint* beserta bukti pengujian menggunakan Swagger/Thu
 | **26** | `PUT` | `/fines/{fines_id}` | Parameter: `fines_id`<br><img src="docs/test/putfines.png" width="300"> | Status pelunasan berhasil di-update<br><img src="docs/test/responsputfines.png" width="300"> |
 | **27** | `GET` | `/fines` | Parameter: `lunas`<br><img src="docs/test/getfines2.png" width="300"> | Menampilkan riwayat denda lunas<br><img src="docs/test/responsgetfines2.png" width="300"> |
 
-_Sources:_ [docs/api-test-results.md](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/blob/main/docs/api-test-results.md) | [setup.sh](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/blob/main/setup.sh)
+## 🐳 Docker Deployment
+
+Kami menyediakan image Docker resmi untuk backend.
+
+### Run via Docker
+#### 1. Pastikan database PostgreSQL berjalan di host.
+#### 2. Jalankan perintah:
+```bash
+docker run -d \
+
+-p 8000:8000 \
+
+--env-file backend/.env \
+
+--name lentera-be \
+
+[USERNAME_DOCKER_KAMU]/lentera-backend:v1
+```
 
 ## 🧪 Hasil Pengujian (UI & API) & Panduan
 * [Laporan Pengujian API (Swagger) - Modul 2](docs/api-test-results.md)
