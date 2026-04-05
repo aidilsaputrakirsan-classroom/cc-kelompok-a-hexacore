@@ -87,7 +87,7 @@ Access
 | 2 | REST API + Database | ✅ |
 | 3 | React Frontend | ✅ |
 | 4 | Full-Stack Integration | ✅ |
-| 5-7 | Docker & Compose | ⬜ |
+| 5-7 | Docker & Compose | ✅ |
 | 8 | UTS Demo | ⬜ |
 | 9-11 | CI/CD Pipeline | ⬜ |
 | 12-14 | Microservices | ⬜ |
@@ -113,7 +113,10 @@ CC-KELOMPOK-A-HEXACORE/
 │   ├── test/                
 │   ├── api-documentation.md 
 │   ├── api-test-results.md   
-│   ├── schemadatabase.md    
+│   ├── auth-test-results.md
+│   ├── docker-cheatsheet.md  ← BARU 
+│   ├── image-comparison.md  ← BARU 
+│   ├── env-setup.md
 │   ├── schemadatabase.md    
 │   ├── member-aqila.md
 │   ├── member-Khanza_Nabila_Tsabita.md
@@ -137,7 +140,7 @@ CC-KELOMPOK-A-HEXACORE/
 │            └── ItemCard.jsx         ← Update
 ├── .gitignore            
 ├── setup.sh                
-└── README.md
+└── README.md                         ← Update
 ```
 
 ## 📁 Tabel ERD
@@ -281,25 +284,59 @@ Berikut adalah daftar *endpoint* beserta bukti pengujian menggunakan Swagger/Thu
 | **26** | `PUT` | `/fines/{fines_id}` | Parameter: `fines_id`<br><img src="docs/test/putfines.png" width="300"> | Status pelunasan berhasil di-update<br><img src="docs/test/responsputfines.png" width="300"> |
 | **27** | `GET` | `/fines` | Parameter: `lunas`<br><img src="docs/test/getfines2.png" width="300"> | Menampilkan riwayat denda lunas<br><img src="docs/test/responsgetfines2.png" width="300"> |
 
-## 🐳 Docker Deployment
+## 🐳 Panduan Menjalankan Project (Local Deployment)
 
-Kami menyediakan image Docker resmi untuk backend.
+Ikuti langkah-langkah di bawah ini untuk menjalankan aplikasi menggunakan Docker. Jika image belum tersedia di lokal, Docker akan otomatis menariknya dari Docker Hub.
 
-### Run via Docker
-#### 1. Pastikan database PostgreSQL berjalan di host.
-#### 2. Jalankan perintah:
+### 1. Persiapan Network
+Buat jaringan internal agar antar container bisa saling berkomunikasi:
 ```bash
-docker run -d \
+docker network create lentera_net
+```
+### 2. Menjalankan Database (PostgreSQL)
+Langkah ini akan membuat container database dan menyimpannya secara persistent di volume lentera_data:
 
--p 8000:8000 \
-
---env-file backend/.env \
-
---name lentera-be \
-
-[USERNAME_DOCKER_KAMU]/lentera-backend:v1
+```bash
+docker run -d --name db \
+  --network lentera_net \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=lentera_pustaka \
+  -p 5433:5432 \
+  -v lentera_data:/var/lib/postgresql/data \
+  postgres:16-alpine
 ```
 
+### 3. Menjalankan Backend (FastAPI)
+Container ini akan menggunakan konfigurasi dari .env.docker:
+```bash
+docker run -d --name lentera_be \
+  --network lentera_net \
+  --env-file ./backend/.env.docker \
+  -p 8000:8000 \
+  x3naline/lentera-be:v1
+```
+
+### 4. Menjalankan Frontend (React/Vite)
+Akses aplikasi melalui browser setelah langkah ini selesai:
+```bash
+docker run -d --name lentera_fe \
+  --network lentera_net \
+  -p 3000:80 \
+  x3naline/lentera-fe:v1
+```
+
+### 5. Seeding Data (Opsional)
+Jika ingin mengisi database dengan data awal, pastikan Python sudah terinstal dan jalankan:
+
+```bash
+# Gunakan port 5433 jika menjalankan seeder dari luar Docker
+python seeder.py
+```
+#### 💡Note: Pastikan Anda sudah melakukan `docker login` jika diperlukan untuk mengakses repository image.
+
+
+---
 ## 🧪 Hasil Pengujian (UI & API) & Panduan
 * [Laporan Pengujian API (Swagger) - Modul 2](docs/api-test-results.md)
 * [Laporan Pengujian UI (React) - Modul 3](docs/ui-test-results.md)
