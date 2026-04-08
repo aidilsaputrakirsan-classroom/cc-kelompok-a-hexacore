@@ -1,5 +1,7 @@
 # ============================================================
 # Stage: Production Image
+# Build dari folder backend:
+# docker build -t cloudapp-backend:v2 .
 # ============================================================
 
 # 1. Base image — Python 3.12 slim (debian minimal, ~50MB)
@@ -24,7 +26,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # python:3.12-slim tidak memiliki curl secara default — perlu diinstall
 # --no-install-recommends: hanya install curl saja (hemat space)
 # rm -rf /var/lib/apt/lists/*: hapus cache apt setelah install (best practice)
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+RUN apt-get update && apt-get install -y --no-install-recommends curl postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 # ---------------------------------------------------------------
 
