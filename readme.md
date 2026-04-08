@@ -343,4 +343,6 @@ python seeder.py
 * [Laporan Pengujian E2E (Autentikasi) - Modul 4](docs/auth-test-results.md) 
 * [Panduan Konfigurasi Environment - Modul 4](docs/setup-guide.md)
 * [API Documentation - Modul 4](docs/api-documentation.md)
+* [Laporan Perbandingan Ukuran Base Image Docker - Modul 5](docs/image-comparison.md)
+* [Docker Commands Cheat Sheet - Modul 5](docs/docker-cheatsheet.md)
 

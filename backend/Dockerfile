@@ -20,7 +20,7 @@ COPY requirements.txt .
 
 # 4. Install Python dependencies
 #    --no-cache-dir: jangan simpan pip cache (hemat space)
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
 
 # --- TAMBAHAN TUGAS BACKEND (INSTALL CURL untuk HEALTHCHECK) ---
 # python:3.12-slim tidak memiliki curl secara default — perlu diinstall
