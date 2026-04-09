@@ -199,5 +199,5 @@ class Fine(Base):
     def __repr__(self):
         return (
             f"<Fine(fine_id={self.fine_id}, amount={self.amount}, "
-            f"is_paid={self.is_paid})>"
+            f"status='{self.status}')>"
         )
