@@ -16,6 +16,10 @@ from schemas import (
 
 from auth import hash_password, verify_password
 
+# File ini menampung operasi database dan business logic utama backend.
+# Endpoint di main.py memanggil fungsi-fungsi di sini agar aturan bisnis tetap
+# terpusat dan tidak tersebar di layer routing.
+
 # ============================================================
 # KONSTANTA
 # ============================================================
@@ -123,6 +127,7 @@ def delete_genre(db: Session, genre_id: int) -> bool:
 
 def create_book(db: Session, data: BookCreate) -> Book:
     """Tambah buku baru ke inventaris beserta relasi genrenya."""
+    # Data buku inti dibuat lebih dulu, lalu relasi many-to-many genre dirakit setelahnya.
     book = Book(
         category_id      = data.category_id,
         isbn             = data.isbn,
@@ -135,7 +140,7 @@ def create_book(db: Session, data: BookCreate) -> Book:
         available_stock  = data.available_stock,
     )
     
-    # Mencari object Genre sesuai genre_ids dan merakitnya
+    # Query genre dilakukan berdasarkan daftar ID yang dikirim frontend, lalu ditempelkan ke object book.
     if data.genre_ids:
         genres_query = db.query(Genre).filter(Genre.genre_id.in_(data.genre_ids)).all()
         book.genres.extend(genres_query)
@@ -156,9 +161,11 @@ def get_books(
     Ambil daftar buku dengan pagination dan pencarian.
     Search mencakup: title, author, isbn.
     """
+    # Query dasar dapat dipakai apa adanya atau dipersempit dengan keyword pencarian.
     query = db.query(Book)
     if search:
         kw = f"%{search}%"
+        # Satu keyword bisa mencari judul, penulis, atau ISBN sekaligus.
         query = query.filter(
             or_(
                 Book.title.ilike(kw),
@@ -254,9 +261,11 @@ def create_user(db: Session, data: UserCreate) -> Optional[User]:
     Daftarkan user baru.
     Return None jika email sudah terdaftar.
     """
+    # Email harus unik agar tidak ada dua akun dengan identitas login yang sama.
     existing = db.query(User).filter(User.email == data.email).first()
     if existing:
         return None
+    # Password tidak pernah disimpan mentah; hashing dilakukan sebelum object User dibuat.
     user = User(
         email         = data.email,
         password_hash = hash_password(data.password),
@@ -313,6 +322,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     Autentikasi user: cek email & password.
     Digunakan nanti di Modul 4 (JWT Auth).
     """
+    # Login dianggap gagal jika email tidak ditemukan atau hash password tidak cocok.
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
@@ -365,11 +375,12 @@ def create_transaction(db: Session, data: TransactionCreate) -> Optional[Transac
     - None jika stok habis
     - Raise ValueError jika user/buku tidak ditemukan atau ada denda
     """
+    # Tahap 1: validasi user peminjam harus benar-benar ada di database.
     user = get_user(db, data.user_id)
     if not user:
         raise ValueError(f"User id={data.user_id} tidak ditemukan")
 
-    # VALIDASI BARU: Blokir jika punya denda belum lunas
+    # Tahap 2: user dengan denda aktif diblokir agar tidak menumpuk kewajiban baru.
     unpaid_fine = db.query(Fine).join(Transaction).filter(
         Transaction.user_id == data.user_id,
         Fine.status.in_(["unpaid", "pending_verification", "rejected"])
@@ -378,19 +389,23 @@ def create_transaction(db: Session, data: TransactionCreate) -> Optional[Transac
     if unpaid_fine:
         raise ValueError("Gagal meminjam: Anda masih memiliki denda yang belum dilunasi. Harap lunasi denda Anda terlebih dahulu.")
 
+    # Tahap 3: buku target harus ada sebelum stok dan tanggal pinjam diproses.
     book = get_book(db, data.book_id)
     if not book:
         raise ValueError(f"Buku id={data.book_id} tidak ditemukan")
 
     # Cek stok — jika habis, tolak pengajuan
+    # Tahap 4: stok dicek di awal, tetapi belum dikurangi karena transaksi masih menunggu approval admin.
     if book.available_stock <= 0:
         return None   # Caller akan raise HTTP 400
 
     # Hitung due_date otomatis (7 hari dari sekarang)
+    # Tahap 5: due_date dihitung otomatis agar aturan masa pinjam konsisten untuk semua transaksi.
     borrow_date = datetime.now(timezone.utc)
     due_date = borrow_date + timedelta(days=7)
 
     # Buat transaksi berstatus pending (stok belum berkurang)
+    # Tahap 6: simpan transaksi sebagai pending; pengurangan stok baru terjadi saat approve.
     trx = Transaction(
         user_id  = data.user_id,
         book_id  = data.book_id,
@@ -445,6 +460,7 @@ def approve_transaction(db: Session, transaction_id: int) -> Optional[Transactio
     - Transaction berstatus 'borrowed' jika berhasil
     - None jika transaksi tidak ditemukan atau statusnya bukan 'pending'
     """
+    # Approval admin adalah titik saat transaksi resmi aktif dan stok benar-benar berkurang.
     trx = get_transaction(db, transaction_id)
     if not trx:
         return None
@@ -458,7 +474,7 @@ def approve_transaction(db: Session, transaction_id: int) -> Optional[Transactio
     if book.available_stock <= 0:
         raise ValueError("Stok buku ini sudah habis — tidak dapat disetujui")
 
-    # Kurangi stok baru setelah diapprove
+    # available_stock dikurangi di sini karena buku baru dianggap keluar setelah disetujui admin.
     book.available_stock -= 1
     trx.status = "borrowed"
 
@@ -517,28 +533,29 @@ def return_book(db: Session, transaction_id: int) -> Optional[Transaction]:
     - Transaction yang sudah di-update
     - None jika transaksi tidak ditemukan atau belum berstatus 'borrowed'
     """
+    # Tahap 1: hanya transaksi borrowed yang boleh diproses sebagai pengembalian.
     trx = get_transaction(db, transaction_id)
     if not trx:
         return None
     if trx.status != "borrowed":
         return None   # Hanya bisa return yang sedang dipinjam
 
-    # Set return_date
+    # Tahap 2: waktu pengembalian dicatat sebagai referensi audit dan perhitungan telat.
     now = datetime.now(timezone.utc)
     trx.return_date = now
 
-    # Increment stok
+    # Tahap 3: stok tersedia dikembalikan karena buku fisik sudah masuk lagi ke perpustakaan.
     book = get_book(db, trx.book_id)
     if book:
         book.available_stock += 1
 
-    # Hitung keterlambatan
+    # Tahap 4: due_date dinormalisasi ke UTC agar perbandingan waktu tetap konsisten.
     due = trx.due_date
     if due.tzinfo is None:
         due = due.replace(tzinfo=timezone.utc)
 
     if now > due:
-        # Terlambat
+        # Jika terlambat, transaksi ditandai overdue dan denda otomatis dibuat.
         trx.status  = "overdue"
         days_late   = (now - due).days or 1   # minimal 1 hari
         fine_amount = days_late * FINE_PER_DAY
@@ -573,19 +590,20 @@ def report_book_lost(db: Session, transaction_id: int) -> Optional[Transaction]:
        - Jika belum ada denda, buat Fine baru senilai LOST_BOOK_FINE.
        - Jika sudah ada denda (akibat overdue), tambahkan amount dengan LOST_BOOK_FINE.
     """
+    # Hanya transaksi aktif yang masih memegang buku yang boleh dilaporkan hilang.
     trx = get_transaction(db, transaction_id)
     if not trx:
         return None
     if trx.status not in ["borrowed", "overdue"]:
         raise ValueError("Hanya buku yang sedang dipinjam (borrowed/overdue) yang bisa dilaporkan hilang.")
     
-    # Kurangi total_stock buku karena buku fisik hilang permanen
+    # total_stock dikurangi karena koleksi fisik perpustakaan benar-benar berkurang permanen.
     book = get_book(db, trx.book_id)
     if book and book.total_stock > 0:
         book.total_stock -= 1
         # Catatan: available_stock tidak ditambah karena bukunya tidak pernah kembali
     
-    # Tambah / Buat denda
+    # Jika denda sudah ada akibat overdue, nominal buku hilang diakumulasikan ke denda yang sama.
     fine = db.query(Fine).filter(Fine.transaction_id == transaction_id).first()
     if fine:
         # Jika sebelumnya sudah overdue dan denda sudah terbentuk, tambahkan denda buku hilang
@@ -618,6 +636,7 @@ def get_transactions(
     Jika user_id diberikan, hanya kembalikan transaksi milik user tersebut (untuk member).
     Status: 'pending' | 'borrowed' | 'returned' | 'overdue' | 'rejected' | 'lost'
     """
+    # Query transaksi dipakai ulang untuk admin maupun member, lalu dibatasi lewat filter opsional.
     query = db.query(Transaction)
     if status:
         query = query.filter(Transaction.status == status)
@@ -653,6 +672,7 @@ def get_fines(
     Filter opsional: status (unpaid, pending_verification, paid, rejected).
     Jika user_id diberikan, hanya kembalikan denda milik user tersebut (untuk member).
     """
+    # Join ke tabel transaction dipakai agar filter berdasarkan user bisa diterapkan pada data denda.
     query = db.query(Fine).join(Transaction, Fine.transaction_id == Transaction.transaction_id)
     if status_filter is not None:
         query = query.filter(Fine.status == status_filter)
