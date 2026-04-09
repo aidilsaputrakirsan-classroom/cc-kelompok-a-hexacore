@@ -3,6 +3,9 @@ from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
 
+# File ini mendefinisikan schema request dan response untuk seluruh endpoint backend.
+# Schema dipakai untuk validasi input dari client sekaligus membentuk output API yang konsisten.
+
 
 # ============================================================
 # USER SCHEMAS
@@ -10,6 +13,7 @@ from datetime import datetime
 
 class UserCreate(BaseModel):
     """Schema untuk mendaftarkan user baru dengan validasi keamanan."""
+    # Schema create dipakai saat registrasi user baru dari endpoint auth/register atau users.
     email     : EmailStr = Field(
         ...,
         pattern=r"^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]{2,}$",
@@ -26,6 +30,7 @@ class UserCreate(BaseModel):
     @field_validator('password')
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
+        # Validator ini menjaga agar password yang masuk memenuhi aturan keamanan minimum backend.
         if not re.search(r'[A-Z]', v):
             raise ValueError('Password wajib mengandung minimal 1 huruf besar')
         if not re.search(r'[a-z]', v):
@@ -88,6 +93,7 @@ class MemberChangePasswordRequest(BaseModel):
 
 class UserResponse(BaseModel):
     """Schema output user — password tidak pernah dikembalikan."""
+    # Response schema hanya membawa data aman yang boleh dikirim kembali ke client.
     user_id    : int
     email      : str
     full_name  : str
@@ -99,11 +105,13 @@ class UserResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     """Schema request untuk endpoint login."""
+    # Schema ini berguna untuk dokumentasi dan referensi bentuk payload login berbasis JSON.
     email: EmailStr = Field(..., examples=["budi@student.itk.ac.id"])
     password: str = Field(..., examples=["P4ssw0rd!"])
 
 class TokenResponse(BaseModel):
     """Schema untuk JWT access_token saat login sukses."""
+    # Setelah login berhasil, backend mengirim token beserta ringkasan data user yang sedang aktif.
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
@@ -115,6 +123,7 @@ class TokenResponse(BaseModel):
 
 class CategoryCreate(BaseModel):
     """Schema untuk membuat kategori buku baru."""
+    # Create schema dipakai saat admin menambah data referensi kategori.
     name        : str           = Field(..., min_length=1, max_length=100, examples=["Fiksi"])
     description : Optional[str] = Field(None, examples=["Buku-buku fiksi dan novel"])
 
@@ -135,6 +144,7 @@ class CategoryResponse(BaseModel):
 
 class GenreCreate(BaseModel):
     """Schema untuk membuat genre buku baru."""
+    # Genre adalah data referensi fleksibel yang bisa dipasangkan ke banyak buku.
     name        : str           = Field(..., min_length=1, max_length=100, examples=["Horor"])
     description : Optional[str] = Field(None, examples=["Cerita yang menakutkan"])
 
@@ -154,6 +164,7 @@ class GenreResponse(BaseModel):
 
 class BookCreate(BaseModel):
     """Schema untuk menambahkan buku baru ke inventaris."""
+    # Request create buku membawa seluruh data inti buku beserta daftar genre yang ingin dipasang.
     category_id      : int
     genre_ids        : list[int]     = Field(default_factory=list, description="List ID Genre buku")
     isbn             : Optional[str] = Field(None, min_length=10, max_length=20, examples=["978-602-03-3446-5"])
@@ -168,6 +179,7 @@ class BookCreate(BaseModel):
 
 class BookUpdate(BaseModel):
     """Schema untuk update data buku — semua field opsional (partial update)."""
+    # Semua field optional karena endpoint update buku mendukung partial update.
     category_id      : Optional[int] = None
     genre_ids        : Optional[list[int]] = Field(None, description="Ganti seluruh relasi genre buku ini")
     title            : Optional[str] = Field(None, min_length=1, max_length=255)
@@ -181,6 +193,7 @@ class BookUpdate(BaseModel):
 
 class BookResponse(BaseModel):
     """Schema output buku — termasuk info stok real-time."""
+    # Response buku ikut membawa object genre agar frontend tidak perlu resolve genre secara manual.
     book_id          : int
     category_id      : int
     genres           : list[GenreResponse] = []
@@ -199,6 +212,7 @@ class BookResponse(BaseModel):
 
 class BookListResponse(BaseModel):
     """Schema output list buku dengan total count — untuk pagination."""
+    # total dipakai frontend untuk menghitung halaman, sedangkan books berisi isi halaman saat ini.
     total : int
     books : list[BookResponse]
 
@@ -222,6 +236,7 @@ class TransactionCreate(BaseModel):
     Status awal otomatis 'pending' — menunggu verifikasi admin.
     Tanggal jatuh tempo (due_date) dihitung otomatis oleh sistem (7 hari).
     """
+    # Request ini minimal karena tanggal pinjam dan jatuh tempo dihitung oleh backend.
     user_id  : int
     book_id  : int
 
@@ -233,6 +248,7 @@ class TransactionUpdate(BaseModel):
 
 class TransactionResponse(BaseModel):
     """Schema output transaksi peminjaman."""
+    # Response transaksi membawa relasi user dan book agar frontend bisa langsung menampilkan detail terkait.
     transaction_id : int
     user_id        : int
     book_id        : int
@@ -251,6 +267,7 @@ class TransactionResponse(BaseModel):
 
 class TransactionListResponse(BaseModel):
     """Schema output list transaksi dengan total count."""
+    # Pola list response dibuat konsisten dengan buku dan denda: total + daftar data.
     total        : int
     transactions : list[TransactionResponse]
 
@@ -261,6 +278,7 @@ class TransactionListResponse(BaseModel):
 
 class FineResponse(BaseModel):
     """Schema output denda keterlambatan."""
+    # Response denda dipakai untuk status pembayaran dan verifikasi bukti transfer.
     fine_id           : int
     transaction_id    : int
     amount            : int    # dalam Rupiah
@@ -273,10 +291,12 @@ class FineResponse(BaseModel):
 
 class FinePaymentSubmit(BaseModel):
     """Schema dari Form Member saat membayar bukti transfer. Status denda berubah ke pending_verification."""
+    # Member hanya mengirim URL bukti; perubahan status denda diproses oleh backend.
     payment_proof_url: str = Field(..., description="URL gambar bukti transfer / struk pembayaran fisik")
 
 class FineRejectRequest(BaseModel):
     """Schema dari Form Admin saat me-reject bukti pembayaran."""
+    # Admin wajib memberi alasan agar penolakan pembayaran bisa dipahami user.
     rejection_note    : str = Field(..., description="Alasan mengapa bukti ditolak")
 
 
