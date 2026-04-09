@@ -34,6 +34,10 @@ load_dotenv()
 # Buat semua tabel di database (jika belum ada)
 Base.metadata.create_all(bind=engine)
 
+# File ini adalah entrypoint FastAPI untuk backend LenteraPustaka.
+# Endpoint di sini menangani request/response HTTP, sedangkan business logic utama
+# seperti validasi aturan peminjaman, pengembalian, dan denda didelegasikan ke crud.py.
+# Metadata aplikasi ini juga dipakai oleh Swagger/OpenAPI untuk menampilkan dokumentasi API.
 app = FastAPI(
     title="LenteraPustaka API",
     description=(
@@ -46,13 +50,14 @@ app = FastAPI(
 )
 
 # ==================== STATIC FILES ====================
-# Pastikan folder static/fines ada
+# Pastikan folder penyimpanan bukti pembayaran selalu tersedia sebelum endpoint upload dipakai.
 os.makedirs("static/fines", exist_ok=True)
 
-# Mount folder static agar bisa diakses via URL /static
+# File yang tersimpan di folder static dapat diakses frontend melalui path /static/...
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ==================== CORS ====================
+# Origin frontend dibaca dari environment agar mudah disesuaikan antara lokal, Docker, dan deployment.
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
 origins_list = [o.strip() for o in allowed_origins.split(",") if o.strip()]
 
@@ -76,16 +81,16 @@ async def upload_fine_proof(file: UploadFile = File(...), current_user: User = D
     File akan disimpan di folder 'static/fines'.
     Return: URL file yang bisa diakses publik.
     """
-    # Validasi tipe file (hanya gambar)
+    # Tahap 1: validasi tipe file, endpoint ini hanya menerima bukti pembayaran berupa gambar.
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File harus berupa gambar (jpg, png, jpeg)")
 
-    # Buat nama file unik agar tidak tertimpa
+    # Tahap 2: gunakan nama file unik agar upload dari user berbeda tidak saling menimpa.
     file_ext = file.filename.split(".")[-1]
     unique_filename = f"{uuid.uuid4()}.{file_ext}"
     file_path = f"static/fines/{unique_filename}"
 
-    # Simpan file ke disk
+    # Tahap 3: simpan file fisik ke folder static agar bisa diakses ulang saat proses verifikasi denda.
     try:
         with open(file_path, "wb") as buffer:
             content = await file.read()
@@ -93,6 +98,7 @@ async def upload_fine_proof(file: UploadFile = File(...), current_user: User = D
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gagal menyimpan file: {str(e)}")
 
+    # Tahap 4: kembalikan URL file, bukan isi binary file-nya.
     # Kembalikan URL lengkap (sesuaikan dengan domain/IP server nanti)
     # Untuk local dev & docker, path relatif '/static/...' sudah cukup jika frontend pintar handle base URL,
     # tapi agar aman kita kembalikan path absolut dari root server.
@@ -149,10 +155,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     - **username**: isi dengan email user
     - **password**: password user
     """
+    # Swagger OAuth2 mengirim email melalui field "username", sehingga nilainya dipetakan ke parameter email.
     user = crud.authenticate_user(db=db, email=form_data.username, password=form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Email atau password salah")
 
+    # Access token hasil login ini nantinya dibaca oleh dependency get_current_user pada endpoint protected.
     token = create_access_token(data={"sub": str(user.user_id)})
     return {
         "access_token": token,
@@ -308,6 +316,7 @@ def list_books(
     db: Session = Depends(get_db)
 ):
     """Ambil daftar buku dengan pagination dan pencarian."""
+    # Endpoint katalog buku ini disiapkan untuk kebutuhan frontend: paging daftar buku dan pencarian cepat.
     return crud.get_books(db=db, skip=skip, limit=limit, search=search)
 
 
@@ -456,12 +465,14 @@ def borrow_book(data: TransactionCreate, db: Session = Depends(get_db), current_
     - Stok belum dikurangi — menunggu persetujuan admin
     - Gunakan `PUT /transactions/{id}/approve` untuk menyetujui
     """
+    # Endpoint ini hanya memvalidasi hak akses caller; aturan stok dan denda dicek di crud.create_transaction().
     if current_user.role != "admin" and data.user_id != current_user.user_id:
         raise HTTPException(
             status_code=403,
             detail="Akses ditolak: Member hanya dapat mengajukan peminjaman atas nama dirinya sendiri",
         )
     try:
+        # Transaksi baru tetap berstatus pending, sehingga stok belum dikurangi pada tahap pengajuan ini.
         trx = crud.create_transaction(db=db, data=data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -521,6 +532,7 @@ def list_transactions(
     current_user: User = Depends(get_current_user),
 ):
     """Ambil daftar transaksi. Admin melihat semua; Member hanya melihat transaksi miliknya."""
+    # Role menentukan ruang lingkup data: admin melihat semua transaksi, member dibatasi ke transaksi miliknya.
     user_id_filter = None if current_user.role == "admin" else current_user.user_id
     return crud.get_transactions(db=db, skip=skip, limit=limit, status=status, user_id=user_id_filter)
 
@@ -548,19 +560,19 @@ def return_book_endpoint(transaction_id: int, db: Session = Depends(get_db), cur
     - Jika terlambat: status → `overdue`, denda dibuat otomatis (Rp 1.000/hari)
     - Jika tepat waktu: status → `returned`
     """
-    # 1. Cek dulu transaksinya ada atau tidak
+    # Tahap 1: pastikan transaksi target memang ada sebelum memeriksa hak akses atau memproses return.
     trx_check = crud.get_transaction(db=db, transaction_id=transaction_id)
     if not trx_check:
         raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
 
-    # 2. Validasi Hak Akses (Member vs Admin)
+    # Tahap 2: member hanya boleh mengembalikan transaksi miliknya sendiri, sedangkan admin bisa membantu semua user.
     if current_user.role != "admin" and trx_check.user_id != current_user.user_id:
         raise HTTPException(
             status_code=403, 
             detail="Akses ditolak: Anda hanya bisa mengembalikan buku yang Anda pinjam sendiri"
         )
 
-    # 3. Proses Return
+    # Tahap 3: business logic return dijalankan di layer CRUD, termasuk update stok dan perhitungan denda telat.
     trx = crud.return_book(db=db, transaction_id=transaction_id)
     if not trx:
         raise HTTPException(
@@ -582,6 +594,8 @@ def report_lost_book_endpoint(transaction_id: int, db: Session = Depends(get_db)
     - Stok total (total_stock) buku dikurangi 1.
     - Denda otomatis bertambah Rp 100.000 (Terakumulasi jika sudah ada denda keterlambatan).
     """
+    # Endpoint ini menangani validasi akses dan penerjemahan error HTTP.
+    # Perubahan stok total buku dan akumulasi denda hilang diproses di crud.report_book_lost().
     trx_check = crud.get_transaction(db=db, transaction_id=transaction_id)
     if not trx_check:
         raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
@@ -617,6 +631,7 @@ def list_fines(
     current_user: User = Depends(get_current_user),
 ):
     """Ambil daftar denda. Admin melihat semua denda; Member hanya melihat denda miliknya."""
+    # Sama seperti transaksi, role menentukan cakupan data yang boleh dilihat pada daftar denda.
     user_id_filter = None if current_user.role == "admin" else current_user.user_id
     return crud.get_fines(db=db, skip=skip, limit=limit, status_filter=status_filter, user_id=user_id_filter)
 
