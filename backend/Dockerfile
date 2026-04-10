@@ -1,56 +1,65 @@
 # ============================================================
-# Stage: Production Image
-# Build dari folder backend:
-# docker build -t cloudapp-backend:v2 .
+# STAGE 1: Builder (Tahap Instalasi/Memasak)
 # ============================================================
+# Gunakan image Python slim sebagai base untuk instalasi
+FROM python:3.12-slim AS builder
 
-# 1. Base image — Python 3.12 slim (debian minimal, ~50MB)
-FROM python:3.12-slim
+# Tentukan folder kerja untuk proses instalasi
+WORKDIR /install
 
-# 2. Set working directory di dalam container
-WORKDIR /app
+# Install tools yang dibutuhkan untuk mengkompilasi library Python (seperti psycopg2)
+# --no-install-recommends: agar tidak menginstall file sampah/tambahan
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# --- TAMBAHAN TUGAS DEVOPS (NON-ROOT USER) ---
-RUN useradd -m appuser
-# ---------------------------------------------
-
-# 3. Copy HANYA requirements.txt dulu (cache optimization)
-#    Layer ini hanya rebuild jika requirements.txt berubah
+# Copy file requirements agar bisa di-install
 COPY requirements.txt .
 
-# 4. Install Python dependencies
-#    --no-cache-dir: jangan simpan pip cache (hemat space)
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
+# Install semua library ke folder /install (menggunakan prefix)
+# --no-cache-dir: agar tidak menyimpan file download (hemat storage)
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# --- TAMBAHAN TUGAS BACKEND (INSTALL CURL untuk HEALTHCHECK) ---
-# python:3.12-slim tidak memiliki curl secara default — perlu diinstall
-# --no-install-recommends: hanya install curl saja (hemat space)
-# rm -rf /var/lib/apt/lists/*: hapus cache apt setelah install (best practice)
-RUN apt-get update && apt-get install -y --no-install-recommends curl postgresql-client \
+
+# ============================================================
+# STAGE 2: Final (Image Produksi yang Langsing)
+# ============================================================
+# Gunakan image Python slim lagi untuk hasil akhir
+FROM python:3.12-slim
+
+# Tentukan folder kerja utama aplikasi
+WORKDIR /app
+
+# --- TUGAS DEVOPS: Keamanan (Non-Root User) ---
+# Membuat user baru agar aplikasi tidak berjalan sebagai 'root' (bahaya keamanan)
+RUN useradd -m appuser
+
+# Install 'curl' untuk fitur Healthcheck (mengecek aplikasi sehat atau tidak)
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
-# ---------------------------------------------------------------
 
-# 5. Copy seluruh kode aplikasi
-#    Layer ini rebuild setiap kali kode berubah
+# --- INTI OPTIMASI (Multi-Stage Copy) ---
+# Hanya mengambil hasil library yang sudah 'matang' dari Stage 1 (Builder)
+# Ini yang membuat image kita kecil karena 'sampah' di Stage 1 ditinggalkan
+COPY --from=builder /install/lib /usr/local/lib
+COPY --from=builder /install/bin /usr/local/bin
+
+# Copy seluruh kode program backend ke dalam container
 COPY . .
 
-# --- TAMBAHAN TUGAS DEVOPS (IZIN AKSES) ---
+# --- TUGAS DEVOPS: Izin Akses ---
+# Berikan hak milik folder aplikasi ke 'appuser'
 RUN chown -R appuser:appuser /app
+# Jalankan container menggunakan user non-root tadi
 USER appuser
-# ------------------------------------------
 
-# 6. Dokumentasikan port yang digunakan
+# Beritahu Docker bahwa aplikasi berjalan di port 8000
 EXPOSE 8000
 
-# --- TAMBAHAN TUGAS BACKEND (HEALTHCHECK) ---
-# Docker akan otomatis cek kesehatan container setiap 30 detik
-# --interval=30s  : cek setiap 30 detik
-# --timeout=10s   : jika tidak respons dalam 10 detik, dianggap gagal
-# --retries=3     : baru dinyatakan 'unhealthy' setelah 3 kali gagal berturut-turut
+# --- TUGAS BACKEND: Healthcheck ---
+# Mengecek status aplikasi setiap 30 detik via endpoint /health
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
-# ---------------------------------------------
 
-# 7. Command untuk menjalankan aplikasi
-#    --host 0.0.0.0: agar bisa diakses dari luar container
+# Perintah utama untuk menyalakan aplikasi FastAPI menggunakan Uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
