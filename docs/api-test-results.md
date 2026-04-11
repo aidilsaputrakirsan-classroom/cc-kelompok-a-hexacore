@@ -48,3 +48,4 @@ Dokumen hasil pengujian endpoint backen menggunakan Swagger UI (http://localhost
 |<img src="test/responsputfines.png" width="600">|Hasil respons pada endpoin `fines/get/fines_id` yang menampilkan detail yang telahdibayarkan|
 |<img src="test/getfines2.png" width="600">|Input value pada endpoin `fines/get` yang telah lunas|
 |<img src="test/responsgetfines2.png" width="600">|Hasil respons pada endpoin `fines/get` yang menampilkan total buku sudah dibayar|
+
