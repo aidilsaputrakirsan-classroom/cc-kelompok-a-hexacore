@@ -779,7 +779,7 @@ function GenresPage({ isAdmin, toast }) {
 // ══════════════════════════════════════════════════════════════
 //  TRANSACTIONS
 // ══════════════════════════════════════════════════════════════
-function TransactionsPage({ user, toast }) {
+function TransactionsPage({ user, toast, onNav }) {
   const isAdmin = user?.role === 'admin'
   const [trxs, setTrxs]              = useState([])
   const [total, setTotal]             = useState(0)
@@ -791,7 +791,7 @@ function TransactionsPage({ user, toast }) {
   const [bookSearch, setBookSearch]   = useState('')
   const [form, setForm]               = useState({ user_id: '', book_id: '' })
   const [confirm, setConfirm]         = useState(null)
-
+  
   const load = useCallback(() => {
     setLoading(true)
     fetchTransactions(statusF)
@@ -833,6 +833,8 @@ function TransactionsPage({ user, toast }) {
       return b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q)
     })
 
+  const visibleTrxs = trxs.filter(t => t.status !== 'overdue' && t.status !== 'lost')
+
   const openBorrowModal = () => {
     setForm({ user_id: '', book_id: '' })
     setBookSearch('')
@@ -856,7 +858,15 @@ function TransactionsPage({ user, toast }) {
   const doAction = (action, id, label) => setConfirm({
     title: label, message: `Konfirmasi ${label.toLowerCase()} transaksi #${id}?`,
     onConfirm: async () => {
-      try { await action(id); toast(`${label} berhasil`) }
+      try { 
+        const res = await action(id); 
+        if (label === 'Kembalikan' && res?.status === 'overdue') {
+          toast('Catatan: Terlambat dikembalikan. Denda ditambahkan.', 'error')
+          setTimeout(() => onNav?.('fines'), 1500)
+        } else {
+          toast(`${label} berhasil`) 
+        }
+      }
       catch (err) { toast(err.message, 'error') }
       finally { setConfirm(null); load() }
     },
@@ -900,15 +910,24 @@ function TransactionsPage({ user, toast }) {
           </div>
         </div>
       )}
-      {/* Banner info: admin melihat buku terlambat */}
-      {isAdmin && trxs.filter(t => t.status === 'overdue').length > 0 && statusF === '' && (
+      {/* Banner info: admin melihat buku terlambat (masih dipinjam tapi lewat waktu) */}
+      {isAdmin && trxs.filter(t => t.status === 'borrowed' && new Date() > new Date(t.due_date)).length > 0 && statusF === '' && (
         <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18 }}>⚠️</span>
           <div>
-            <strong>{trxs.filter(t => t.status === 'overdue').length} buku terlambat</strong> dikembalikan.
+            <strong>{trxs.filter(t => t.status === 'borrowed' && new Date() > new Date(t.due_date)).length} buku lewat batas waktu!</strong> Harap hubungi peminjam.
+          </div>
+        </div>
+      )}
+      {/* Banner info: admin mendapat denda belum lunas */}
+      {isAdmin && statusF === '' && (
+        <div className="alert alert-info" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>💳</span>
+          <div>
+            Transaksi yang dilaporkan Hilang atau Dikembalikan Terlambat otomatis pindah ke 
             <button className="btn btn-ghost btn-sm" style={{ marginLeft: 10 }}
-              onClick={() => setStatusF('overdue')}>
-              Lihat sekarang →
+              onClick={() => onNav?.('fines')}>
+              Halaman Denda →
             </button>
           </div>
         </div>
@@ -922,18 +941,18 @@ function TransactionsPage({ user, toast }) {
           </div>
         </div>
       )}
-      {!isAdmin && trxs.filter(t => t.status === 'overdue').length > 0 && statusF === '' && (
+      {!isAdmin && trxs.filter(t => t.status === 'borrowed' && new Date() > new Date(t.due_date)).length > 0 && statusF === '' && (
         <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18 }}>🚨</span>
           <div>
-            <strong>{trxs.filter(t => t.status === 'overdue').length} buku</strong> kamu melewati jatuh tempo! Segera kembalikan untuk menghindari denda tambahan.
+            <strong>{trxs.filter(t => t.status === 'borrowed' && new Date() > new Date(t.due_date)).length} buku</strong> kamu melewati jatuh tempo! Segera kembalikan di bawah ini, atau denda akan diberikan.
           </div>
         </div>
       )}
 
-      {loading ? <Spinner /> : trxs.length === 0 ? (
+      {loading ? <Spinner /> : visibleTrxs.length === 0 ? (
         <Empty icon="📋" title="Tidak ada transaksi"
-          sub={statusF ? 'Coba filter lain' : 'Belum ada peminjaman'} />
+          sub={statusF ? 'Coba filter lain' : 'Belum ada peminjaman aktif'} />
       ) : (
         <div className="table-wrap">
           <table className="data-table">
@@ -950,7 +969,7 @@ function TransactionsPage({ user, toast }) {
               </tr>
             </thead>
             <tbody>
-              {trxs.map(t => {
+              {visibleTrxs.map(t => {
                 const badge = trxBadge[t.status] || { cls: 'badge-slate', label: t.status }
                 const cd    = (t.status === 'borrowed' || t.status === 'overdue') ? countdown(t.due_date) : null
                 return (
@@ -1008,15 +1027,8 @@ function TransactionsPage({ user, toast }) {
                             </button>
                           </>
                         )}
-                        {/* ADMIN: borrowed → hanya Kembalikan */}
+                        {/* ADMIN: borrowed → Kembalikan + Hilang */}
                         {isAdmin && t.status === 'borrowed' && (
-                          <button className="btn btn-ghost btn-sm"
-                            onClick={() => doAction(returnBook, t.transaction_id, 'Kembalikan')}>
-                            ↩ Kembalikan
-                          </button>
-                        )}
-                        {/* ADMIN: overdue → Kembalikan + Laporkan Hilang */}
-                        {isAdmin && t.status === 'overdue' && (
                           <>
                             <button className="btn btn-ghost btn-sm"
                               onClick={() => doAction(returnBook, t.transaction_id, 'Kembalikan')}>
@@ -1024,11 +1036,14 @@ function TransactionsPage({ user, toast }) {
                             </button>
                             <button className="btn btn-danger btn-sm"
                               onClick={() => setConfirm({
-                                title: 'Laporkan Buku Hilang',
-                                message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Stok berkurang 1 dan denda Rp 100.000 dibuat otomatis.`,
+                                title: 'Lapor Buku Hilang',
+                                message: `Laporkan "${bookName(t.book_id)}" hilang? Stok akan dikurangkan secara permanen dan otomatis dibuatkan denda Rp 100.000 ke menu Denda.`,
                                 onConfirm: async () => {
-                                  try { await reportBookLost(t.transaction_id); toast('Buku dilaporkan hilang') }
-                                  catch (err) { toast(err.message, 'error') }
+                                  try { 
+                                    await reportBookLost(t.transaction_id); 
+                                    toast('Buku dilaporkan hilang. Masuk ke halaman denda.', 'error')
+                                    setTimeout(() => onNav?.('fines'), 1500)
+                                  } catch (err) { toast(err.message, 'error') }
                                   finally { setConfirm(null); load() }
                                 },
                               })}>
@@ -1036,31 +1051,23 @@ function TransactionsPage({ user, toast }) {
                             </button>
                           </>
                         )}
-                        {/* MEMBER: borrowed → hanya Kembalikan */}
+                        {/* MEMBER: borrowed → Kembalikan + Hilang */}
                         {!isAdmin && t.status === 'borrowed' && (
-                          <button className="btn btn-ghost btn-sm"
-                            onClick={() => setConfirm({
-                              title: 'Kembalikan Buku',
-                              message: `Konfirmasi pengembalian "${bookName(t.book_id)}"?`,
-                              onConfirm: async () => {
-                                try { await returnBook(t.transaction_id); toast('Buku berhasil dikembalikan') }
-                                catch (err) { toast(err.message, 'error') }
-                                finally { setConfirm(null); load() }
-                              }
-                            })}>
-                            ↩ Kembalikan
-                          </button>
-                        )}
-                        {/* MEMBER: overdue → Kembalikan + Laporkan Hilang */}
-                        {!isAdmin && t.status === 'overdue' && (
                           <>
                             <button className="btn btn-ghost btn-sm"
                               onClick={() => setConfirm({
                                 title: 'Kembalikan Buku',
-                                message: `Konfirmasi pengembalian "${bookName(t.book_id)}"? Denda keterlambatan akan dihitung otomatis.`,
+                                message: `Konfirmasi pengembalian "${bookName(t.book_id)}"? Jika lewat jatuh tempo, Anda akan diarahkan ke layar Denda.`,
                                 onConfirm: async () => {
-                                  try { await returnBook(t.transaction_id); toast('Buku dikembalikan, cek denda') }
-                                  catch (err) { toast(err.message, 'error') }
+                                  try { 
+                                    const res = await returnBook(t.transaction_id); 
+                                    if (res?.status === 'overdue') {
+                                      toast('Dikembalikan terlambat! Segera lunasi denda.', 'error')
+                                      setTimeout(() => onNav?.('fines'), 1500)
+                                    } else {
+                                      toast('Buku berhasil dikembalikan') 
+                                    }
+                                  } catch (err) { toast(err.message, 'error') }
                                   finally { setConfirm(null); load() }
                                 }
                               })}>
@@ -1068,11 +1075,14 @@ function TransactionsPage({ user, toast }) {
                             </button>
                             <button className="btn btn-danger btn-sm"
                               onClick={() => setConfirm({
-                                title: 'Laporkan Buku Hilang',
-                                message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Denda Rp 100.000 akan dikenakan.`,
+                                title: 'Lapor Buku Hilang',
+                                message: `Laporkan "${bookName(t.book_id)}" sebagai hilang? Anda otomatis akan dikenakan Denda sebesar Rp 100.000 di halaman Denda. Lanjutkan?`,
                                 onConfirm: async () => {
-                                  try { await reportBookLost(t.transaction_id); toast('Buku dilaporkan hilang') }
-                                  catch (err) { toast(err.message, 'error') }
+                                  try { 
+                                    await reportBookLost(t.transaction_id); 
+                                    toast('Berhasil dilaporkan. Silakan bayar di layar Denda.', 'error')
+                                    setTimeout(() => onNav?.('fines'), 1500)
+                                  } catch (err) { toast(err.message, 'error') }
                                   finally { setConfirm(null); load() }
                                 },
                               })}>
@@ -1080,6 +1090,7 @@ function TransactionsPage({ user, toast }) {
                             </button>
                           </>
                         )}
+                        {/* MEMBER: overdue blocks removed since it's filtered visually */}
                       </div>
                     </td>
                   </tr>
@@ -1242,7 +1253,9 @@ function FinesPage({ user, toast }) {
   }, [statusF])
   useEffect(() => { load() }, [load])
 
-  const totalUnpaid = fines.filter(f => f.status === 'unpaid').reduce((a, f) => a + f.amount, 0)
+  // Filter khusus denda keterlambatan (overdue, bukan lost)
+  const displayFines = fines.filter(f => f.transaction?.status !== 'lost')
+  const totalUnpaid = displayFines.filter(f => f.status === 'unpaid').reduce((a, f) => a + f.amount, 0)
 
   const TABS = [
     { v: null,                  l: 'Semua'      },
@@ -1320,15 +1333,15 @@ function FinesPage({ user, toast }) {
           <div className="fine-banner-lbl">Belum Bayar</div>
         </div>
         <div>
-          <div className="fine-banner-val">{fines.filter(f => f.status === 'pending_verification').length}</div>
+          <div className="fine-banner-val">{displayFines.filter(f => f.status === 'pending_verification').length}</div>
           <div className="fine-banner-lbl">Menunggu Verifikasi</div>
         </div>
         <div>
-          <div className="fine-banner-val">{fines.filter(f => f.status === 'paid').length}</div>
+          <div className="fine-banner-val">{displayFines.filter(f => f.status === 'paid').length}</div>
           <div className="fine-banner-lbl">Lunas</div>
         </div>
         <div>
-          <div className="fine-banner-val">{total}</div>
+          <div className="fine-banner-val">{displayFines.length}</div>
           <div className="fine-banner-lbl">Total</div>
         </div>
       </div>
@@ -1342,7 +1355,36 @@ function FinesPage({ user, toast }) {
 
       {loadErr && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠️ {loadErr}</div>}
 
-      {loading ? <Spinner /> : fines.length === 0 ? (
+      {/* Notifikasi/Banner FinesPage */}
+      {isAdmin && displayFines.filter(f => f.status === 'pending_verification').length > 0 && statusF === null && (
+        <div className="alert alert-warning" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>💳</span>
+          <div>
+            <strong>{displayFines.filter(f => f.status === 'pending_verification').length} denda</strong> menunggu verifikasi pembayaran dari Admin!
+            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 10 }} onClick={() => setStatusF('pending_verification')}>
+              Cek Sekarang →
+            </button>
+          </div>
+        </div>
+      )}
+      {!isAdmin && displayFines.filter(f => f.status === 'unpaid').length > 0 && statusF === null && (
+        <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>🚨</span>
+          <div>
+            <strong>{displayFines.filter(f => f.status === 'unpaid').length} denda keterlambatan</strong> belum Anda lunasi! Segera selesaikan pembayaran untuk meminjam buku lagi.
+          </div>
+        </div>
+      )}
+      {!isAdmin && displayFines.filter(f => f.status === 'rejected').length > 0 && statusF === null && (
+        <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>❌</span>
+          <div>
+            <strong>{displayFines.filter(f => f.status === 'rejected').length} pembayaran ditolak</strong> oleh admin! Mohon perbaiki bukti transfer Anda.
+          </div>
+        </div>
+      )}
+
+      {loading ? <Spinner /> : displayFines.length === 0 ? (
         <Empty icon="🎉" title="Tidak ada denda!" sub={statusF ? 'Coba filter lain' : 'Semua buku dikembalikan tepat waktu'} />
       ) : (
         <div className="table-wrap">
@@ -1354,7 +1396,7 @@ function FinesPage({ user, toast }) {
               </tr>
             </thead>
             <tbody>
-              {fines.map(f => {
+              {displayFines.map(f => {
                 const fb = fineBadge[f.status] || { cls: 'badge-slate', label: f.status }
                 return (
                   <tr key={f.fine_id}>
@@ -1552,6 +1594,350 @@ function FinesPage({ user, toast }) {
               placeholder="misal: foto buram, nominal kurang, rekening berbeda…"
               autoFocus
             />
+          </Field>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LOST BOOKS FINES
+// ══════════════════════════════════════════════════════════════
+function LostBooksPage({ user, toast }) {
+  const isAdmin = user?.role === 'admin'
+  const [fines, setFines]             = useState([])
+  const [total, setTotal]             = useState(0)
+  const [statusF, setStatusF]         = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [loadErr, setLoadErr]         = useState(null)
+  const [proofModal, setProofModal]   = useState(null)
+  const [proofUrl, setProofUrl]       = useState('')
+  const [proofFile, setProofFile]     = useState(null)
+  const [uploadMode, setUploadMode]   = useState('file') // 'file' | 'url'
+  const [uploading, setUploading]     = useState(false)
+  const [rejectModal, setRejectModal] = useState(null)
+  const [rejectNote, setRejectNote]   = useState('')
+  const [submitting, setSubmitting]   = useState(false)
+
+  const load = useCallback(() => {
+    setLoading(true); setLoadErr(null)
+    fetchFines(statusF)
+      .then(d => { setFines(d.fines || []); setTotal(d.total || 0); setLoading(false) })
+      .catch(err => { setLoadErr(err.message); setLoading(false) })
+  }, [statusF])
+  useEffect(() => { load() }, [load])
+
+  // Filter KHUSUS denda hilangnya buku (lost)
+  const displayFines = fines.filter(f => f.transaction?.status === 'lost')
+  const totalUnpaid = displayFines.filter(f => f.status === 'unpaid').reduce((a, f) => a + f.amount, 0)
+
+  const TABS = [
+    { v: null,                  l: 'Semua'      },
+    { v: 'unpaid',              l: 'Belum Bayar' },
+    { v: 'pending_verification', l: 'Verifikasi'  },
+    { v: 'paid',                l: 'Lunas'       },
+    { v: 'rejected',            l: 'Ditolak'     },
+  ]
+
+  const uploadFileToServer = async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const t = token.get()
+    const res = await fetch(`${API_BASE}/upload/fines`, {
+      method: 'POST',
+      headers: t ? { Authorization: `Bearer ${t}` } : {},
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.detail || 'Gagal mengupload file')
+    }
+    const data = await res.json()
+    return data.url
+  }
+
+  const doSubmitProof = async () => {
+    setSubmitting(true)
+    try {
+      let finalUrl = ''
+      if (uploadMode === 'file') {
+        if (!proofFile) { toast('Pilih file terlebih dahulu', 'error'); setSubmitting(false); return }
+        setUploading(true)
+        const uploadedPath = await uploadFileToServer(proofFile)
+        setUploading(false)
+        finalUrl = uploadedPath.startsWith('http') ? uploadedPath : `${API_BASE}${uploadedPath}`
+      } else {
+        finalUrl = proofUrl.trim()
+        if (!finalUrl) { toast('URL bukti wajib diisi', 'error'); setSubmitting(false); return }
+      }
+      await submitFinePayment(proofModal.fine_id, finalUrl)
+      toast('Bukti pembayaran terkirim! Menunggu verifikasi admin.')
+      setProofModal(null); setProofUrl(''); setProofFile(null); load()
+    } catch (err) { toast(err.message, 'error'); setUploading(false) }
+    finally { setSubmitting(false) }
+  }
+
+  const doReject = async () => {
+    if (!rejectNote.trim()) { toast('Alasan penolakan wajib diisi', 'error'); return }
+    setSubmitting(true)
+    try {
+      await rejectFine(rejectModal.fine_id, rejectNote.trim())
+      toast('Bukti ditolak'); setRejectModal(null); setRejectNote(''); load()
+    } catch (err) { toast(err.message, 'error') }
+    finally { setSubmitting(false) }
+  }
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Denda Kehilangan Buku</h1>
+          <p className="page-sub">{displayFines.length} laporan kehilangan</p>
+        </div>
+      </div>
+
+      <div className="fine-banner">
+        <div>
+          <div className="fine-banner-val" style={{ color: 'var(--c-red)' }}>{fmt(totalUnpaid)}</div>
+          <div className="fine-banner-lbl">Belum Bayar</div>
+        </div>
+        <div>
+          <div className="fine-banner-val">{displayFines.filter(f => f.status === 'pending_verification').length}</div>
+          <div className="fine-banner-lbl">Menunggu Verifikasi</div>
+        </div>
+        <div>
+          <div className="fine-banner-val">{displayFines.filter(f => f.status === 'paid').length}</div>
+          <div className="fine-banner-lbl">Lunas</div>
+        </div>
+        <div>
+          <div className="fine-banner-val">{displayFines.length}</div>
+          <div className="fine-banner-lbl">Total</div>
+        </div>
+      </div>
+
+      <div className="filter-pills" style={{ marginBottom: 20 }}>
+        {TABS.map(s => (
+          <button key={String(s.v)} className={`filter-pill${statusF === s.v ? ' active' : ''}`}
+            onClick={() => setStatusF(s.v)}>{s.l}</button>
+        ))}
+      </div>
+
+      {loadErr && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠️ {loadErr}</div>}
+
+      {/* Notifikasi/Banner LostBooksPage */}
+      {isAdmin && displayFines.filter(f => f.status === 'pending_verification').length > 0 && statusF === null && (
+        <div className="alert alert-warning" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>💳</span>
+          <div>
+            <strong>{displayFines.filter(f => f.status === 'pending_verification').length} pengajuan pembayaran</strong> kehilangan menunggu!
+            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 10 }} onClick={() => setStatusF('pending_verification')}>
+              Cek Sekarang →
+            </button>
+          </div>
+        </div>
+      )}
+      {!isAdmin && displayFines.filter(f => f.status === 'unpaid').length > 0 && statusF === null && (
+        <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>🚨</span>
+          <div>
+            <strong>Anda dilaporkan menghilangkan {displayFines.filter(f => f.status === 'unpaid').length} buku!</strong> Segera lunasi tagihan ganti rugi Rp 100.000 (per buku) agar dapat meminjam kembali.
+          </div>
+        </div>
+      )}
+
+      {loading ? <Spinner /> : displayFines.length === 0 ? (
+        <Empty icon="📚" title="Aman" sub={statusF ? 'Coba filter lain' : 'Tidak ada catatan kehilangan buku'} />
+      ) : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Transaksi</th><th>Biaya Ganti Rugi</th>
+                <th>Status</th><th>Bukti Bayar</th><th>Catatan Admin</th><th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayFines.map(f => {
+                const fb = fineBadge[f.status] || { cls: 'badge-slate', label: f.status }
+                return (
+                  <tr key={f.fine_id}>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--c-text3)' }}>#{f.fine_id}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>#{f.transaction_id}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--c-red)' }}>{fmt(f.amount)}</td>
+                    <td><span className={`badge ${fb.cls}`}>{fb.label}</span></td>
+                    <td>
+                      {f.payment_proof_url
+                        ? <a href={f.payment_proof_url} target="_blank" rel="noreferrer"
+                            style={{ color: 'var(--c-accent)', fontSize: 12, fontWeight: 600 }}>
+                            📎 Lihat Bukti
+                          </a>
+                        : <span style={{ color: 'var(--c-text3)', fontSize: 12 }}>—</span>
+                      }
+                    </td>
+                    <td style={{ fontSize: 12, color: 'var(--c-red)', maxWidth: 180 }}>
+                      {f.rejection_note || '—'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {!isAdmin && (f.status === 'unpaid' || f.status === 'rejected') && (
+                          <button className="btn btn-primary btn-sm"
+                            onClick={() => { setProofModal(f); setProofUrl(''); setProofFile(null); setUploadMode('file') }}>
+                            💳 Bayar
+                          </button>
+                        )}
+                        {isAdmin && f.status === 'pending_verification' && (
+                          <>
+                            <button className="btn btn-primary btn-sm"
+                              onClick={async () => {
+                                try { await approveFine(f.fine_id); toast('Denda ditandai lunas') }
+                                catch (err) { toast(err.message, 'error') }
+                                finally { load() }
+                              }}>✓ Lunas</button>
+                            <button className="btn btn-danger btn-sm"
+                              onClick={() => { setRejectModal(f); setRejectNote('') }}>
+                              ✕ Tolak
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal: Kirim Bukti Pembayaran */}
+      {proofModal && (
+        <Modal title="Kirim Bukti Pembayaran Kehilangan" onClose={() => { setProofModal(null); setProofFile(null); setProofUrl('') }} size="sm"
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => { setProofModal(null); setProofFile(null); setProofUrl('') }}>Batal</button>
+              <button className="btn btn-primary"
+                disabled={submitting || uploading || (uploadMode === 'file' ? !proofFile : !proofUrl.trim())}
+                onClick={doSubmitProof}>
+                {uploading ? 'Mengupload…' : submitting ? 'Mengirim…' : 'Kirim Bukti'}
+              </button>
+            </>
+          }>
+
+          <div className="alert alert-error" style={{ marginBottom: 16 }}>
+            <strong>Total Ganti Rugi: {fmt(proofModal.amount)}</strong>
+            {proofModal.status === 'rejected' && proofModal.rejection_note && (
+              <p style={{ marginTop: 6, fontSize: 12 }}>
+                ⚠️ Ditolak sebelumnya: <em>{proofModal.rejection_note}</em>
+              </p>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+            <button
+              onClick={() => setUploadMode('file')}
+              style={{
+                flex: 1, padding: '8px 12px', border: '1.5px solid',
+                borderColor: uploadMode === 'file' ? 'var(--c-accent)' : 'var(--c-border)',
+                borderRadius: 'var(--r-md)',
+                background: uploadMode === 'file' ? 'var(--c-accentbg)' : 'var(--c-surface)',
+                color: uploadMode === 'file' ? 'var(--c-accent2)' : 'var(--c-text2)',
+                cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+              }}>
+              📁 Upload File
+            </button>
+            <button
+              onClick={() => setUploadMode('url')}
+              style={{
+                flex: 1, padding: '8px 12px', border: '1.5px solid',
+                borderColor: uploadMode === 'url' ? 'var(--c-accent)' : 'var(--c-border)',
+                borderRadius: 'var(--r-md)',
+                background: uploadMode === 'url' ? 'var(--c-accentbg)' : 'var(--c-surface)',
+                color: uploadMode === 'url' ? 'var(--c-accent2)' : 'var(--c-text2)',
+                cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+              }}>
+              🔗 Tempel URL
+            </button>
+          </div>
+
+          {uploadMode === 'file' ? (
+            <Field label="Upload Bukti Transfer *" hint="Format: JPG, PNG, JPEG (maks. 5MB)">
+              <div style={{
+                border: '2px dashed var(--c-border)',
+                borderRadius: 'var(--r-md)',
+                padding: '20px 16px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'border-color var(--t), background var(--t)',
+                background: proofFile ? 'var(--c-green-bg)' : 'var(--c-bg)',
+                borderColor: proofFile ? 'var(--c-green)' : 'var(--c-border)',
+              }}
+                onClick={() => document.getElementById('proof-file-input').click()}
+                onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--c-accent)' }}
+                onDragLeave={e => { e.currentTarget.style.borderColor = proofFile ? 'var(--c-green)' : 'var(--c-border)' }}
+                onDrop={e => {
+                  e.preventDefault()
+                  const file = e.dataTransfer.files[0]
+                  if (file && file.type.startsWith('image/')) {
+                    setProofFile(file)
+                    e.currentTarget.style.borderColor = 'var(--c-green)'
+                  } else {
+                    toast('Hanya file gambar yang diizinkan', 'error')
+                  }
+                }}>
+                <input
+                  id="proof-file-input"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) setProofFile(file)
+                  }}
+                />
+                {proofFile ? (
+                  <div>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>✅</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>{proofFile.name}</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 28, marginBottom: 8, opacity: .5 }}>📸</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text2)' }}>Klik atau seret file ke sini</div>
+                  </div>
+                )}
+              </div>
+            </Field>
+          ) : (
+            <Field label="URL Bukti Transfer *">
+              <Input
+                value={proofUrl}
+                onChange={e => setProofUrl(e.target.value)}
+                placeholder="https://drive.google.com/..."
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter' && proofUrl.trim()) doSubmitProof() }}
+              />
+            </Field>
+          )}
+        </Modal>
+      )}
+
+      {/* Modal: Tolak Bukti (Admin) */}
+      {rejectModal && (
+        <Modal title="Tolak Bukti Pembayaran" onClose={() => setRejectModal(null)} size="sm"
+          footer={
+            <>
+              <button className="btn btn-ghost" onClick={() => setRejectModal(null)}>Batal</button>
+              <button className="btn btn-danger" disabled={!rejectNote.trim() || submitting} onClick={doReject}>
+                {submitting ? 'Memproses…' : 'Tolak Bukti'}
+              </button>
+            </>
+          }>
+          <div className="alert alert-warning" style={{ marginBottom: 16 }}>
+            Denda #{rejectModal.fine_id} — <strong>{fmt(rejectModal.amount)}</strong>
+          </div>
+          <Field label="Alasan Penolakan *">
+            <Textarea value={rejectNote} onChange={e => setRejectNote(e.target.value)} rows={3} autoFocus />
           </Field>
         </Modal>
       )}
@@ -2220,8 +2606,9 @@ export default function App() {
       case 'books':        return isAdmin ? <BooksAdminPage toast={toast} /> : <HomePage user={user} onNav={nav} toast={toast} />
       case 'categories':   return <CategoriesPage   isAdmin={isAdmin} toast={toast} />
       case 'genres':       return <GenresPage       isAdmin={isAdmin} toast={toast} />
-      case 'transactions': return <TransactionsPage user={user}   toast={toast} />
+      case 'transactions': return <TransactionsPage user={user}   toast={toast} onNav={nav} />
       case 'fines':        return <FinesPage        user={user}   toast={toast} />
+      case 'lost':         return <LostBooksPage    user={user}   toast={toast} />
       case 'users':        return <UsersPage        toast={toast} />
       case 'profile':      return <ProfilePage      user={user} setUser={setUser} toast={toast} />
       case 'home':
