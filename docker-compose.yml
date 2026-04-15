@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # ==================== DATABASE ====================
+  db:
+    image: postgres:16-alpine
+    container_name: lentera-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres   # Sesuaikan passwordmu
+      POSTGRES_DB: lentera_pustaka # Sesuaikan namadb-mu
+    ports:
+      - "5433:5432"
+    volumes:
+      - lentera_pgdata:/var/lib/postgresql/data
+    networks:
+      - lentera_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lentera_pustaka"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== BACKEND ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: x3naline/lentera:be-v2  # Tag yang kamu buat kemarin
+    container_name: lentera-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.docker
+    ports:
+      - "8000:8000"
+    networks:
+      - lentera_net
+    depends_on:
+      db:
+        condition: service_healthy  # Backend nunggu DB beneran siap!
+
+  # ==================== FRONTEND ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: x3naline/lentera:fe-v1
+    container_name: lentera-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - lentera_net
+    depends_on:
+      - backend
+
+volumes:
+  lentera_pgdata:
+    name: lentera-pgdata
+
+networks:
+  lentera_net:
+    name: lentera-network
