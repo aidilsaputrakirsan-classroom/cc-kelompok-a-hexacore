@@ -144,13 +144,13 @@ CC-KELOMPOK-A-HEXACORE/
 ```
 
 ## 📁 Tabel ERD
-```
+```text
 +-------------------+              +-----------------------+
 |       USERS       |              |      TRANSACTIONS     |
 +-------------------+              +-----------------------+
-| user_id (PK/UUID) | 1          N | transaction_id (PK)   |
-| email (UK)        |--------------| user_id (FK/UUID)     |
-| password_hash     | (Melakukan)  | book_id (FK/UUID)     |
+| user_id (PK)      | 1          N | transaction_id (PK)   |
+| email (UK)        |--------------| user_id (FK)          |
+| password_hash     | (Melakukan)  | book_id (FK)          |
 | full_name         |              | borrow_date           |
 | role              |              | due_date              |
 | created_at        |              | return_date           |
@@ -161,91 +161,34 @@ CC-KELOMPOK-A-HEXACORE/
 +-------------------+     (Menghasilkan) |           | 
 |    CATEGORIES     |                    |           |
 +-------------------+                    | 1         |
-| category_id (PK)  |              +-----------+     |
-| name (UK)         |              |   FINES   |     |
-| description       |              +-----------+     |
-+---------+---------+              | fine_id   |     |
-          |                        | trans_id  |     |
-          | 1                      | amount    |     |
-          | (Memiliki)             | is_paid   |     |
-          |                        +-----------+     |
-          | N                                        |
-+---------+---------+                                |
+| category_id (PK)  |              +-------------+   |
+| name (UK)         |              |   FINES     |   |
+| description       |              +-----------  +   |
++---------+---------+              | fine_id(PK) |   |
+          |                        | trans_id(FK)|   |
+          | 1                      | amount      |   |
+          | (Memiliki)             | status      |   |
+          |                        | proof_url   |   |
+          | N                      | rej_note    |   |
++---------+---------+              +-----------+     |
 |       BOOKS       | 1                              |
 +-------------------+--------------------------------+
-| book_id (PK/UUID) |
+| book_id (PK)      |
 | category_id (FK)  |
 | isbn (UK)         |
 | title             |
 | author            |
 | publisher         | 
-| publication_year  | 
-| total_stock       | 
-| available_stock   |
-+-------------------+
+| publication_year  | 1     N +-----------------+ N     1 +------------------+
+| synopsis          |---------|   BOOK_GENRES   |---------|      GENRES      |
+| total_stock       |         +-----------------+         +------------------+
+| available_stock   |         | book_id (PK,FK) |         | genre_id (PK)    |
+| cover_image_url   |         | genre_id(PK,FK) |         | name (UK)        |
++-------------------+         +-----------------+         | description      |
+                                                          +------------------+                    
 ```
-
 Berikut adalah detail arsitektur *database* PostgreSQL yang digunakan oleh aplikasi LenteraPustaka.
-
-### 1. Tabel `users`
-Menyimpan data otentikasi dan profil pengguna (Admin & Member).
-
-| Kolom | Tipe Data | Constraint | Deskripsi |
-|---|---|---|---|
-| `user_id` | UUID | PK, Index | ID unik pengguna (Auto-generated). |
-| `email` | String(255) | UK, Not Null | Alamat email unik untuk login. |
-| `password_hash` | String(255) | Not Null | Password yang sudah di-enkripsi. |
-| `full_name` | String(150) | Not Null | Nama lengkap pengguna. |
-| `role` | String(10) | Not Null | 'admin' atau 'member'. |
-| `created_at` | DateTime | TZ, Now() | Waktu pendaftaran. |
-
-### 2. Tabel `categories`
-Kategori buku untuk pengelompokan koleksi.
-
-| Kolom | Tipe Data | Constraint | Deskripsi |
-|---|---|---|---|
-| `category_id` | Integer | PK, Auto-inc | ID unik kategori (bukan UUID). |
-| `name` | String(100) | UK, Not Null | Nama kategori (Fiksi, Sains, dll). |
-| `description` | Text | Nullable | Penjelasan singkat kategori. |
-
-### 3. Tabel `books`
-Inventaris utama buku perpustakaan.
-
-| Kolom | Tipe Data | Constraint | Deskripsi |
-|---|---|---|---|
-| `book_id` | UUID | PK, Index | ID unik buku. |
-| `category_id` | Integer | FK, Not Null | Relasi ke tabel `categories`. |
-| `isbn` | String(20) | UK, Not Null | Nomor ISBN unik buku. |
-| `title` | String(255) | Not Null, Index | Judul buku. |
-| `author` | String(150) | Not Null | Nama penulis buku. |
-| `publisher` | String(150) | Nullable | Nama penerbit buku. |
-| `publication_year`| Integer | Nullable | Tahun terbit buku. |
-| `total_stock` | Integer | Not Null | Total buku yang dimiliki. |
-| `available_stock` | Integer | Not Null | Sisa buku yang bisa dipinjam saat ini. |
-
-### 4. Tabel `transactions`
-Mencatat sirkulasi peminjaman dan pengembalian.
-
-| Kolom | Tipe Data | Constraint | Deskripsi |
-|---|---|---|---|
-| `transaction_id` | UUID | PK, Index | ID unik transaksi. |
-| `user_id` | UUID | FK, Not Null | Relasi ke peminjam (`users`). |
-| `book_id` | UUID | FK, Not Null | Relasi ke buku yang dipinjam (`books`). |
-| `borrow_date` | DateTime | Not Null | Waktu buku mulai dipinjam. |
-| `due_date` | DateTime | Not Null | Batas waktu pengembalian buku. |
-| `return_date` | DateTime | Nullable | Waktu buku dikembalikan (kosong jika belum). |
-| `status` | String(10) | Not Null | `borrowed`, `returned`, `overdue`, atau `lost`. |
-
-### 5. Tabel `fines`
-Data denda jika terjadi keterlambatan (Relasi 1:1 dengan Transaksi).
-
-| Kolom | Tipe Data | Constraint | Deskripsi |
-|---|---|---|---|
-| `fine_id` | UUID | PK, Index | ID unik denda. |
-| `transaction_id` | UUID | FK, UK, Not Null | Relasi unik ke satu transaksi spesifik. |
-| `amount` | Integer | Not Null | Jumlah denda dalam mata uang Rupiah. |
-| `is_paid` | Boolean | Not Null | Status pelunasan denda (`true` jika sudah lunas). |
-
+* [Schema Database](docs/SchemaDatabase.md)
 
 ## 🐳 Panduan Menjalankan Project (Local Deployment)
 
@@ -289,13 +232,6 @@ docker run -d --name lentera_fe \
   x3naline/lentera-fe:v1
 ```
 
-### 5. Seeding Data (Opsional)
-Jika ingin mengisi database dengan data awal, pastikan Python sudah terinstal dan jalankan:
-
-```bash
-# Gunakan port 5433 jika menjalankan seeder dari luar Docker
-python seeder.py
-```
 #### 💡Note: Pastikan Anda sudah melakukan `docker login` jika diperlukan untuk mengakses repository image.
 
 
