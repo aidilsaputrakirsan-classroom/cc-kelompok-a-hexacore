@@ -136,6 +136,7 @@ def create_book(db: Session, data: BookCreate) -> Book:
         publisher        = data.publisher,
         publication_year = data.publication_year,
         synopsis         = data.synopsis,
+        cover_image_url  = data.cover_image_url,
         total_stock      = data.total_stock,
         available_stock  = data.available_stock,
     )

@@ -173,6 +173,7 @@ class BookCreate(BaseModel):
     publisher        : Optional[str] = Field(None, examples=["Bentang Pustaka"])
     publication_year : Optional[int] = Field(None, ge=1000, le=2100, examples=[2005])
     synopsis         : Optional[str] = Field(None, examples=["Novel tentang semangat anak-anak Belitung..."])
+    cover_image_url  : Optional[str] = Field(None, description="URL cover buku yang dapat diakses publik")
     total_stock      : int           = Field(1, ge=1, examples=[5])
     available_stock  : int           = Field(1, ge=0, examples=[5])
 
@@ -187,6 +188,7 @@ class BookUpdate(BaseModel):
     publisher        : Optional[str] = None
     publication_year : Optional[int] = Field(None, ge=1000, le=2100)
     synopsis         : Optional[str] = None
+    cover_image_url  : Optional[str] = None
     total_stock      : Optional[int] = Field(None, ge=1)
     available_stock  : Optional[int] = Field(None, ge=0)
 
@@ -203,6 +205,7 @@ class BookResponse(BaseModel):
     publisher        : Optional[str]
     publication_year : Optional[int]
     synopsis         : Optional[str]
+    cover_image_url  : Optional[str]
     total_stock      : int
     available_stock  : int
 

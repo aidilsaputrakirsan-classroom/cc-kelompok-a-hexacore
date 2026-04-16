@@ -113,6 +113,7 @@ class Book(Base):
     publisher        = Column(String(150), nullable=True)
     publication_year = Column(Integer, nullable=True)
     synopsis         = Column(Text, nullable=True)                          # Sinopsis buku
+    cover_image_url  = Column(String(500), nullable=True)                   # URL cover buku (opsional)
     # total_stock adalah total koleksi fisik, sedangkan available_stock adalah stok yang siap dipinjam.
     total_stock      = Column(Integer, nullable=False, default=1)
     available_stock  = Column(Integer, nullable=False, default=1)

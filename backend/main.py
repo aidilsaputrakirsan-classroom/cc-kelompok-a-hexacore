@@ -52,6 +52,8 @@ app = FastAPI(
 # ==================== STATIC FILES ====================
 # Pastikan folder penyimpanan bukti pembayaran selalu tersedia sebelum endpoint upload dipakai.
 os.makedirs("static/fines", exist_ok=True)
+# Pastikan folder penyimpanan cover buku selalu tersedia sebelum endpoint upload cover dipakai.
+os.makedirs("static/covers", exist_ok=True)
 
 # File yang tersimpan di folder static dapat diakses frontend melalui path /static/...
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -103,6 +105,34 @@ async def upload_fine_proof(file: UploadFile = File(...), current_user: User = D
     # Untuk local dev & docker, path relatif '/static/...' sudah cukup jika frontend pintar handle base URL,
     # tapi agar aman kita kembalikan path absolut dari root server.
     return {"url": f"/static/fines/{unique_filename}"}
+
+
+@app.post("/upload/covers", tags=["Upload"])
+async def upload_book_cover(file: UploadFile = File(...), current_user: User = Depends(get_admin_user)):
+    """
+    Upload cover buku (Image only).
+    File akan disimpan di folder 'static/covers'.
+    Return: URL file yang bisa diakses publik.
+    """
+    # Tahap 1: validasi tipe file, endpoint ini hanya menerima cover berupa gambar.
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File harus berupa gambar (jpg, png, jpeg)")
+
+    # Tahap 2: gunakan nama file unik agar upload tidak saling menimpa.
+    file_ext = file.filename.split(".")[-1]
+    unique_filename = f"{uuid.uuid4()}.{file_ext}"
+    file_path = f"static/covers/{unique_filename}"
+
+    # Tahap 3: simpan file fisik ke folder static/covers.
+    try:
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal menyimpan file: {str(e)}")
+
+    # Tahap 4: kembalikan URL file agar dapat disimpan ke field cover_image_url pada data buku.
+    return {"url": f"/static/covers/{unique_filename}"}
 
 
 # ============================================================
