@@ -34,6 +34,9 @@ services:
       - ./backend/.env.docker
     ports:
       - "8000:8000"
+    volumes:
+      # Sinkronkan file upload backend (fines/covers) ke folder project lokal
+      - ./backend/static:/app/static
     networks:
       - lentera_net
     depends_on:
