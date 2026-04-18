@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 import uuid
@@ -19,7 +20,7 @@ from schemas import (
     # User
     UserCreate, UserUpdate, UserResponse, AdminResetPasswordRequest, MemberChangePasswordRequest, MemberProfileUpdate,
     # Auth
-    LoginRequest, TokenResponse,
+    TokenResponse,
     # Transaction
     TransactionCreate, TransactionUpdate, TransactionResponse, TransactionListResponse,
     # Fine
@@ -33,6 +34,11 @@ load_dotenv()
 
 # Buat semua tabel di database (jika belum ada)
 Base.metadata.create_all(bind=engine)
+
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+FINES_DIR = STATIC_DIR / "fines"
+COVERS_DIR = STATIC_DIR / "covers"
 
 # File ini adalah entrypoint FastAPI untuk backend LenteraPustaka.
 # Endpoint di sini menangani request/response HTTP, sedangkan business logic utama
@@ -51,12 +57,12 @@ app = FastAPI(
 
 # ==================== STATIC FILES ====================
 # Pastikan folder penyimpanan bukti pembayaran selalu tersedia sebelum endpoint upload dipakai.
-os.makedirs("static/fines", exist_ok=True)
+FINES_DIR.mkdir(parents=True, exist_ok=True)
 # Pastikan folder penyimpanan cover buku selalu tersedia sebelum endpoint upload cover dipakai.
-os.makedirs("static/covers", exist_ok=True)
+COVERS_DIR.mkdir(parents=True, exist_ok=True)
 
 # File yang tersimpan di folder static dapat diakses frontend melalui path /static/...
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # ==================== CORS ====================
 # Origin frontend dibaca dari environment agar mudah disesuaikan antara lokal, Docker, dan deployment.
@@ -95,7 +101,7 @@ async def upload_fine_proof(file: UploadFile = File(...), current_user: User = D
     # Tahap 2: gunakan nama file unik agar upload dari user berbeda tidak saling menimpa.
     file_ext = file.filename.split(".")[-1]
     unique_filename = f"{uuid.uuid4()}.{file_ext}"
-    file_path = f"static/fines/{unique_filename}"
+    file_path = FINES_DIR / unique_filename
 
     # Tahap 3: simpan file fisik ke folder static agar bisa diakses ulang saat proses verifikasi denda.
     try:
@@ -126,7 +132,7 @@ async def upload_book_cover(file: UploadFile = File(...), current_user: User = D
     # Tahap 2: gunakan nama file unik agar upload tidak saling menimpa.
     file_ext = file.filename.split(".")[-1]
     unique_filename = f"{uuid.uuid4()}.{file_ext}"
-    file_path = f"static/covers/{unique_filename}"
+    file_path = COVERS_DIR / unique_filename
 
     # Tahap 3: simpan file fisik ke folder static/covers.
     try:

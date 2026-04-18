@@ -1,6 +1,6 @@
 from sqlalchemy import (
-    Column, Integer, String, Text, Boolean,
-    DateTime, ForeignKey, UniqueConstraint, Table
+    Column, Integer, String, Text,
+    DateTime, ForeignKey, Table
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
