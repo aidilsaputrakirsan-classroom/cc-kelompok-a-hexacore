@@ -335,7 +335,10 @@ def create_book(data: BookCreate, db: Session = Depends(get_db), current_user: U
     - **total_stock** & **available_stock**: Jumlah eksemplar
     - **category_id**: ID kategori harus sudah ada
     """
-    return crud.create_book(db=db, data=data)
+    try:
+        return crud.create_book(db=db, data=data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/books", response_model=BookListResponse, tags=["Books"])
@@ -379,7 +382,10 @@ def update_book(book_id: int, data: BookUpdate, db: Session = Depends(get_db), c
     Update data buku — partial update, hanya field yang dikirim yang berubah.
     ISBN tidak bisa diubah (gunakan DELETE + POST jika perlu).
     """
-    updated = crud.update_book(db=db, book_id=book_id, data=data)
+    try:
+        updated = crud.update_book(db=db, book_id=book_id, data=data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     if not updated:
         raise HTTPException(status_code=404, detail=f"Buku id={book_id} tidak ditemukan")
     return updated

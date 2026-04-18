@@ -1,5 +1,5 @@
 import re
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator
 from typing import Optional
 from datetime import datetime
 
@@ -177,6 +177,12 @@ class BookCreate(BaseModel):
     total_stock      : int           = Field(1, ge=1, examples=[5])
     available_stock  : int           = Field(1, ge=0, examples=[5])
 
+    @model_validator(mode="after")
+    def validate_stock_consistency(self):
+        if self.available_stock > self.total_stock:
+            raise ValueError("available_stock tidak boleh lebih besar dari total_stock")
+        return self
+
 
 class BookUpdate(BaseModel):
     """Schema untuk update data buku — semua field opsional (partial update)."""
@@ -191,6 +197,13 @@ class BookUpdate(BaseModel):
     cover_image_url  : Optional[str] = None
     total_stock      : Optional[int] = Field(None, ge=1)
     available_stock  : Optional[int] = Field(None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_stock_consistency_when_both_present(self):
+        if self.total_stock is not None and self.available_stock is not None:
+            if self.available_stock > self.total_stock:
+                raise ValueError("available_stock tidak boleh lebih besar dari total_stock")
+        return self
 
 
 class BookResponse(BaseModel):

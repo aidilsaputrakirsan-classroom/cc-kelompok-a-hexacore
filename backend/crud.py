@@ -127,6 +127,9 @@ def delete_genre(db: Session, genre_id: int) -> bool:
 
 def create_book(db: Session, data: BookCreate) -> Book:
     """Tambah buku baru ke inventaris beserta relasi genrenya."""
+    if data.available_stock > data.total_stock:
+        raise ValueError("available_stock tidak boleh lebih besar dari total_stock")
+
     # Data buku inti dibuat lebih dulu, lalu relasi many-to-many genre dirakit setelahnya.
     book = Book(
         category_id      = data.category_id,
@@ -190,6 +193,11 @@ def update_book(db: Session, book_id: int, data: BookUpdate) -> Optional[Book]:
     if not book:
         return None
     update_data = data.model_dump(exclude_unset=True)
+
+    final_total_stock = update_data.get("total_stock", book.total_stock)
+    final_available_stock = update_data.get("available_stock", book.available_stock)
+    if final_available_stock > final_total_stock:
+        raise ValueError("available_stock tidak boleh lebih besar dari total_stock")
     
     # Handle genre_ids terpisah karena relasi M2M
     if "genre_ids" in update_data:
