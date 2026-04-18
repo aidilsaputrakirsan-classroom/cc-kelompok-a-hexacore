@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from models import Book, Category, Genre, Fine, Transaction, User
@@ -32,6 +33,10 @@ LOST_BOOK_FINE = 100_000 # Rp 100.000 denda fix buku hilang
 # ============================================================
 
 
+class ConflictError(ValueError):
+    """Error bisnis untuk konflik data unik seperti email, nama, atau ISBN."""
+
+
 # ============================================================
 # CRUD: CATEGORY
 # ============================================================
@@ -40,7 +45,11 @@ def create_category(db: Session, data: CategoryCreate) -> Category:
     """Buat kategori buku baru."""
     category = Category(name=data.name, description=data.description)
     db.add(category)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ConflictError("Nama kategori sudah digunakan")
     db.refresh(category)
     return category
 
@@ -62,7 +71,11 @@ def update_category(db: Session, category_id: int, data: CategoryCreate) -> Opti
         return None
     category.name        = data.name
     category.description = data.description
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ConflictError("Nama kategori sudah digunakan")
     db.refresh(category)
     return category
 
@@ -85,7 +98,11 @@ def create_genre(db: Session, data: GenreCreate) -> Genre:
     """Buat referensi genre baru."""
     genre = Genre(name=data.name, description=data.description)
     db.add(genre)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ConflictError("Nama genre sudah digunakan")
     db.refresh(genre)
     return genre
 
@@ -107,7 +124,11 @@ def update_genre(db: Session, genre_id: int, data: GenreCreate) -> Optional[Genr
         return None
     genre.name        = data.name
     genre.description = data.description
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ConflictError("Nama genre sudah digunakan")
     db.refresh(genre)
     return genre
 
@@ -150,7 +171,11 @@ def create_book(db: Session, data: BookCreate) -> Book:
         book.genres.extend(genres_query)
 
     db.add(book)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ConflictError("ISBN sudah digunakan")
     db.refresh(book)
     return book
 
@@ -282,7 +307,11 @@ def create_user(db: Session, data: UserCreate) -> Optional[User]:
         role          = data.role,
     )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ConflictError("Email sudah terdaftar")
     db.refresh(user)
     return user
 
@@ -308,7 +337,11 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> Optional[User]:
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(user, field, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ConflictError("Email sudah terdaftar")
     db.refresh(user)
     return user
 

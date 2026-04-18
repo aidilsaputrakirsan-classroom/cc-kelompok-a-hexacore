@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 
 import uuid
-from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile
+from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
@@ -70,6 +70,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def raise_http_from_crud_error(error: ValueError) -> None:
+    status_code = 409 if isinstance(error, crud.ConflictError) else 400
+    raise HTTPException(status_code=status_code, detail=str(error))
 
 
 # ============================================================
@@ -171,9 +176,12 @@ def team_info():
 @app.post("/auth/register", response_model=UserResponse, status_code=201, tags=["Auth"])
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Registrasi user baru."""
-    user = crud.create_user(db=db, data=user_data)
+    try:
+        user = crud.create_user(db=db, data=user_data)
+    except ValueError as e:
+        raise_http_from_crud_error(e)
     if not user:
-        raise HTTPException(status_code=400, detail="Email sudah terdaftar")
+        raise HTTPException(status_code=409, detail="Email sudah terdaftar")
     return user
 
 
@@ -232,7 +240,10 @@ def update_my_profile(data: MemberProfileUpdate, db: Session = Depends(get_db), 
 @app.post("/categories", response_model=CategoryResponse, status_code=201, tags=["Categories"])
 def create_category(data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Tambah kategori buku baru."""
-    return crud.create_category(db=db, data=data)
+    try:
+        return crud.create_category(db=db, data=data)
+    except ValueError as e:
+        raise_http_from_crud_error(e)
 
 
 @app.get("/categories", response_model=list[CategoryResponse], tags=["Categories"])
@@ -257,7 +268,10 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
 @app.put("/categories/{category_id}", response_model=CategoryResponse, tags=["Categories"])
 def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Update nama dan deskripsi kategori."""
-    updated = crud.update_category(db=db, category_id=category_id, data=data)
+    try:
+        updated = crud.update_category(db=db, category_id=category_id, data=data)
+    except ValueError as e:
+        raise_http_from_crud_error(e)
     if not updated:
         raise HTTPException(status_code=404, detail=f"Kategori id={category_id} tidak ditemukan")
     return updated
@@ -279,7 +293,10 @@ def delete_category(category_id: int, db: Session = Depends(get_db), current_use
 @app.post("/genres", response_model=GenreResponse, status_code=201, tags=["Genres"])
 def create_genre(data: GenreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Tambah genre buku baru."""
-    return crud.create_genre(db=db, data=data)
+    try:
+        return crud.create_genre(db=db, data=data)
+    except ValueError as e:
+        raise_http_from_crud_error(e)
 
 
 @app.get("/genres", response_model=list[GenreResponse], tags=["Genres"])
@@ -304,7 +321,10 @@ def get_genre(genre_id: int, db: Session = Depends(get_db)):
 @app.put("/genres/{genre_id}", response_model=GenreResponse, tags=["Genres"])
 def update_genre(genre_id: int, data: GenreCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Update nama dan deskripsi genre."""
-    updated = crud.update_genre(db=db, genre_id=genre_id, data=data)
+    try:
+        updated = crud.update_genre(db=db, genre_id=genre_id, data=data)
+    except ValueError as e:
+        raise_http_from_crud_error(e)
     if not updated:
         raise HTTPException(status_code=404, detail=f"Genre id={genre_id} tidak ditemukan")
     return updated
@@ -338,7 +358,7 @@ def create_book(data: BookCreate, db: Session = Depends(get_db), current_user: U
     try:
         return crud.create_book(db=db, data=data)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise_http_from_crud_error(e)
 
 
 @app.get("/books", response_model=BookListResponse, tags=["Books"])
@@ -409,9 +429,12 @@ def create_user_old(data: UserCreate, db: Session = Depends(get_db)):
     """
     Daftarkan user baru (DEPRECATED, silakan gunakan /auth/register).
     """
-    user = crud.create_user(db=db, data=data)
+    try:
+        user = crud.create_user(db=db, data=data)
+    except ValueError as e:
+        raise_http_from_crud_error(e)
     if not user:
-        raise HTTPException(status_code=400, detail="Email sudah terdaftar")
+        raise HTTPException(status_code=409, detail="Email sudah terdaftar")
     return user
 
 
@@ -443,7 +466,10 @@ def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db), c
     Update data user — partial update, hanya field yang dikirim yang berubah.
     Dapat digunakan admin untuk mengubah role, nama, atau email user.
     """
-    updated = crud.update_user(db=db, user_id=user_id, data=data)
+    try:
+        updated = crud.update_user(db=db, user_id=user_id, data=data)
+    except ValueError as e:
+        raise_http_from_crud_error(e)
     if not updated:
         raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
     return updated

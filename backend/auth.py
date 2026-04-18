@@ -89,7 +89,20 @@ def get_current_user(
     """
     # Tahap 1: token bearer dibaca dari request dan diverifikasi lebih dulu.
     payload = decode_token(token)
-    user_id: Optional[int] = int(payload.get("sub")) if payload.get("sub") is not None else None
+    subject = payload.get("sub")
+    if subject is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token tidak valid, subject missing",
+        )
+
+    try:
+        user_id: Optional[int] = int(subject)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token tidak valid, subject tidak sesuai",
+        )
 
     if user_id is None:
         raise HTTPException(
