@@ -4,6 +4,7 @@
 // onBorrow(book) → dipanggil kalau member mau pinjam dari beranda
 // ============================================================
 import { Badge } from './ui/Common'
+import { API_BASE } from '../services/api'
 
 const COVERS = ['cover-0','cover-1','cover-2','cover-3','cover-4','cover-5','cover-6','cover-7']
 
@@ -64,14 +65,21 @@ export function BookDetailModal({ book, cats = [], onClose, onBorrow, isLoggedIn
               border: '2px solid rgba(255,255,255,.2)',
               display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
-              padding: 6, textAlign: 'center',
+              padding: book.cover_image_url ? 0 : 6, textAlign: 'center',
+              overflow: 'hidden',
             }}>
-              <div style={{ fontSize: 22, marginBottom: 4 }}>📚</div>
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.7)', lineHeight: 1.3,
-                overflow: 'hidden', display: '-webkit-box',
-                WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>
-                {book.title}
-              </div>
+              {book.cover_image_url ? (
+                <img src={`${API_BASE}${book.cover_image_url}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Cover" />
+              ) : (
+                <>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>📚</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,.7)', lineHeight: 1.3,
+                    overflow: 'hidden', display: '-webkit-box',
+                    WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>
+                    {book.title}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Info utama */}
@@ -197,11 +205,15 @@ function ItemCard({ book, onEdit, onDelete, isAdmin, onClick }) {
     <div className="book-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       {/* Cover */}
       <div className="book-cover">
-        <div className={`book-cover-bg ${cover}`}>
-          <div style={{ fontSize: 28, marginBottom: 8, opacity: .7 }}>📚</div>
-          <span className="book-cover-title">{book.title}</span>
-          <span className="book-cover-author">{book.author}</span>
-        </div>
+        {book.cover_image_url ? (
+          <img src={`${API_BASE}${book.cover_image_url}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Cover" />
+        ) : (
+          <div className={`book-cover-bg ${cover}`}>
+            <div style={{ fontSize: 28, marginBottom: 8, opacity: .7 }}>📚</div>
+            <span className="book-cover-title">{book.title}</span>
+            <span className="book-cover-author">{book.author}</span>
+          </div>
+        )}
 
         {/* Stock badge */}
         <div className="book-cover-badge">

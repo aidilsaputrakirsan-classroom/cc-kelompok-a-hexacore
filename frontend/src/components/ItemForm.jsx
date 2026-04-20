@@ -3,12 +3,14 @@
 // ============================================================
 import { useState, useEffect } from 'react'
 import { Modal, Field, Input, Select, Textarea } from './ui/Common'
+import { uploadBookCover, API_BASE } from '../services/api'
 
 const EMPTY = {
   isbn: '', title: '', author: '', publisher: '',
   publication_year: '', synopsis: '',
   total_stock: 1, available_stock: 1,
   category_id: '', genre_ids: [],
+  cover_image_url: null,
 }
 
 function GenreChips({ genres, selected, onChange }) {
@@ -37,6 +39,7 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
   const [form, setForm]       = useState(EMPTY)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors]   = useState({})   // validasi per-field
+  const [coverFile, setCoverFile] = useState(null)
 
   // Bug fix: isEdit harus dideklarasikan di level komponen,
   // bukan di dalam JSX setelah handleSave — supaya handleSave bisa pakai
@@ -55,10 +58,12 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
         available_stock:  editingItem.available_stock  ?? 1,
         category_id:      editingItem.category_id      ?? '',
         genre_ids:        editingItem.genres?.map(g => g.genre_id) ?? [],
+        cover_image_url:  editingItem.cover_image_url  ?? null,
       })
     } else {
       setForm(EMPTY)
     }
+    setCoverFile(null)
     setErrors({})
   }, [editingItem, isOpen])
 
@@ -80,6 +85,12 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
 
     setLoading(true)
     try {
+      let finalCoverUrl = form.cover_image_url
+      if (coverFile) {
+        const upRes = await uploadBookCover(coverFile)
+        finalCoverUrl = upRes.url
+      }
+
       const base = {
         title:            form.title.trim(),
         author:           form.author.trim(),
@@ -90,6 +101,7 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
         available_stock:  Number(form.available_stock),
         category_id:      Number(form.category_id),
         genre_ids:        form.genre_ids,
+        cover_image_url:  finalCoverUrl,
       }
       await onSave(isEdit ? base : { ...base, isbn: form.isbn.trim() || null }, editingItem?.book_id ?? null)
       onClose()
@@ -140,6 +152,16 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
           <Input value={form.isbn} onChange={e => { f('isbn')(e) }} placeholder="978-xxx-xxx-xxx-x" error={errors.isbn} />
         </Field>
       )}
+
+      <Field label="Cover Buku" optional hint="Opsional: Upload gambar untuk cover buku">
+        <input type="file" accept="image/*" onChange={e => setCoverFile(e.target.files[0])} className="input" style={{ background: 'var(--c-bg)', padding: '6px' }} />
+        {form.cover_image_url && !coverFile && (
+          <div style={{ marginTop: 8, padding: 8, background: 'var(--c-bg)', borderRadius: 6, display: 'inline-block' }}>
+            <span style={{ display: 'block', fontSize: 11, marginBottom: 4, color: 'var(--c-text3)' }}>Cover saat ini:</span>
+            <img src={`${API_BASE}${form.cover_image_url}`} style={{ height: 60, borderRadius: 4 }} alt="Current Cover" />
+          </div>
+        )}
+      </Field>
 
       <div className="form-row">
         <Field label="Judul *" error={errors.title}>

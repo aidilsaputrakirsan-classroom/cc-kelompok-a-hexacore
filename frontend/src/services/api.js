@@ -147,6 +147,33 @@ export const createBook = (d)     => req('/books',       { method: 'POST',   bod
 export const updateBook = (id, d) => req(`/books/${id}`, { method: 'PUT',    body: JSON.stringify(d) })
 export const deleteBook = (id)    => req(`/books/${id}`, { method: 'DELETE' })
 
+export const uploadBookCover = async (fileBlob) => {
+  const t = token.get()
+  const formData = new FormData()
+  formData.append('file', fileBlob)
+
+  const headers = t ? { 'Authorization': `Bearer ${t}` } : {}
+  // Biarkan fetch mengurus Content-Type dan boundary otomatis
+  let res
+  try {
+    res = await fetch(`${API_BASE}/upload/covers`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+  } catch {
+    throw new Error('Tidak dapat terhubung ke server.')
+  }
+
+  if (res.status === 401) { onSessionExpired(); throw new Error('Sesi berakhir. Silakan masuk kembali.') }
+  if (res.status === 403) throw new Error('Akses ditolak — bukan admin.')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Error ${res.status} saat upload cover`)
+  }
+  return res.json()
+}
+
 // ── Users — butuh token (semua role), PUT/DELETE = admin ──────
 export const fetchUsers = (limit = 100) => req(`/users?limit=${limit}`)
 export const fetchUser  = (id)          => req(`/users/${id}`)
