@@ -6,14 +6,14 @@ Sistem ini dirancang untuk tiga kelompok demografi pengguna dengan kebutuhan yan
 1. **Pengunjung Publik (Guest):**
 mahasiswa, pelajar, atau masyarakat umum yang ingin menelusuri katalog atau cek ketersediaan buku sebelum memutuskan untuk mendaftar
 2. **Anggota Terdaftar (Member):**
-pengguna aktif perpustakaan yang membtuuhkan fasilitas untuk meminjam buku, mengecek batas waktu pengembalian, dan melihat riwayat.
+pengguna aktif perpustakaan yang membutuhkan fasilitas untuk meminjam buku, mengecek batas waktu pengembalian, dan melihat riwayat.
 3. **Pustakawan (Admin):**
 Petugas perpustakaan yang membutuhkan alat bantu efisien berupa dashboard statistik terstruktur dan mengelola inventaris, menyetujui peminjaman, dan mengelola member.
 
 Aplikasi ini dikembangkan untuk memberikan solusi atas beberapa kendala dalam pengelolaan perpustakaan:
 1. **Pencarian yang inefisien:**
 Menyelesaikan masalah pengunjung yang kesulitan menemukan buku di rak fisik dengan menyediakan fitur *searchbar* digital yang cepat dan akurat.
-2. **Risiko Kehilagan Data Transaksi:**
+2. **Risiko Kehilangan Data Transaksi:**
 Menggantikan pencatatan peminjaman dengan menjadi basis data digital yang terstruktur.
 3. **Keterbatasan Akses Informasi:**
 Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apakah sebuah buku sedang dipinjam orang lain atau tersedia dengan menampilkan ketersediaan stok secara real-time
@@ -44,21 +44,52 @@ Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apa
 [React Frontend] <--HTTP--> [FastAPI Backend] <--SQL--> [PostgreSQL]
        |                            |
   Vite + JSX               REST API Endpoints
-  (Port 5173)               (Port 8000)
+(Port 3000/5173)              (Port 8000)
 ```
 
 ## 🤖 Getting Started
+
+Kami merekomendasikan penggunaan **Docker Compose** agar seluruh sistem dapat berjalan serentak secara otomatis. Namun, kami juga menyediakan panduan *Quick Start* (Native) untuk kebutuhan *development* atau pengujian manual per modul.
+
+Kami telah menyediakan panduan langkah-demi-langkah yang lengkap untuk menjalankan proyek ini di berbagai perangkat.
+
+### 🐳 Panduan Menjalankan Project (Docker Compose)
+
+Proyek ini sudah terkonfigurasi penuh menggunakan Docker Compose untuk memudahkan proses deployment lokal.
+
+#### 1. Jalankan Seluruh Sistem  
+Buka terminal di root folder proyek dan jalankan perintah:
+```bash
+docker compose up -d
+```
+(Perintah ini akan secara otomatis membuat network lentera_net, menyiapkan volume lentera_data, dan menyalakan Database, Backend, serta Frontend secara bersamaan).
+
+#### 2. Cek Status Aplikasi
+Pastikan ketiga services sudah berstatus Up (healthy):
+
+```bash
+docker compose ps
+```
+
+#### 3. Akses Aplikasi
+- Frontend (UI): http://localhost:3000
+- Backend API: http://localhost:8000
+- API Documentation (Swagger): http://localhost:8000/docs
+
+#### 4. Mematikan Sistem
+Untuk mematikan sistem tanpa menghilangkan data database:
+
+```bash
+docker compose down
+```
+
+### Quick Start Instalasi Native (Untuk Development)  
 Prasyarat
 - Python 3.10+
 - Node.js 18+
 - Git
 
-Kami telah menyediakan panduan langkah-demi-langkah yang lengkap untuk menjalankan proyek ini di berbagai perangkat.
-
-👉 BACA DI SINI: [Panduan Instalasi & Setup Lengkap](docs/setup-guide.md)
-
-#### Quick Start :
-- Automated Setup: `./setup.sh`
+Automated Setup: `./setup.sh`
 - Backend
 ```
 cd backend
@@ -190,59 +221,27 @@ CC-KELOMPOK-A-HEXACORE/
 Berikut adalah detail arsitektur *database* PostgreSQL yang digunakan oleh aplikasi LenteraPustaka.
 * [Schema Database](docs/SchemaDatabase.md)
 
-## 🐳 Panduan Menjalankan Project (Local Deployment)
-
-Ikuti langkah-langkah di bawah ini untuk menjalankan aplikasi menggunakan Docker. Jika image belum tersedia di lokal, Docker akan otomatis menariknya dari Docker Hub.
-
-### 1. Persiapan Network
-Buat jaringan internal agar antar container bisa saling berkomunikasi:
-```bash
-docker network create lentera_net
-```
-### 2. Menjalankan Database (PostgreSQL)
-Langkah ini akan membuat container database dan menyimpannya secara persistent di volume lentera_data:
-
-```bash
-docker run -d --name db \
-  --network lentera_net \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=lentera_pustaka \
-  -p 5433:5432 \
-  -v lentera_data:/var/lib/postgresql/data \
-  postgres:16-alpine
-```
-
-### 3. Menjalankan Backend (FastAPI)
-Container ini akan menggunakan konfigurasi dari .env.docker:
-```bash
-docker run -d --name lentera_be \
-  --network lentera_net \
-  --env-file ./backend/.env.docker \
-  -p 8000:8000 \
-  x3naline/lentera-be:v1
-```
-
-### 4. Menjalankan Frontend (React/Vite)
-Akses aplikasi melalui browser setelah langkah ini selesai:
-```bash
-docker run -d --name lentera_fe \
-  --network lentera_net \
-  -p 3000:80 \
-  x3naline/lentera-fe:v1
-```
-
-#### 💡Note: Pastikan Anda sudah melakukan `docker login` jika diperlukan untuk mengakses repository image.
-
-
 ---
-## 🧪 Hasil Pengujian (UI & API) & Panduan
-* [Laporan Pengujian API (Swagger) - Modul 2](docs/api-test-results.md)
-* [Ringkasan Spesifikasi & Parameter API - Modul 2](docs/api-summary.md)
-* [Laporan Pengujian UI (React) - Modul 3](docs/ui-test-results.md)
-* [Laporan Pengujian E2E (Autentikasi) - Modul 4](docs/auth-test-results.md) 
-* [Panduan Konfigurasi Environment - Modul 4](docs/setup-guide.md)
-* [API Documentation - Modul 4](docs/api-documentation.md)
-* [Laporan Perbandingan Ukuran Base Image Docker - Modul 5](docs/image-comparison.md)
-* [Docker Commands Cheat Sheet - Modul 5](docs/docker-cheatsheet.md)
-* [Diagram Arsitektur Docker Multi-Container - Modul 6](docs/docker-architecture.md)
+  
+## 📚 Dokumentasi Teknis & Laporan Pengujian
+**⚙️ Modul 2: Backend REST API (FastAPI)**
+* [Hasil Pengujian API Terintegrasi via Swagger](docs/api-test-results.md)
+* [Ringkasan Spesifikasi & Parameter API](docs/api-summary.md)
+
+**💻 Modul 3: Frontend Development (React UI)**
+* [Hasil Pengujian Fungsionalitas Antarmuka (UI)](docs/ui-test-results.md)
+
+**🔐 Modul 4: Integrasi Full-Stack & Autentikasi**
+* [Hasil Pengujian End-to-End (Alur Otentikasi & Otorisasi)](docs/auth-test-results.md)
+* [Panduan Instalasi & Konfigurasi Environment Lokal](docs/setup-guide.md)
+* [Dokumentasi Lengkap Endpoints API](docs/api-documentation.md)
+
+**📦 Modul 5 & 6: Docker Containerization & Orchestration**
+* 🐳 **[Diagram Arsitektur Multi-Kontainer Docker](docs/docker-architecture.md)**
+* [Analisis & Perbandingan Ukuran Base Image Docker](docs/image-comparison.md)
+* [Cheat Sheet: Daftar Perintah Esensial Docker](docs/docker-cheatsheet.md)
+
+**🎯 Persiapan UTS & Arsitektur Utama**
+* 🚀 **[Naskah Demo UTS Kelompok Hexacore](docs/uts-demo-script.md)**
+* 🗄️ **[Detail Skema Database & ERD Terkini](docs/SchemaDatabase.md)**
+
