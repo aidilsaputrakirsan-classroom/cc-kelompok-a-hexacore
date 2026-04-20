@@ -16,7 +16,7 @@ docker images python
 ```
 
 ## 3. Tabel hasil perbandingan
-![modul5](image-comparison.png)
+![modul5](test/image-comparison.png)
 
 ## 4. Hasil Analisis
 ### 1. Efisiensi Penyimpanan:
