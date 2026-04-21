@@ -13,6 +13,18 @@ const EMPTY = {
   cover_image_url: null,
 }
 
+const ISBN_ALLOWED = /^[0-9-]+$/
+
+function validateIsbn(value) {
+  const isbn = value.trim()
+  if (!isbn) return ''
+  if (isbn.length < 10) return 'ISBN minimal 10 karakter'
+  if (isbn.length > 20) return 'ISBN maksimal 20 karakter'
+  if (!ISBN_ALLOWED.test(isbn)) return 'ISBN hanya boleh berisi angka dan strip (-)'
+  if (!isbn.includes('-')) return 'ISBN harus menggunakan format angka dan strip (-)'
+  return ''
+}
+
 function GenreChips({ genres, selected, onChange }) {
   const toggle = (id) =>
     onChange(selected.includes(id) ? selected.filter(g => g !== id) : [...selected, id])
@@ -68,6 +80,11 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
   }, [editingItem, isOpen])
 
   const f = k => e => { setForm(p => ({ ...p, [k]: e.target.value })); setErrors(p => ({ ...p, [k]: '' })) }
+  const handleIsbnChange = e => {
+    const nextValue = e.target.value.replace(/[^0-9-]/g, '').slice(0, 20)
+    setForm(p => ({ ...p, isbn: nextValue }))
+    setErrors(p => ({ ...p, isbn: validateIsbn(nextValue) || '' }))
+  }
 
   const handleSave = async () => {
     // Validasi field wajib
@@ -75,8 +92,10 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
     if (!form.title.trim())           e.title      = 'Judul wajib diisi'
     if (!form.author.trim())          e.author     = 'Pengarang wajib diisi'
     if (!form.category_id)            e.category_id = 'Kategori wajib dipilih'
-    if (!isEdit && form.isbn.trim() && form.isbn.trim().length < 10)
-                                      e.isbn       = 'ISBN minimal 10 karakter'
+    if (!isEdit) {
+      const isbnError = validateIsbn(form.isbn)
+      if (isbnError) e.isbn = isbnError
+    }
     if (Number(form.total_stock) < 1) e.total_stock = 'Minimal 1'
     if (Number(form.available_stock) > Number(form.total_stock))
                                       e.available_stock = 'Tidak boleh melebihi total stok'
@@ -148,8 +167,8 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
           </div>
         </div>
       ) : (
-        <Field label="ISBN" optional hint="Min. 10 karakter — contoh: 978-602-03-3446-5" error={errors.isbn}>
-          <Input value={form.isbn} onChange={e => { f('isbn')(e) }} placeholder="978-xxx-xxx-xxx-x" error={errors.isbn} />
+        <Field label="ISBN" optional hint="Wajib angka + strip, 10-20 karakter — contoh: 978-602-03-3446-5" error={errors.isbn}>
+          <Input value={form.isbn} onChange={handleIsbnChange} maxLength={20} placeholder="978-602-03-3446-5" error={errors.isbn} />
         </Field>
       )}
 
