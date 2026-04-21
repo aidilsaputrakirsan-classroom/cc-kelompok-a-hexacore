@@ -177,6 +177,20 @@ class BookCreate(BaseModel):
     total_stock      : int           = Field(1, ge=1, examples=[5])
     available_stock  : int           = Field(1, ge=0, examples=[5])
 
+    @field_validator("isbn")
+    @classmethod
+    def validate_isbn_format(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        value = v.strip()
+        if not value:
+            return None
+        if not re.fullmatch(r"[0-9-]+", value):
+            raise ValueError("ISBN hanya boleh berisi angka dan strip (-)")
+        if "-" not in value:
+            raise ValueError("ISBN wajib menggunakan format angka + strip (-)")
+        return value
+
     @model_validator(mode="after")
     def validate_stock_consistency(self):
         if self.available_stock > self.total_stock:
