@@ -24,7 +24,7 @@ RUN npm run build
 # ============================================================
 # Stage 2: Production — Serve dengan Nginx
 # ============================================================
-FROM nginx:alpine
+FROM nginx:alpine-slim
 
 # Copy build output from Stage 1
 COPY --from=builder /app/dist/ /usr/share/nginx/html/
