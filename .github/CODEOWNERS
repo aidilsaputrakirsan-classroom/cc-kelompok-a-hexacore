@@ -19,6 +19,3 @@ Makefile                 @x3naline
 # Documentation — Lead QA & Docs
 README.md                @mightyqila13
 /docs/                   @mightyqila13
-
-# CI/CD (jika 5 orang) — Lead CI/CD
-# /.github/workflows/   @username-lead-cicd
