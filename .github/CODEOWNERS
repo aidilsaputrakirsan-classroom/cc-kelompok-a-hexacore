@@ -1,0 +1,21 @@
+# =============================================
+# CODEOWNERS — Hexacore
+# =============================================
+# Setiap baris: pola file → username GitHub reviewer
+# Reviewer otomatis ditambahkan saat PR mengubah file terkait
+
+# Backend — Lead Backend
+/backend/                @malikajaa
+
+# Frontend — Lead Frontend
+/frontend/               @mickamayulia
+
+# Docker & Infrastructure — Lead DevOps
+docker-compose.yml       @x3naline
+/backend/Dockerfile      @x3naline
+/frontend/Dockerfile     @x3naline
+Makefile                 @x3naline
+
+# Documentation — Lead QA & Docs
+README.md                @mightyqila13
+/docs/                   @mightyqila13
