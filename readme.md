@@ -110,6 +110,12 @@ Access
 - API Docs: http://localhost:8000/docs
 - Frontend: http://localhost:5173
 
+### 🛠 DevOps Automation
+Gunakan perintah berikut untuk mempermudah workflow:
+- `make lint`: Menjalankan pengecekan kualitas kode.
+- `make test`: Menjalankan unit testing.
+- `make pr-check`: Simulasi pengecekan sebelum melakukan Pull Request.
+
 ## 📅 Roadmap
 
 | Minggu | Target | Status |
@@ -128,25 +134,27 @@ Access
 
 ```
 CC-KELOMPOK-A-HEXACORE/
+├── .github/
+│   ├── CODEOWNERS                     ← Baru
 ├── backend/
 │   ├── static/   
-│   ├── Dockerfile           ← BARU
-│   ├── .dockerignore        ← BARU           
-│   ├── crud.py              ← Updated (Fix Lost Buku Status)
+│   ├── Dockerfile           
+│   ├── .dockerignore                   
+│   ├── crud.py              
 │   ├── database.py
-│   ├── main.py              ← Updated (Fix Lost Buku Status)
+│   ├── main.py              
 │   ├── models.py            
 │   ├── requirements.txt     
 │   ├── schemas.py           
-│   ├── .env                 ← Updated (host.docker.internal)
-│   └── .env.example         ← Updated
+│   ├── .env                 
+│   └── .env.example         
 ├── docs/ 
 │   ├── test/                
 │   ├── api-documentation.md 
 │   ├── api-test-results.md   
 │   ├── auth-test-results.md
-│   ├── docker-cheatsheet.md  ← BARU 
-│   ├── image-comparison.md  ← BARU 
+│   ├── docker-cheatsheet.md   
+│   ├── image-comparison.md  
 │   ├── env-setup.md
 │   ├── schemadatabase.md    
 │   ├── member-aqila.md
@@ -159,17 +167,20 @@ CC-KELOMPOK-A-HEXACORE/
 │   ├── frontend/
 │   ├── node_modules/
 │   ├── public/    
-│   └── src/                ← Update
-│        ├── App.jsx                  ← Update
-│        ├── App.css                  ← Update
-│        ├── main.jsx                 ← Update
+│   └── src/                
+│        ├── App.jsx                  
+│        ├── App.css                  
+│        ├── main.jsx                 
 │        └── components/
-│            ├── Header.jsx           ← Update
-│            ├── SearchBar.jsx        ← Update
-│            ├── ItemForm.jsx         ← Update
-│            ├── ItemList.jsx         ← Update
-│            └── ItemCard.jsx         ← Update
+│            ├── Header.jsx           
+│            ├── SearchBar.jsx        
+│            ├── ItemForm.jsx         
+│            ├── ItemList.jsx         
+│            └── ItemCard.jsx         
+├── docker-compose.yml                ← Update
+├── docker-compose.prod.yml           ← Baru
 ├── .gitignore            
+├── Makefile
 ├── setup.sh                
 └── README.md                         ← Update
 ```
