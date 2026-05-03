@@ -1,0 +1,17 @@
+# Production overrides — gunakan dengan:
+# docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  backend:
+    environment:
+      - DEBUG=false
+      - CORS_ORIGINS=https://lentera-pustaka.com # Ganti dengan domain aslimu nanti
+    restart: always
+
+  frontend:
+    restart: always
+
+  db:
+    restart: always
+    # Menghapus port 5433 agar database tidak bisa diakses dari internet/luar network Docker
+    ports: !reset []
