@@ -124,12 +124,14 @@ class TokenResponse(BaseModel):
 class CategoryCreate(BaseModel):
     """Schema untuk membuat kategori buku baru."""
     # Create schema dipakai saat admin menambah data referensi kategori.
+    # Field di schema ini divalidasi sebelum data kategori dikirim ke layer CRUD.
     name        : str           = Field(..., min_length=1, max_length=100, examples=["Fiksi"])
     description : Optional[str] = Field(None, examples=["Buku-buku fiksi dan novel"])
 
 
 class CategoryResponse(BaseModel):
     """Schema output kategori."""
+    # Response kategori dikirim kembali ke frontend sebagai opsi klasifikasi buku.
     category_id : int
     name        : str
     description : Optional[str]
@@ -165,6 +167,7 @@ class GenreResponse(BaseModel):
 class BookCreate(BaseModel):
     """Schema untuk menambahkan buku baru ke inventaris."""
     # Request create buku membawa seluruh data inti buku beserta daftar genre yang ingin dipasang.
+    # category_id menghubungkan buku baru ke satu data kategori yang sudah tersedia.
     category_id      : int
     genre_ids        : list[int]     = Field(default_factory=list, description="List ID Genre buku")
     isbn             : Optional[str] = Field(None, min_length=10, max_length=20, examples=["978-602-03-3446-5"])
@@ -201,6 +204,7 @@ class BookCreate(BaseModel):
 class BookUpdate(BaseModel):
     """Schema untuk update data buku — semua field opsional (partial update)."""
     # Semua field optional karena endpoint update buku mendukung partial update.
+    # Jika category_id dikirim saat update, buku dipindahkan ke kategori referensi yang baru.
     category_id      : Optional[int] = None
     genre_ids        : Optional[list[int]] = Field(None, description="Ganti seluruh relasi genre buku ini")
     title            : Optional[str] = Field(None, min_length=1, max_length=255)
@@ -223,6 +227,7 @@ class BookUpdate(BaseModel):
 class BookResponse(BaseModel):
     """Schema output buku — termasuk info stok real-time."""
     # Response buku ikut membawa object genre agar frontend tidak perlu resolve genre secara manual.
+    # category_id tetap dikirim agar frontend dapat mencocokkan buku dengan daftar kategori.
     book_id          : int
     category_id      : int
     genres           : list[GenreResponse] = []

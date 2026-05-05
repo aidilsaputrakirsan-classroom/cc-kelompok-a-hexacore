@@ -48,12 +48,16 @@ class Category(Base):
     """
     __tablename__ = "categories"
 
+    # Data kategori menjadi master data yang dirujuk oleh tabel books lewat category_id.
     # Category adalah klasifikasi utama buku, misalnya Fiksi atau Teknologi.
     category_id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    # Nama kategori dibuat unik agar admin tidak membuat dua kategori dengan label yang sama.
     name        = Column(String(100), nullable=False, unique=True)
+    # Deskripsi bersifat opsional dan hanya membantu memperjelas cakupan kategori.
     description = Column(Text, nullable=True)
 
     # Relasi one-to-many: satu kategori dapat menaungi banyak buku.
+    # back_populates menghubungkan Category.books dengan Book.category tanpa menambah kolom baru.
     books = relationship("Book", back_populates="category")
 
     def __repr__(self):
@@ -105,6 +109,7 @@ class Book(Base):
     __tablename__ = "books"
 
     book_id          = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    # Setiap buku wajib terhubung ke satu kategori valid di tabel categories.
     category_id      = Column(Integer, ForeignKey("categories.category_id"), nullable=False)
     # ISBN bersifat opsional, tetapi harus unik jika diisi.
     isbn             = Column(String(20), unique=True, nullable=True, index=True)
