@@ -19,7 +19,7 @@ import { useBooks } from '../hooks/useBooks';
 import {
   fmt, fmtDate, validatePassword, pwStrength,
   trxBadge, fineBadge,
-} from '../../utils/formatters';
+} from '../utils/Formatters';
 
 import {
   login, register, logout, getMe, token, userCache,
