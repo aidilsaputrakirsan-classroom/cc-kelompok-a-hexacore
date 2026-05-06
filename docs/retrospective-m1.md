@@ -6,6 +6,8 @@
 - Seluruh dokumentasi esensial (Skema Database, Pengujian API, Setup Lingkungan) telah dicatat dengan sangat komprehensif sehingga mempermudah proses pelacakan progres.
 
 ## 🔴 Apa yang Perlu Diperbaiki?
+> **Catatan Evaluasi (Fase UTS):** Poin-poin di bawah ini merupakan hasil temuan dan evaluasi kinerja tim selama pengerjaan Milestone 1 (periode hingga Ujian Tengah Semester). *Update terbaru: Seluruh kendala, bug antarmuka, dan kekurangan dokumentasi yang tercatat di bawah ini saat ini telah dieksekusi dan berhasil diperbaiki.*
+
 - Masih ditemukan kelolosan *bug* antarmuka (misal: ID Buku yang muncul di tabel transaksi, alih-alih Judul Buku).
 - Kerap terjadi bentrokan pengerjaan kode (*conflict*) karena seluruh anggota tim sebelumnya terbiasa melakukan *push* secara langsung ke *branch* `main`.
 - Perlunya sinkronisasi yang lebih rutin antara pengembangan Backend dan Frontend untuk mencegah parameter API yang tidak terpakai atau tidak terbaca.
