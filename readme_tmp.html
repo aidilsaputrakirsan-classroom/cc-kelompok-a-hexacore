@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>readme.md</title>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+html,footer,header{
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Custom MD PDF CSS
+ */
+html,footer,header{
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+
+ }
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+<link rel="stylesheet" href="file:///r%3A/2.Travail/1.Enseignement/Cours/_1.Outils/2.Developpement/1.SCSS/main.css" type="text/css"><link rel="stylesheet" href="file:///d%3A/rdaros/Cours/_1.Outils/2.Developpement/1.SCSS/main.css" type="text/css">
+</head>
+
+<body>
+    <h1 id="%E2%98%81%EF%B8%8F-cloud-app---lenterapustaka">☁️ Cloud App - [LenteraPustaka]</h1>
+<p>Aplikasi <strong>LenteraPustaka</strong> adalah sebuah platform berbasis web yang dirancang untuk mendigitalisasi proses pengelolaan katalog dan transaksi peminjaman buku di perpustakaan. Aplikasi ini bertujuan untuk memberikan kemudahan akses informasi bagi pengunjung perpustakaan, memfasilitasi sirkulasi peminjaman, sekaligus menyederhanakan tugas administratif pustakawan secara terpusat.</p>
+<p>Sistem ini dirancang untuk tiga kelompok demografi pengguna dengan kebutuhan yang berbeda:</p>
+<ol>
+<li><strong>Pengunjung Publik (Guest):</strong><br>
+mahasiswa, pelajar, atau masyarakat umum yang ingin menelusuri katalog atau cek ketersediaan buku sebelum memutuskan untuk mendaftar</li>
+<li><strong>Anggota Terdaftar (Member):</strong><br>
+pengguna aktif perpustakaan yang membutuhkan fasilitas untuk meminjam buku, mengecek batas waktu pengembalian, dan melihat riwayat.</li>
+<li><strong>Pustakawan (Admin):</strong><br>
+Petugas perpustakaan yang membutuhkan alat bantu efisien berupa dashboard statistik terstruktur dan mengelola inventaris, menyetujui peminjaman, dan mengelola member.</li>
+</ol>
+<p>Aplikasi ini dikembangkan untuk memberikan solusi atas beberapa kendala dalam pengelolaan perpustakaan:</p>
+<ol>
+<li><strong>Pencarian yang inefisien:</strong><br>
+Menyelesaikan masalah pengunjung yang kesulitan menemukan buku di rak fisik dengan menyediakan fitur <em>searchbar</em> digital yang cepat dan akurat.</li>
+<li><strong>Risiko Kehilangan Data Transaksi:</strong><br>
+Menggantikan pencatatan peminjaman dengan menjadi basis data digital yang terstruktur.</li>
+<li><strong>Keterbatasan Akses Informasi:</strong><br>
+Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apakah sebuah buku sedang dipinjam orang lain atau tersedia dengan menampilkan ketersediaan stok secara real-time</li>
+</ol>
+<h2 id="%F0%9F%91%A5-tim">👥 Tim</h2>
+<table>
+<thead>
+<tr>
+<th>Nama</th>
+<th>NIM</th>
+<th>Peran</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Maulana Malik Ibrahim</td>
+<td>10231051</td>
+<td>Lead Backend</td>
+</tr>
+<tr>
+<td>Micka Mayulia Utama</td>
+<td>10231053</td>
+<td>Lead Frontend</td>
+</tr>
+<tr>
+<td>Khanza Nabila Tsabita</td>
+<td>10231049</td>
+<td>Lead DevOps</td>
+</tr>
+<tr>
+<td>Muhammad Aqila Ardhi</td>
+<td>10231057</td>
+<td>Lead QA &amp; Docs</td>
+</tr>
+</tbody>
+</table>
+<h2 id="%F0%9F%9B%A0%EF%B8%8F-tech-stack">🛠️ Tech Stack</h2>
+<table>
+<thead>
+<tr>
+<th>Teknologi</th>
+<th>Fungsi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FastAPI</td>
+<td>Backend REST API</td>
+</tr>
+<tr>
+<td>React</td>
+<td>Frontend SPA</td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>Database</td>
+</tr>
+<tr>
+<td>Docker</td>
+<td>Containerization</td>
+</tr>
+<tr>
+<td>GitHub Actions</td>
+<td>CI/CD</td>
+</tr>
+<tr>
+<td>Railway/Render</td>
+<td>Cloud Deployment</td>
+</tr>
+</tbody>
+</table>
+<h2 id="%F0%9F%8F%97%EF%B8%8F-architecture">🏗️ Architecture</h2>
+<pre class="hljs"><code><div>[React Frontend] &lt;--HTTP--&gt; [FastAPI Backend] &lt;--SQL--&gt; [PostgreSQL]
+       |                            |
+  Vite + JSX               REST API Endpoints
+(Port 3000/5173)              (Port 8000)
+</div></code></pre>
+<h2 id="%F0%9F%A4%96-getting-started">🤖 Getting Started</h2>
+<p>Kami merekomendasikan penggunaan <strong>Docker Compose</strong> agar seluruh sistem dapat berjalan serentak secara otomatis. Namun, kami juga menyediakan panduan <em>Quick Start</em> (Native) untuk kebutuhan <em>development</em> atau pengujian manual per modul.</p>
+<p>Kami telah menyediakan panduan langkah-demi-langkah yang lengkap untuk menjalankan proyek ini di berbagai perangkat.</p>
+<h3 id="%F0%9F%90%B3-panduan-menjalankan-project-docker-compose">🐳 Panduan Menjalankan Project (Docker Compose)</h3>
+<p>Proyek ini sudah terkonfigurasi penuh menggunakan Docker Compose untuk memudahkan proses deployment lokal.</p>
+<h4 id="1-jalankan-seluruh-sistem">1. Jalankan Seluruh Sistem</h4>
+<p>Buka terminal di root folder proyek dan jalankan perintah:</p>
+<pre class="hljs"><code><div>docker compose up -d
+</div></code></pre>
+<p>(Perintah ini akan secara otomatis membuat network lentera_net, menyiapkan volume lentera_data, dan menyalakan Database, Backend, serta Frontend secara bersamaan).</p>
+<h4 id="2-cek-status-aplikasi">2. Cek Status Aplikasi</h4>
+<p>Pastikan ketiga services sudah berstatus Up (healthy):</p>
+<pre class="hljs"><code><div>docker compose ps
+</div></code></pre>
+<h4 id="3-akses-aplikasi">3. Akses Aplikasi</h4>
+<ul>
+<li>Frontend (UI): http://localhost:3000</li>
+<li>Backend API: http://localhost:8000</li>
+<li>API Documentation (Swagger): http://localhost:8000/docs</li>
+</ul>
+<h4 id="4-mematikan-sistem">4. Mematikan Sistem</h4>
+<p>Untuk mematikan sistem tanpa menghilangkan data database:</p>
+<pre class="hljs"><code><div>docker compose down
+</div></code></pre>
+<h3 id="quick-start-instalasi-native-untuk-development">Quick Start Instalasi Native (Untuk Development)</h3>
+<p>Prasyarat</p>
+<ul>
+<li>Python 3.10+</li>
+<li>Node.js 18+</li>
+<li>Git</li>
+</ul>
+<p>Automated Setup: <code>./setup.sh</code></p>
+<ul>
+<li>Backend</li>
+</ul>
+<pre class="hljs"><code><div>cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+</div></code></pre>
+<ul>
+<li>Frontend</li>
+</ul>
+<pre class="hljs"><code><div>cd frontend
+npm install
+npm install recharts
+npm run dev
+</div></code></pre>
+<p>Access</p>
+<ul>
+<li>API: http://localhost:8000</li>
+<li>API Docs: http://localhost:8000/docs</li>
+<li>Frontend: http://localhost:5173</li>
+</ul>
+<h3 id="%F0%9F%9B%A0-devops-automation">🛠 DevOps Automation</h3>
+<p>Gunakan perintah berikut untuk mempermudah workflow:</p>
+<ul>
+<li><code>make lint</code>: Menjalankan pengecekan kualitas kode.</li>
+<li><code>make test</code>: Menjalankan unit testing.</li>
+<li><code>make pr-check</code>: Simulasi pengecekan sebelum melakukan Pull Request.</li>
+</ul>
+<h2 id="%F0%9F%93%85-roadmap">📅 Roadmap</h2>
+<table>
+<thead>
+<tr>
+<th>Minggu</th>
+<th>Target</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Setup &amp; Hello World</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>2</td>
+<td>REST API + Database</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>3</td>
+<td>React Frontend</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Full-Stack Integration</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>5-7</td>
+<td>Docker &amp; Compose</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>8</td>
+<td>UTS Demo</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>9-11</td>
+<td>CI/CD Pipeline</td>
+<td>⬜</td>
+</tr>
+<tr>
+<td>12-14</td>
+<td>Microservices</td>
+<td>⬜</td>
+</tr>
+<tr>
+<td>15-16</td>
+<td>Final &amp; UAS</td>
+<td>⬜</td>
+</tr>
+</tbody>
+</table>
+<h2 id="%F0%9F%97%83%EF%B8%8F-project-structure">🗃️ Project Structure</h2>
+<pre class="hljs"><code><div>CC-KELOMPOK-A-HEXACORE/
+├── .github/
+│   ├── CODEOWNERS                     ← Baru
+├── backend/
+│   ├── static/   
+│   ├── Dockerfile           
+│   ├── .dockerignore                   
+│   ├── crud.py              
+│   ├── database.py
+│   ├── main.py              
+│   ├── models.py            
+│   ├── requirements.txt     
+│   ├── schemas.py           
+│   ├── .env                 
+│   └── .env.example         
+├── docs/ 
+│   ├── test/                
+│   ├── api-documentation.md 
+│   ├── api-test-results.md   
+│   ├── auth-test-results.md
+│   ├── docker-cheatsheet.md   
+│   ├── image-comparison.md  
+│   ├── env-setup.md
+│   ├── schemadatabase.md    
+│   ├── member-aqila.md
+│   ├── member-Khanza_Nabila_Tsabita.md
+│   ├── member-Maulana_Malik_Ibrahim.md
+│   ├── member-Micka_Mayulia_Utama.md
+│   ├── setup-guide.md      
+│   └── ui-test-result.md
+├── frontend/  
+│   ├── frontend/
+│   ├── node_modules/
+│   ├── public/    
+│   └── src/                
+│        ├── App.jsx                  
+│        ├── App.css                  
+│        ├── main.jsx                 
+│        └── components/
+│            ├── Header.jsx           
+│            ├── SearchBar.jsx        
+│            ├── ItemForm.jsx         
+│            ├── ItemList.jsx         
+│            └── ItemCard.jsx         
+├── docker-compose.yml                ← Update
+├── docker-compose.prod.yml           ← Baru
+├── .gitignore            
+├── Makefile
+├── setup.sh                
+└── README.md                         ← Update
+</div></code></pre>
+<h2 id="%F0%9F%93%81-tabel-erd">📁 Tabel ERD</h2>
+<pre class="hljs"><code><div>+-------------------+              +-----------------------+
+|       USERS       |              |      TRANSACTIONS     |
++-------------------+              +-----------------------+
+| user_id (PK)      | 1          N | transaction_id (PK)   |
+| email (UK)        |--------------| user_id (FK)          |
+| password_hash     | (Melakukan)  | book_id (FK)          |
+| full_name         |              | borrow_date           |
+| role              |              | due_date              |
+| created_at        |              | return_date           |
++-------------------+              | status                |
+                                   +-----------+-----------+
+                                         | 1         | N
+                                         |           |
++-------------------+     (Menghasilkan) |           | 
+|    CATEGORIES     |                    |           |
++-------------------+                    | 1         |
+| category_id (PK)  |              +-------------+   |
+| name (UK)         |              |   FINES     |   |
+| description       |              +-----------  +   |
++---------+---------+              | fine_id(PK) |   |
+          |                        | trans_id(FK)|   |
+          | 1                      | amount      |   |
+          | (Memiliki)             | status      |   |
+          |                        | proof_url   |   |
+          | N                      | rej_note    |   |
++---------+---------+              +-----------+     |
+|       BOOKS       | 1                              |
++-------------------+--------------------------------+
+| book_id (PK)      |
+| category_id (FK)  |
+| isbn (UK)         |
+| title             |
+| author            |
+| publisher         | 
+| publication_year  | 1     N +-----------------+ N     1 +------------------+
+| synopsis          |---------|   BOOK_GENRES   |---------|      GENRES      |
+| total_stock       |         +-----------------+         +------------------+
+| available_stock   |         | book_id (PK,FK) |         | genre_id (PK)    |
+| cover_image_url   |         | genre_id(PK,FK) |         | name (UK)        |
++-------------------+         +-----------------+         | description      |
+                                                          +------------------+                    
+</div></code></pre>
+<p>Berikut adalah detail arsitektur <em>database</em> PostgreSQL yang digunakan oleh aplikasi LenteraPustaka.</p>
+<ul>
+<li><a href="docs/SchemaDatabase.md">Schema Database</a></li>
+</ul>
+<hr>
+<h2 id="%F0%9F%93%A1-dokumentasi--hasil-testing-endpoint-api">📡 Dokumentasi &amp; Hasil Testing Endpoint API</h2>
+<p>Berikut adalah daftar <em>endpoint</em> beserta bukti pengujian menggunakan Swagger/Thunder Client.</p>
+<p><em>(Daftar pengujian mencakup 6 poin utama dengan total 22 sub-poin)</em>:<br>
+<br><img src="docs/test/categories.png" width="500"></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">No</th>
+<th>method</th>
+<th>URL</th>
+<th>request body</th>
+<th>response example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>1</strong></td>
+<td><code>GET</code></td>
+<td><code>/system/health</code></td>
+<td><em>-</em></td>
+<td>Status <code>healthy</code> v0.3.0<br><img src="docs/test/systemget1.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>2</strong></td>
+<td><code>GET</code></td>
+<td><code>/system/team</code></td>
+<td><em>-</em></td>
+<td>Data tim beranggotakan 4 orang<br><img src="docs/test/responsystemget.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>3</strong></td>
+<td><code>POST</code></td>
+<td><code>/categories</code></td>
+<td><pre><code>{&quot;name&quot;: &quot;Non-Fiksi&quot;, &quot;description&quot;: &quot;Karya tulis informatif...&quot;}</code></pre><img src="docs/test/post4.png" width="300"></td>
+<td>Berhasil membuat data kategori<br><img src="docs/test/responspost.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>4</strong></td>
+<td><code>GET</code></td>
+<td><code>/categories</code></td>
+<td><em>-</em></td>
+<td>Menampilkan <em>list</em> kategori<br><img src="docs/test/responsget.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>5</strong></td>
+<td><code>GET</code></td>
+<td><code>/categories/{category_id}</code></td>
+<td>Parameter: <code>category_id = 1</code><br><img src="docs/test/get2.png" width="300"></td>
+<td>Menampilkan detail kategori ID 1<br><img src="docs/test/responsget2.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>6</strong></td>
+<td><code>PUT</code></td>
+<td><code>/categories/{category_id}</code></td>
+<td><code>category_id = 1</code><br><pre><code>{&quot;name&quot;: &quot;Fiksi&quot;, &quot;description&quot;: &quot;Karya sastra naratif...&quot;}</code></pre><img src="docs/test/put3.png" width="300"></td>
+<td>Data kategori berhasil di-update<br><img src="docs/test/responsput.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>7</strong></td>
+<td><code>DELETE</code></td>
+<td><code>/categories/{category_id}</code></td>
+<td>Parameter: <code>category_id = 1</code><br><img src="docs/test/delete1.png" width="300"></td>
+<td><code>access-control-allow-credentials: true</code><br><img src="docs/test/responsdelete1.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>8</strong></td>
+<td><code>GET</code></td>
+<td><code>/categories</code></td>
+<td><em>(Pengecekan setelah hapus)</em><br><em>-</em></td>
+<td>Kategori ID 1 sudah terhapus<br><img src="docs/test/getdelete.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>9</strong></td>
+<td><code>POST</code></td>
+<td><code>/books</code></td>
+<td><pre><code>{&quot;category_id&quot;: 1, &quot;isbn&quot;: &quot;978-602-033-294-9&quot;, &quot;title&quot;: &quot;Bulan&quot;, &quot;author&quot;: &quot;Tere Liye&quot;, &quot;total_stock&quot;: 5...}</code></pre><img src="docs/test/bookspost1.png" width="300"></td>
+<td>Berhasil membuat data buku<br><img src="docs/test/responspostbook.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>10</strong></td>
+<td><code>GET</code></td>
+<td><code>/books/stats</code></td>
+<td><em>(Statistik inventaris awal)</em><br><em>-</em></td>
+<td>Menampilkan statistik total buku<br><img src="docs/test/getbookawalpng" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>11</strong></td>
+<td><code>GET</code></td>
+<td><code>/books</code></td>
+<td>Parameter: <code>ISBN = 978-602-033-294-9</code><br><img src="docs/test/getbook.png" width="300"></td>
+<td>Menampilkan hasil pencarian buku<br><img src="docs/test/responsgetbook.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>12</strong></td>
+<td><code>GET</code></td>
+<td><code>/books/{book_id}</code></td>
+<td>Parameter: <code>book_id</code><br><img src="docs/test/getbook2.png" width="300"></td>
+<td>Menampilkan detail spesifik buku<br><img src="docs/test/responsgetbook2.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>13</strong></td>
+<td><code>PUT</code></td>
+<td><code>/books/{book_id}</code></td>
+<td><code>book_id</code><br><pre><code>{&quot;available_stock&quot;: 3...}</code></pre><img src="docs/test/putbook.png" width="300"></td>
+<td>Stok buku berhasil di-update<br><img src="docs/test/responsputbook.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>14</strong></td>
+<td><code>GET</code></td>
+<td><code>/books/stats</code></td>
+<td><em>(Cek statistik pasca update)</em><br><em>-</em></td>
+<td>Perubahan statistik inventaris<br><img src="docs/test/getbookput.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>15</strong></td>
+<td><code>DELETE</code></td>
+<td><code>/books/{book_id}</code></td>
+<td>Parameter: <code>book_id</code><br><em>-</em></td>
+<td>Data buku berhasil dihapus<br><img src="docs/test/responsdeletebook.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>16</strong></td>
+<td><code>GET</code></td>
+<td><code>/books</code></td>
+<td><em>(Pengecekan setelah hapus)</em><br><em>-</em></td>
+<td>Menampilkan <em>list</em> buku terbaru<br><img src="docs/test/responsgetdeletebook.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>17</strong></td>
+<td><code>GET</code></td>
+<td><code>/books/stats</code></td>
+<td><em>(Cek statistik pasca hapus)</em><br><em>-</em></td>
+<td>Statistik inventaris berkurang<br><img src="docs/test/getbookdelete.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>18</strong></td>
+<td><code>POST</code></td>
+<td><code>/user</code></td>
+<td><pre><code>{&quot;email&quot;: &quot;micka@example.com&quot;, &quot;password&quot;: &quot;password456&quot;, &quot;full_name&quot;: &quot;Micka Mayulia&quot;, &quot;role&quot;: &quot;member&quot;}</code></pre><img src="docs/test/postuser.png" width="300"></td>
+<td>Berhasil membuat <em>user</em> baru<br><img src="docs/test/responsputuser.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>19</strong></td>
+<td><code>GET</code></td>
+<td><code>/user</code></td>
+<td><em>-</em></td>
+<td>Menampilkan <em>list</em> <em>user</em><br><img src="docs/test/responsgetuser.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>20</strong></td>
+<td><code>GET</code></td>
+<td><code>/user/{user_id}</code></td>
+<td>Parameter: <code>user_id</code><br><img src="docs/test/getuser2.png" width="300"></td>
+<td>Menampilkan detail <em>user</em><br><img src="docs/test/responsgetuser2.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>21</strong></td>
+<td><code>POST</code></td>
+<td><code>/transaction</code></td>
+<td><pre><code>{&quot;user_id&quot;: &quot;96b872f9...&quot;, &quot;book_id&quot;: &quot;29efea5f...&quot;, &quot;due_date&quot;: &quot;2026-03-07...&quot;}</code></pre><img src="docs/test/postransaction.png" width="300"></td>
+<td>Peminjaman buku berhasil dicatat<br><img src="docs/test/responspostransaction.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>22</strong></td>
+<td><code>GET</code></td>
+<td><code>/transaction</code></td>
+<td>Menampilkan status (dipinjam, dikembalikan, dll)<br><img src="docs/test/getransaction.png" width="300"></td>
+<td>Menampilkan <em>list</em> transaksi<br><img src="docs/test/responsgetransaction.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>23</strong></td>
+<td><code>GET</code></td>
+<td><code>/transaction/{id}</code></td>
+<td>Parameter: <code>transaction_id</code><br><img src="docs/test/getransaction2.png" width="300"></td>
+<td>Menampilkan detail transaksi spesifik<br><img src="docs/test/responsgetransaction2.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>24</strong></td>
+<td><code>PUT</code></td>
+<td><code>/transaction/{id}</code></td>
+<td>Parameter: <code>transaction_id</code><br><img src="docs/test/putransaction.png" width="300"></td>
+<td>Pembaruan status transaksi berhasil<br><img src="docs/test/responsputransaction.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>25</strong></td>
+<td><code>GET</code></td>
+<td><code>/fines</code></td>
+<td>Parameter: <code>belum lunas</code><br><img src="docs/test/getfines.png" width="300"></td>
+<td>Menampilkan detail denda berjalan<br><img src="docs/test/responsgetfines.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>26</strong></td>
+<td><code>PUT</code></td>
+<td><code>/fines/{fines_id}</code></td>
+<td>Parameter: <code>fines_id</code><br><img src="docs/test/putfines.png" width="300"></td>
+<td>Status pelunasan berhasil di-update<br><img src="docs/test/responsputfines.png" width="300"></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>27</strong></td>
+<td><code>GET</code></td>
+<td><code>/fines</code></td>
+<td>Parameter: <code>lunas</code><br><img src="docs/test/getfines2.png" width="300"></td>
+<td>Menampilkan riwayat denda lunas<br><img src="docs/test/responsgetfines2.png" width="300"></td>
+</tr>
+</tbody>
+</table>
+<h2 id="%F0%9F%93%9A-dokumentasi-teknis--laporan-pengujian">📚 Dokumentasi Teknis &amp; Laporan Pengujian</h2>
+<p><strong>⚙️ Modul 2: Backend REST API (FastAPI)</strong></p>
+<ul>
+<li><a href="docs/api-test-results.md">Hasil Pengujian API Terintegrasi via Swagger</a></li>
+<li><a href="docs/api-summary.md">Ringkasan Spesifikasi &amp; Parameter API</a></li>
+</ul>
+<p><strong>💻 Modul 3: Frontend Development (React UI)</strong></p>
+<ul>
+<li><a href="docs/ui-test-results.md">Hasil Pengujian Fungsionalitas Antarmuka (UI)</a></li>
+</ul>
+<p><strong>🔐 Modul 4: Integrasi Full-Stack &amp; Autentikasi</strong></p>
+<ul>
+<li><a href="docs/auth-test-results.md">Hasil Pengujian End-to-End (Alur Otentikasi &amp; Otorisasi)</a></li>
+<li><a href="docs/setup-guide.md">Panduan Instalasi &amp; Konfigurasi Environment Lokal</a></li>
+<li><a href="docs/api-documentation.md">Dokumentasi Lengkap Endpoints API</a></li>
+</ul>
+<p><strong>📦 Modul 5 &amp; 6: Docker Containerization &amp; Orchestration</strong></p>
+<ul>
+<li>🐳 <strong><a href="docs/docker-architecture.md">Diagram Arsitektur Multi-Kontainer Docker</a></strong></li>
+<li><a href="docs/image-comparison.md">Analisis &amp; Perbandingan Ukuran Base Image Docker</a></li>
+<li><a href="docs/docker-cheatsheet.md">Cheat Sheet: Daftar Perintah Esensial Docker</a></li>
+</ul>
+<p><strong>🎯 Persiapan UTS &amp; Arsitektur Utama</strong></p>
+<ul>
+<li>🚀 <strong><a href="docs/uts-demo-script.md">Naskah Demo UTS Kelompok Hexacore</a></strong></li>
+<li>🗄️ <strong><a href="docs/SchemaDatabase.md">Detail Skema Database &amp; ERD Terkini</a></strong></li>
+</ul>
+
+</body>
+
+</html>
