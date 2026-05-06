@@ -37,6 +37,18 @@ export default function App() {
   const [badges, setBadges]           = useState({ transactions: 0, fines: 0 })
   const { toasts, toast }             = useToast()
 
+  // Dark mode
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light')
+  }, [])
+
   // Fetch notification counts (polling setiap 60 detik)
   const refreshBadges = useCallback(async (currentUser) => {
     if (!currentUser) { setBadges({ transactions: 0, fines: 0 }); return }
@@ -209,7 +221,7 @@ export default function App() {
   if (isAdmin) return (
     <>
       <div className="layout-side">
-        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} />
+        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} theme={theme} toggleTheme={toggleTheme} />
         <main className="layout-side-main">
           <div className="layout-side-inner">
             <Suspense fallback={<GlobalLoadingState />}>
@@ -226,7 +238,7 @@ export default function App() {
   return (
     <>
       <div className="layout-top">
-        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} />
+        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} theme={theme} toggleTheme={toggleTheme} />
         {safePage === 'home' || safePage === 'books'
           ? renderPage(safePage)
           : (
