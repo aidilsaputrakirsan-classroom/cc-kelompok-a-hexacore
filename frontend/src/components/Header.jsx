@@ -60,7 +60,7 @@ function BadgeDot({ count }) {
   )
 }
 
-function TopNav({ page, onNav, user, onLogout, badges = {} }) {
+function TopNav({ page, onNav, user, onLogout, badges = {}, theme, toggleTheme }) {
   const links = user ? MEMBER_LINKS : GUEST_LINKS
   return (
     <header className="topnav">
@@ -86,6 +86,9 @@ function TopNav({ page, onNav, user, onLogout, badges = {} }) {
       </nav>
 
       <div className="topnav-right">
+        <button className="btn btn-ghost btn-sm" onClick={toggleTheme} title="Toggle Dark Mode" style={{ fontSize: 16, padding: '4px 8px' }}>
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
         {user ? (
           <>
             <button className="topnav-user-btn" onClick={() => onNav('profile')}>
@@ -108,7 +111,7 @@ function TopNav({ page, onNav, user, onLogout, badges = {} }) {
   )
 }
 
-function Sidebar({ page, onNav, user, onLogout, badges = {} }) {
+function Sidebar({ page, onNav, user, onLogout, badges = {}, theme, toggleTheme }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -143,6 +146,9 @@ function Sidebar({ page, onNav, user, onLogout, badges = {} }) {
 
       {user && (
         <div className="sidebar-footer">
+          <button className="sidebar-logout" onClick={toggleTheme} style={{ marginBottom: 12, justifyContent: 'center' }}>
+            {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          </button>
           <div className="sidebar-user" onClick={() => onNav('profile')}>
             <div className="avatar avatar-md">{user.full_name?.[0]?.toUpperCase()}</div>
             <div style={{ overflow: 'hidden', flex: 1 }}>
@@ -159,10 +165,10 @@ function Sidebar({ page, onNav, user, onLogout, badges = {} }) {
   )
 }
 
-function Header({ page, onNav, user, onLogout, badges }) {
+function Header({ page, onNav, user, onLogout, badges, theme, toggleTheme }) {
   return user?.role === 'admin'
-    ? <Sidebar page={page} onNav={onNav} user={user} onLogout={onLogout} badges={badges} />
-    : <TopNav  page={page} onNav={onNav} user={user} onLogout={onLogout} badges={badges} />
+    ? <Sidebar page={page} onNav={onNav} user={user} onLogout={onLogout} badges={badges} theme={theme} toggleTheme={toggleTheme} />
+    : <TopNav  page={page} onNav={onNav} user={user} onLogout={onLogout} badges={badges} theme={theme} toggleTheme={toggleTheme} />
 }
 
 export default Header
