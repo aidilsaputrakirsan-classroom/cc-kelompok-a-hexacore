@@ -7,6 +7,7 @@
 
 const GUEST_LINKS = [
   { id: 'home', label: 'Beranda' },
+  { id: 'about', label: 'Tentang' },
 ]
 
 const MEMBER_LINKS = [
@@ -14,6 +15,7 @@ const MEMBER_LINKS = [
   { id: 'transactions', label: 'Transaksi', badgeKey: 'transactions' },
   { id: 'fines',        label: 'Denda',     badgeKey: 'fines'        },
   { id: 'profile',      label: 'Profil'    },
+  { id: 'about',        label: 'Tentang'   },
 ]
 
 const ADMIN_GROUPS = [
@@ -22,6 +24,7 @@ const ADMIN_GROUPS = [
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: '▦' },
       { id: 'profile',   label: 'Profil',    icon: '◉' },
+      { id: 'about',     label: 'Tentang',   icon: 'ℹ️' },
     ],
   },
   {

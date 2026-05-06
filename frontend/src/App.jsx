@@ -5,6 +5,7 @@
 // ============================================================
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Header from './components/Header';
+import AboutPage from './components/AboutPage';
 import { Spinner, ToastContainer } from './components/ui/Common';
 import { useToast } from './hooks/useToast';
 import { logout, getMe, token, userCache, fetchTransactions, fetchFines } from './services/api';
@@ -198,6 +199,7 @@ export default function App() {
       case 'lost':         return <LostBooksPage    user={user}   toast={toast} />
       case 'users':        return <UsersPage        toast={toast} />
       case 'profile':      return <ProfilePage      user={user} setUser={setUser} toast={toast} />
+      case 'about':        return <AboutPage        onBack={() => nav('home')} />
       case 'home':
       default:             return <HomePage         user={user} onNav={nav} toast={toast} />
     }
