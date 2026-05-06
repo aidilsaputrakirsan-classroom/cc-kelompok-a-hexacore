@@ -9,7 +9,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     css: true,
-  server: {
+    server: {
       deps: {
         inline: ['@testing-library/jest-dom'],
       },
