@@ -11,7 +11,7 @@ describe('API Service', () => {
   it('fetch berhasil mengembalikan data buku', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ total: 2, items: [{ book_id: 1, title: 'Buku A' }] }),
+      json: async () => ({ total: 2, books: [{ book_id: 1, title: 'Buku A' }] }),
     })
 
     const response = await fetch('http://localhost:8000/books')
@@ -19,7 +19,7 @@ describe('API Service', () => {
 
     expect(fetch).toHaveBeenCalledWith('http://localhost:8000/books')
     expect(data.total).toBe(2)
-    expect(data.items).toHaveLength(1)
+    expect(data.books).toHaveLength(1)
   })
 
   it('menangani error jaringan dengan benar', async () => {
