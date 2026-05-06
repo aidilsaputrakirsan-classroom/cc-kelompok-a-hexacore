@@ -242,10 +242,12 @@ def update_my_profile(data: MemberProfileUpdate, db: Session = Depends(get_db), 
 # ============================================================
 # CATEGORIES
 # ============================================================
+# Endpoint kategori mengelola master data klasifikasi yang dirujuk oleh data buku.
 
 @app.post("/categories", response_model=CategoryResponse, status_code=201, tags=["Categories"])
 def create_category(data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Tambah kategori buku baru."""
+    # Admin membuat kategori lebih dulu agar buku dapat memilih category_id yang valid.
     try:
         return crud.create_category(db=db, data=data)
     except ValueError as e:
@@ -259,12 +261,14 @@ def list_categories(
     db: Session = Depends(get_db)
 ):
     """Ambil semua kategori buku."""
+    # Daftar kategori biasanya dipakai frontend untuk dropdown saat membuat atau mengubah buku.
     return crud.get_categories(db=db, skip=skip, limit=limit)
 
 
 @app.get("/categories/{category_id}", response_model=CategoryResponse, tags=["Categories"])
 def get_category(category_id: int, db: Session = Depends(get_db)):
     """Ambil satu kategori berdasarkan ID."""
+    # Detail kategori membantu memastikan category_id tertentu masih tersedia di database.
     category = crud.get_category(db=db, category_id=category_id)
     if not category:
         raise HTTPException(status_code=404, detail=f"Kategori id={category_id} tidak ditemukan")
@@ -274,6 +278,7 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
 @app.put("/categories/{category_id}", response_model=CategoryResponse, tags=["Categories"])
 def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Update nama dan deskripsi kategori."""
+    # Update kategori tidak mengubah relasi buku; buku tetap menunjuk category_id yang sama.
     try:
         updated = crud.update_category(db=db, category_id=category_id, data=data)
     except ValueError as e:
@@ -286,6 +291,7 @@ def update_category(category_id: int, data: CategoryCreate, db: Session = Depend
 @app.delete("/categories/{category_id}", status_code=204, tags=["Categories"])
 def delete_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     """Hapus kategori."""
+    # Penghapusan kategori diproses di CRUD agar aturan database tetap menjadi sumber kebenaran.
     success = crud.delete_category(db=db, category_id=category_id)
     if not success:
         raise HTTPException(status_code=404, detail=f"Kategori id={category_id} tidak ditemukan")
@@ -361,6 +367,7 @@ def create_book(data: BookCreate, db: Session = Depends(get_db), current_user: U
     - **total_stock** & **available_stock**: Jumlah eksemplar
     - **category_id**: ID kategori harus sudah ada
     """
+    # Payload buku membawa category_id sebagai penghubung ke master data kategori.
     try:
         return crud.create_book(db=db, data=data)
     except ValueError as e:
@@ -369,14 +376,15 @@ def create_book(data: BookCreate, db: Session = Depends(get_db), current_user: U
 
 @app.get("/books", response_model=BookListResponse, tags=["Books"])
 def list_books(
-  skip:   int        = Query(0,    ge=0,       description="Offset pagination"),
-    limit:  int        = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
-    search: str | None = Query(None,             description="Cari berdasarkan judul, pengarang, atau ISBN"),
+    skip:        int        = Query(0,    ge=0,       description="Offset pagination"),
+    limit:       int        = Query(20,   ge=1, le=100, description="Jumlah data per halaman"),
+    search:      str | None = Query(None,             description="Cari berdasarkan judul, pengarang, atau ISBN"),
+    category_id: int | None = Query(None, ge=1,       description="Filter berdasarkan ID kategori"),
     db: Session = Depends(get_db)
 ):
-    """Ambil daftar buku dengan pagination dan pencarian."""
-    # Endpoint katalog buku ini disiapkan untuk kebutuhan frontend: paging daftar buku dan pencarian cepat.
-    return crud.get_books(db=db, skip=skip, limit=limit, search=search)
+    """Ambil daftar buku dengan pagination, pencarian, dan filter kategori."""
+    # Endpoint katalog buku ini disiapkan untuk kebutuhan frontend: paging, pencarian cepat, dan filter kategori.
+    return crud.get_books(db=db, skip=skip, limit=limit, search=search, category_id=category_id)
 
 
 @app.get("/books/stats", response_model=BookStatsResponse, tags=["Books"])
@@ -396,6 +404,7 @@ def get_book_stats(db: Session = Depends(get_db)):
 @app.get("/books/{book_id}", response_model=BookResponse, tags=["Books"])
 def get_book(book_id: int, db: Session = Depends(get_db)):
     """Ambil detail satu buku berdasarkan ID."""
+    # Detail buku mengembalikan category_id agar client dapat mencocokkannya dengan endpoint /categories.
     book = crud.get_book(db=db, book_id=book_id)
     if not book:
         raise HTTPException(status_code=404, detail=f"Buku id={book_id} tidak ditemukan")
@@ -408,6 +417,7 @@ def update_book(book_id: int, data: BookUpdate, db: Session = Depends(get_db), c
     Update data buku — partial update, hanya field yang dikirim yang berubah.
     ISBN tidak bisa diubah (gunakan DELETE + POST jika perlu).
     """
+    # Jika payload membawa category_id, layer CRUD akan memperbarui referensi kategori buku tersebut.
     try:
         updated = crud.update_book(db=db, book_id=book_id, data=data)
     except ValueError as e:

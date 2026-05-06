@@ -42,11 +42,13 @@ class ConflictError(ValueError):
 
 def create_category(db: Session, data: CategoryCreate) -> Category:
     """Buat kategori buku baru."""
+    # Objek Category dibentuk dari schema yang sudah divalidasi oleh Pydantic.
     category = Category(name=data.name, description=data.description)
     db.add(category)
     try:
         db.commit()
     except IntegrityError:
+        # Nama kategori unik di database, sehingga duplikasi diterjemahkan menjadi error bisnis.
         db.rollback()
         raise ConflictError("Nama kategori sudah digunakan")
     db.refresh(category)
@@ -55,16 +57,19 @@ def create_category(db: Session, data: CategoryCreate) -> Category:
 
 def get_categories(db: Session, skip: int = 0, limit: int = 100) -> list[Category]:
     """Ambil semua kategori."""
+    # Pagination menjaga daftar referensi kategori tetap aman jika jumlah data bertambah.
     return db.query(Category).offset(skip).limit(limit).all()
 
 
 def get_category(db: Session, category_id: int) -> Optional[Category]:
     """Ambil satu kategori berdasarkan ID."""
+    # Query tunggal ini dipakai ulang oleh endpoint detail, update, dan delete kategori.
     return db.query(Category).filter(Category.category_id == category_id).first()
 
 
 def update_category(db: Session, category_id: int, data: CategoryCreate) -> Optional[Category]:
     """Update nama/deskripsi kategori."""
+    # Ambil data lama lebih dulu agar endpoint bisa membedakan kategori tidak ditemukan dan konflik nama.
     category = get_category(db, category_id)
     if not category:
         return None
@@ -81,6 +86,7 @@ def update_category(db: Session, category_id: int, data: CategoryCreate) -> Opti
 
 def delete_category(db: Session, category_id: int) -> bool:
     """Hapus kategori. Gagal jika masih ada buku di kategori ini."""
+    # Delete hanya dilakukan setelah kategori target ditemukan.
     category = get_category(db, category_id)
     if not category:
         return False
@@ -151,6 +157,7 @@ def create_book(db: Session, data: BookCreate) -> Book:
         raise ValueError("available_stock tidak boleh lebih besar dari total_stock")
 
     # Data buku inti dibuat lebih dulu, lalu relasi many-to-many genre dirakit setelahnya.
+    # category_id disimpan sebagai foreign key untuk menghubungkan buku ke master kategori.
     book = Book(
         category_id      = data.category_id,
         isbn             = data.isbn,
@@ -184,13 +191,17 @@ def get_books(
     skip: int = 0,
     limit: int = 20,
     search: Optional[str] = None,
+    category_id: Optional[int] = None,
 ) -> dict:
     """
-    Ambil daftar buku dengan pagination dan pencarian.
+    Ambil daftar buku dengan pagination, pencarian, dan filter kategori.
     Search mencakup: title, author, isbn.
     """
     # Query dasar dapat dipakai apa adanya atau dipersempit dengan keyword pencarian.
+    # Filter category_id memakai foreign key langsung agar sesuai dengan relasi Book -> Category.
     query = db.query(Book)
+    if category_id is not None:
+        query = query.filter(Book.category_id == category_id)
     if search:
         kw = f"%{search}%"
         # Satu keyword bisa mencari judul, penulis, atau ISBN sekaligus.
