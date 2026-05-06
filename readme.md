@@ -1,4 +1,5 @@
 # ☁️ Cloud App - [LenteraPustaka]
+![CI Pipeline](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/actions/workflows/ci.yml/badge.svg)
 
 Aplikasi **LenteraPustaka** adalah sebuah platform berbasis web yang dirancang untuk mendigitalisasi proses pengelolaan katalog dan transaksi peminjaman buku di perpustakaan. Aplikasi ini bertujuan untuk memberikan kemudahan akses informasi bagi pengunjung perpustakaan, memfasilitasi sirkulasi peminjaman, sekaligus menyederhanakan tugas administratif pustakawan secara terpusat.
 
@@ -135,7 +136,10 @@ Gunakan perintah berikut untuk mempermudah workflow:
 ```
 CC-KELOMPOK-A-HEXACORE/
 ├── .github/
-│   ├── CODEOWNERS                     ← Baru
+│   ├── CODEOWNERS
+│   ├── pull_request_template.md
+│   └── workflows/
+│       └── ci.yml                     ← Baru
 ├── backend/
 │   ├── static/   
 │   ├── Dockerfile           
@@ -144,7 +148,14 @@ CC-KELOMPOK-A-HEXACORE/
 │   ├── database.py
 │   ├── main.py              
 │   ├── models.py            
-│   ├── requirements.txt     
+│   ├── requirements.txt               ← Updated (pytest, httpx)
+│   ├── pytest.ini                     ← Baru
+│   ├── tests/                         ← Baru
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── test_auth.py
+│   │   ├── test_items.py
+│   │   └── test_health.py
 │   ├── schemas.py           
 │   ├── .env                 
 │   └── .env.example         
@@ -167,22 +178,27 @@ CC-KELOMPOK-A-HEXACORE/
 │   ├── frontend/
 │   ├── node_modules/
 │   ├── public/    
+│   ├── vite.config.js                 ← Updated (test config)
+│   ├── package.json                   ← Updated (test scripts)
 │   └── src/                
 │        ├── App.jsx                  
 │        ├── App.css                  
 │        ├── main.jsx                 
 │        └── components/
-│            ├── Header.jsx           
-│            ├── SearchBar.jsx        
-│            ├── ItemForm.jsx         
-│            ├── ItemList.jsx         
-│            └── ItemCard.jsx         
-├── docker-compose.yml                ← Update
-├── docker-compose.prod.yml           ← Baru
+│        │   ├── Header.jsx           
+│        │   ├── SearchBar.jsx        
+│        │   ├── ItemForm.jsx         
+│        │   ├── ItemList.jsx         
+│        │   └── ItemCard.jsx         
+│        └── test/                      ← Baru
+│            └── setup.js
+│            └── api.test.js
+├── docker-compose.yml                
+├── docker-compose.prod.yml           
 ├── .gitignore            
 ├── Makefile
 ├── setup.sh                
-└── README.md                         ← Update
+└── README.md                          ← Updated (CI badge)
 ```
 
 ## 📁 Tabel ERD
