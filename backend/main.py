@@ -4,9 +4,11 @@ from dotenv import load_dotenv
 
 import uuid
 from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile, status
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import engine, get_db
@@ -151,9 +153,25 @@ async def upload_book_cover(file: UploadFile = File(...), current_user: User = D
 # ============================================================
 
 @app.get("/health", tags=["System"])
-def health_check():
-    """Cek apakah API berjalan."""
-    return {"status": "healthy", "version": "0.4.0", "app": "LenteraPustaka"}
+def health_check(db: Session = Depends(get_db)):
+    """Health check endpoint untuk mengecek status API dan database."""
+    health = {
+        "status": "healthy",
+        "service": "backend",
+        "app": "LenteraPustaka",
+        "version": "0.4.0",
+    }
+
+    # Query ringan ini memastikan koneksi database masih bisa dipakai oleh backend.
+    try:
+        db.execute(text("SELECT 1"))
+        health["database"] = "connected"
+    except Exception as e:
+        health["status"] = "unhealthy"
+        health["database"] = f"error: {str(e)}"
+
+    status_code = 200 if health["status"] == "healthy" else 503
+    return JSONResponse(content=health, status_code=status_code)
 
 
 # ============================================================
