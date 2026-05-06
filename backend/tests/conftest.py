@@ -85,6 +85,34 @@ def member_headers(client):
 
 
 @pytest.fixture
+def second_member_headers(client):
+    email = "second.member@example.com"
+    register_user(client, email=email, full_name="Second Member", role="member")
+    return login_headers(client, email)
+
+
+@pytest.fixture
+def admin_user(client, admin_headers):
+    response = client.get("/auth/me", headers=admin_headers)
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.fixture
+def member_user(client, member_headers):
+    response = client.get("/auth/me", headers=member_headers)
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.fixture
+def second_member_user(client, second_member_headers):
+    response = client.get("/auth/me", headers=second_member_headers)
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.fixture
 def sample_category(client, admin_headers):
     response = client.post(
         "/categories",
@@ -93,6 +121,51 @@ def sample_category(client, admin_headers):
     )
     assert response.status_code == 201
     return response.json()
+
+
+@pytest.fixture
+def pending_transaction(client, member_headers, member_user, sample_book):
+    response = client.post(
+        "/transactions",
+        json={
+            "user_id": member_user["user_id"],
+            "book_id": sample_book["book_id"],
+        },
+        headers=member_headers,
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+@pytest.fixture
+def borrowed_transaction(client, admin_headers, pending_transaction):
+    response = client.put(
+        f"/transactions/{pending_transaction['transaction_id']}/approve",
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.fixture
+def sample_fine(client, admin_headers, member_headers, borrowed_transaction):
+    simulate_response = client.post(
+        f"/transactions/{borrowed_transaction['transaction_id']}/simulate-overdue?days_late=3",
+        headers=admin_headers,
+    )
+    assert simulate_response.status_code == 200
+
+    return_response = client.put(
+        f"/transactions/{borrowed_transaction['transaction_id']}/return",
+        headers=member_headers,
+    )
+    assert return_response.status_code == 200
+
+    fines_response = client.get("/fines", headers=member_headers)
+    assert fines_response.status_code == 200
+    fines = fines_response.json()["fines"]
+    assert len(fines) == 1
+    return fines[0]
 
 
 @pytest.fixture

@@ -80,3 +80,66 @@ def test_auth_me_requires_valid_token(client, member_headers):
 
     assert response.status_code == 200
     assert response.json()["email"] == "member@example.com"
+
+
+def test_auth_me_rejects_invalid_token(client):
+    response = client.get("/auth/me", headers={"Authorization": "Bearer invalid-token"})
+
+    assert response.status_code == 401
+
+
+def test_register_weak_password_returns_validation_error(client):
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": "weakpass@example.com",
+            "password": "weakpass",
+            "full_name": "Weak Password",
+            "role": "member",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_profile_success(client, member_headers):
+    response = client.put(
+        "/auth/me/profile",
+        json={"full_name": "Updated Member"},
+        headers=member_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["full_name"] == "Updated Member"
+
+
+def test_change_password_success(client, member_headers):
+    response = client.put(
+        "/auth/me/change-password",
+        json={
+            "current_password": "TestUser123!",
+            "new_password": "NewPassword123!",
+        },
+        headers=member_headers,
+    )
+
+    assert response.status_code == 200
+
+    login_response = client.post(
+        "/auth/login",
+        data={"username": "member@example.com", "password": "NewPassword123!"},
+    )
+    assert login_response.status_code == 200
+
+
+def test_change_password_wrong_current_password(client, member_headers):
+    response = client.put(
+        "/auth/me/change-password",
+        json={
+            "current_password": "WrongPassword123!",
+            "new_password": "NewPassword123!",
+        },
+        headers=member_headers,
+    )
+
+    assert response.status_code == 400

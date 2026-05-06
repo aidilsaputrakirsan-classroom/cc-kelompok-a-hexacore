@@ -108,6 +108,54 @@ def test_update_book_stock(client, admin_headers, sample_book):
     assert data["available_stock"] == 5
 
 
+def test_update_book_not_found(client, admin_headers):
+    response = client.put(
+        "/books/9999",
+        json={"title": "Missing Book"},
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 404
+
+
+def test_delete_book_success(client, admin_headers, sample_book):
+    response = client.delete(f"/books/{sample_book['book_id']}", headers=admin_headers)
+
+    assert response.status_code == 204
+
+    get_response = client.get(f"/books/{sample_book['book_id']}")
+    assert get_response.status_code == 404
+
+
+def test_delete_book_not_found(client, admin_headers):
+    response = client.delete("/books/9999", headers=admin_headers)
+
+    assert response.status_code == 404
+
+
+def test_create_book_duplicate_isbn_returns_conflict(client, admin_headers, sample_book):
+    response = client.post(
+        "/books",
+        json={
+            "category_id": sample_book["category_id"],
+            "isbn": sample_book["isbn"],
+            "title": "Duplicate ISBN",
+            "author": "Hexacore Team",
+            "total_stock": 1,
+            "available_stock": 1,
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 409
+
+
+def test_get_books_invalid_limit_returns_validation_error(client):
+    response = client.get("/books?limit=101")
+
+    assert response.status_code == 422
+
+
 def test_get_book_stats(client, sample_book):
     response = client.get("/books/stats")
 
