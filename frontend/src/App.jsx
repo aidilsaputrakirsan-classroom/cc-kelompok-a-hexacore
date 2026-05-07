@@ -5,6 +5,7 @@
 // ============================================================
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Header from './components/Header';
+import AboutPage from './components/AboutPage';
 import { Spinner, ToastContainer } from './components/ui/Common';
 import { useToast } from './hooks/useToast';
 import { logout, getMe, token, userCache, fetchTransactions, fetchFines } from './services/api';
@@ -35,6 +36,18 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false)
   const [badges, setBadges]           = useState({ transactions: 0, fines: 0 })
   const { toasts, toast }             = useToast()
+
+  // Dark mode
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light')
+  }, [])
 
   // Fetch notification counts (polling setiap 60 detik)
   const refreshBadges = useCallback(async (currentUser) => {
@@ -198,6 +211,7 @@ export default function App() {
       case 'lost':         return <LostBooksPage    user={user}   toast={toast} />
       case 'users':        return <UsersPage        toast={toast} />
       case 'profile':      return <ProfilePage      user={user} setUser={setUser} toast={toast} />
+      case 'about':        return <AboutPage        onBack={() => nav('home')} />
       case 'home':
       default:             return <HomePage         user={user} onNav={nav} toast={toast} />
     }
@@ -207,7 +221,7 @@ export default function App() {
   if (isAdmin) return (
     <>
       <div className="layout-side">
-        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} />
+        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} theme={theme} toggleTheme={toggleTheme} />
         <main className="layout-side-main">
           <div className="layout-side-inner">
             <Suspense fallback={<GlobalLoadingState />}>
@@ -224,7 +238,7 @@ export default function App() {
   return (
     <>
       <div className="layout-top">
-        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} />
+        <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} theme={theme} toggleTheme={toggleTheme} />
         {safePage === 'home' || safePage === 'books'
           ? renderPage(safePage)
           : (

@@ -43,6 +43,28 @@
   --t:         150ms ease;
 }
 
+[data-theme='dark'] {
+  --c-bg:       #0F172A;
+  --c-surface:  #1E293B;
+  --c-border:   #334155;
+  --c-border2:  #475569;
+  --c-text:     #F8FAFC;
+  --c-text2:    #CBD5E1;
+  --c-text3:    #94A3B8;
+  --c-accent:   #3B82F6;
+  --c-accent2:  #60A5FA;
+  --c-accentbg: rgba(59, 130, 246, 0.2);
+  --c-slate8:   #F1F5F9;
+  --c-slate9:   #020617;
+  --c-green-bg: rgba(34, 197, 94, 0.2);
+  --c-amber-bg: rgba(245, 158, 11, 0.2);
+  --c-red-bg:   rgba(239, 68, 68, 0.2);
+  --sh-sm: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.2);
+  --sh-md: 0 4px 6px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.2);
+  --sh-lg: 0 10px 15px rgba(0,0,0,.4), 0 4px 6px rgba(0,0,0,.2);
+  --sh-xl: 0 20px 25px rgba(0,0,0,.4), 0 8px 10px rgba(0,0,0,.2);
+}
+
 /* ── Reset ─────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html  { scroll-behavior: smooth; }
