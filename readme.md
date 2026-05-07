@@ -127,8 +127,8 @@ Gunakan perintah berikut untuk mempermudah workflow:
 | 3 | React Frontend | ✅ |
 | 4 | Full-Stack Integration | ✅ |
 | 5-7 | Docker & Compose | ✅ |
-| 8 | UTS Demo | ⬜ |
-| 9-11 | CI/CD Pipeline | ⬜ |
+| 8 | UTS Demo | ✅ |
+| 9-11 | CI/CD Pipeline | ✅ |
 | 12-14 | Microservices | ⬜ |
 | 15-16 | Final & UAS | ⬜ |
 
