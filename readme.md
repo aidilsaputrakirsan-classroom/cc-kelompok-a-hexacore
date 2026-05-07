@@ -1,5 +1,7 @@
 # ☁️ Cloud App - [LenteraPustaka]
 
+![CI Pipeline](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/actions/workflows/ci.yml/badge.svg)
+
 Aplikasi **LenteraPustaka** adalah sebuah platform berbasis web yang dirancang untuk mendigitalisasi proses pengelolaan katalog dan transaksi peminjaman buku di perpustakaan. Aplikasi ini bertujuan untuk memberikan kemudahan akses informasi bagi pengunjung perpustakaan, memfasilitasi sirkulasi peminjaman, sekaligus menyederhanakan tugas administratif pustakawan secara terpusat.
 
 Sistem ini dirancang untuk tiga kelompok demografi pengguna dengan kebutuhan yang berbeda:
