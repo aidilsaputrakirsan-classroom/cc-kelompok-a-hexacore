@@ -22,3 +22,6 @@ dist/
 
 # Docker secret files
 .env.docker
+
+# Mengabaikan file PDF hasil auto-generate
+*.pdf
