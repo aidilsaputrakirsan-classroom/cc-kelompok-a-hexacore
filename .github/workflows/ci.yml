@@ -134,7 +134,7 @@ jobs:
           sleep 30
           
           # ⚠️ GANTI 'xxx' di bawah ini dengan subdomain Railway asli tim kamu nanti!
-          HEALTH_URL="https://cloudapp-backend-xxx.up.railway.app/health"
+          HEALTH_URL="https://backend-production-3084.up.railway.app/health"
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
           
           if [ "$HTTP_STATUS" == "200" ]; then
@@ -148,5 +148,5 @@ jobs:
       - name: ✅ Deploy complete
         run: |
           echo "✅ Deployment successful!"
-          echo "Backend: https://cloudapp-backend-xxx.up.railway.app"
-          echo "Frontend: https://cloudapp-frontend-xxx.up.railway.app"
+          echo "Backend: https://backend-production-3084.up.railway.app"
+          echo "Frontend: https://frontend-production-78efa.up.railway.app"
