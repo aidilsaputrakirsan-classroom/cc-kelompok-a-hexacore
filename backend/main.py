@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
 import uuid
 from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile, status
@@ -31,8 +30,7 @@ from schemas import (
 from auth import create_access_token, get_current_user, get_admin_user
 from models import User
 import crud
-
-load_dotenv()
+from config import settings
 
 # Buat semua tabel di database (jika belum ada)
 Base.metadata.create_all(bind=engine)
@@ -67,13 +65,10 @@ COVERS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # ==================== CORS ====================
-# Origin frontend dibaca dari environment agar mudah disesuaikan antara lokal, Docker, dan deployment.
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
-origins_list = [o.strip() for o in allowed_origins.split(",") if o.strip()]
-
+# Origin frontend dibaca dari environment secara terpusat agar mudah disesuaikan.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins_list,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

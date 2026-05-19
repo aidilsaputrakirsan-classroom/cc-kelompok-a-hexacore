@@ -2,7 +2,6 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from dotenv import load_dotenv
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 from passlib.context import CryptContext
@@ -12,17 +11,16 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
-
-load_dotenv()
+from config import settings
 
 # File ini menampung helper keamanan backend: hash password, pembuatan token,
 # validasi token, dan dependency untuk membatasi akses endpoint.
 
-# Konfigurasi dari environment variables
+# Konfigurasi diambil dari centralized config (config.py)
 # Nilai auth dibaca dari environment agar bisa dibedakan antara lokal, Docker, dan production.
-SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key-for-development")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Password hashing
 # Context bcrypt dipakai ulang agar seluruh proses hash dan verify konsisten.
