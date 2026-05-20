@@ -22,6 +22,7 @@
 | Variable | Contoh Value |
 |----------|-------------|
 | `VITE_API_URL` | `https://backend-production-3084.up.railway.app/docs` |
+| `PORT` | `80` |
 
 ### GitHub Secrets
 | Secret | Keterangan |
