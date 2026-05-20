@@ -14,7 +14,7 @@
 |----------|-------------|
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
 | `SECRET_KEY` | *(random hex 64 chars)* |
-| `CORS_ORIGINS` | `https://frontend-production-78efa.up.railway.app/` |
+| `ALLOW_ORIGINS` | `https://frontend-production-78efa.up.railway.app/` |
 | `ENVIRONMENT` | `production` |
 
 ### Frontend (Railway)
