@@ -19,5 +19,14 @@ Dokumen ini berisi hasil pengujian fitur utama aplikasi LenteraPustaka setelah d
 | Update (Edit) item | ✅ Pass | ✅ Pass | Pass |
 | Delete (Hapus) item | ✅ Pass | ✅ Pass | Pass |
 
+### 3. Production Issues
+
+Berikut adalah beberapa kendala yang terjadi saat aplikasi berada di production beserta solusinya:
+
+| Gejala | Penyebab | Solusi |
+|---|---|---|
+| CORS error di browser console | `CORS_ORIGINS` tidak sesuai URL frontend | Update env var di Railway |
+| `502 Bad Gateway` | Backend crash / port salah | Cek deploy logs, pastikan `PORT` env var |
+
 ---
 *Diuji oleh: Lead QA & Docs*
