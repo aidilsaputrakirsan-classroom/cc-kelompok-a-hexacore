@@ -16,6 +16,7 @@
 | `SECRET_KEY` | *(random hex 64 chars)* |
 | `ALLOW_ORIGINS` | `https://frontend-production-78efa.up.railway.app/` |
 | `ENVIRONMENT` | `production` |
+| `PORT` | `8000` |
 
 ### Frontend (Railway)
 | Variable | Contoh Value |
