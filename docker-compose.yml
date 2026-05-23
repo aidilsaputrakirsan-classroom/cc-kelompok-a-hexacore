@@ -62,6 +62,11 @@ services:
     depends_on:
       auth-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"] # Sesuaikan endpoint health check backend-mu
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # ==================== LIBRARY SERVICE ====================
   library-service:
@@ -85,7 +90,12 @@ services:
       item-db:
         condition: service_healthy
       auth-service:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # ==================== FRONTEND ====================
   frontend:
@@ -116,9 +126,12 @@ services:
     networks:
       - lentera_net
     depends_on:
-      - auth-service
-      - library-service
-      - frontend
+      auth-service:
+        condition: service_healthy
+      library-service:
+        condition: service_healthy
+      frontend:
+        condition: service_started
 
 volumes:
   auth_pgdata:
