@@ -30,6 +30,14 @@ Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apa
 | Khanza Nabila Tsabita | 10231049 | Lead DevOps |
 | Muhammad Aqila Ardhi | 10231057 | Lead QA & Docs |
 
+## 🌐 Live Demo
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://frontend-production-78efa.up.railway.app/ |
+| Backend API | https://backend-production-3084.up.railway.app/health |
+| API Docs (Swagger) | https://backend-production-3084.up.railway.app/docs |
+
 ## 🛠️ Tech Stack
 
 | Teknologi | Fungsi |
@@ -130,7 +138,6 @@ Gunakan perintah berikut untuk mempermudah workflow:
 | 5-7 | Docker & Compose | ✅ |
 | 8 | UTS Demo | ✅ |
 | 9-11 | CI/CD Pipeline | ✅ |
-| 9-11 | CI/CD Pipeline | ⬜ |
 | 12-14 | Microservices | ⬜ |
 | 15-16 | Final & UAS | ⬜ |
 
