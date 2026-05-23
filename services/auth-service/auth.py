@@ -13,23 +13,15 @@ from database import get_db
 from models import User
 from config import settings
 
-# File ini menampung helper keamanan backend: hash password, pembuatan token,
-# validasi token, dan dependency untuk membatasi akses endpoint.
-
-# Konfigurasi diambil dari centralized config (config.py)
-# Nilai auth dibaca dari environment agar bisa dibedakan antara lokal, Docker, dan production.
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Password hashing
-# Context bcrypt dipakai ulang agar seluruh proses hash dan verify konsisten.
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Schema autentikasi OAuth2 (sesuai Modul 4)
-# tokenUrl mengarah ke endpoint login yang dipakai Swagger dan client untuk meminta access token.
+# Schema autentikasi OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
 
 # ==================== PASSWORD ====================
 
@@ -47,9 +39,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Buat JWT access token."""
-    # Payload token disalin dulu agar penambahan exp tidak mengubah object asli dari caller.
     to_encode = data.copy()
-    # Jika caller tidak memberi durasi khusus, token memakai umur default dari environment.
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -58,7 +48,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def decode_token(token: str) -> dict:
     """Decode dan verifikasi JWT token."""
     try:
-        # Token yang valid akan di-decode dan payload-nya dikembalikan ke dependency caller.
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except ExpiredSignatureError:
@@ -85,7 +74,6 @@ def get_current_user(
     Dependency injection: ambil current user dari JWT token.
     Gunakan di endpoint yang butuh autentikasi.
     """
-    # Tahap 1: token bearer dibaca dari request dan diverifikasi lebih dulu.
     payload = decode_token(token)
     subject = payload.get("sub")
     if subject is None:
@@ -102,13 +90,6 @@ def get_current_user(
             detail="Token tidak valid, subject tidak sesuai",
         )
 
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token tidak valid, subject missing",
-        )
-
-    # Tahap 2: subject token dipakai untuk mengambil user aktif dari database.
     user = db.query(User).filter(User.user_id == user_id).first()
 
     if user is None:
@@ -123,9 +104,7 @@ def get_current_user(
 def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """
     Dependency injection lapis kedua: pastikan user yang login adalah admin.
-    Gunakan di endpoint yang butuh otoritas mutlak (CRUD referensi & persetujuan denda/transaksi).
     """
-    # Dependency lapis kedua ini dipakai saat endpoint hanya boleh diakses oleh admin.
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
