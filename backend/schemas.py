@@ -339,3 +339,13 @@ class FineListResponse(BaseModel):
     """Schema output list denda."""
     total : int
     fines : list[FineResponse]
+
+
+class FineStatsResponse(BaseModel):
+    total_items: int
+    total_value: int
+    termahal: int
+    termurah: int
+
+    class Config:
+        from_attributes = True
