@@ -39,13 +39,19 @@ clean:
 
 # 💻 Shell Access Shortcuts
 
-# Masuk ke terminal container backend
-shell-backend:
-	docker compose exec backend sh
+# Masuk ke terminal container auth atau library service
+shell-auth:
+	docker compose exec auth-service sh
 
-# Masuk ke CLI PostgreSQL Database lokal
-shell-db:
-	docker compose exec db psql -U postgres
+shell-library:
+	docker compose exec library-service sh
+
+# Masuk ke CLI PostgreSQL di container auth-db atau item-db
+shell-auth-db:
+	docker compose exec auth-db psql -U postgres -d auth_db
+
+shell-item-db:
+	docker compose exec item-db psql -U postgres -d item_db
 
 # 🧪 Workflow Automation & Testing (CI/CD Local Simulation)
 

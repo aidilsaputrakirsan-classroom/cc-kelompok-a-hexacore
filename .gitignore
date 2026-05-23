@@ -25,3 +25,9 @@ dist/
 
 # Mengabaikan file PDF hasil auto-generate
 *.pdf
+
+# Mengabaikan semua file hasil upload testing di backend
+backend/static/covers/*.png
+backend/static/covers/*.jpg
+backend/static/covers/*.jpeg
+backend/static/fines/
