@@ -630,3 +630,15 @@ def admin_reject_fine_endpoint(
     if not fine:
         raise HTTPException(status_code=404, detail=f"Denda id={fine_id} tidak ditemukan")
     return fine
+
+
+@app.get("/fines/stats", response_model=schemas.FineStatsResponse, tags=["Fines"])
+def get_fines_stats(db: Session = Depends(get_db)):
+    """Mendapatkan statistik denda perpustakaan (total items, total value, termahal, termurah)."""
+    return crud.get_fine_stats(db=db)
+
+
+@app.get("/items/stats", response_model=schemas.FineStatsResponse, tags=["Fines"])
+def get_items_stats_alias(db: Session = Depends(get_db)):
+    """Alias untuk memenuhi tugas terstruktur GET /items/stats (Modul 12)."""
+    return crud.get_fine_stats(db=db)

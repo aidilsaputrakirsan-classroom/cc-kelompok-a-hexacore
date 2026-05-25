@@ -39,6 +39,7 @@ async function req(url, opts = {}) {
     throw new Error('Tidak dapat terhubung ke server. Pastikan backend berjalan.')
   }
 
+  if (res.status === 503 || res.status === 504) throw new Error('Layanan tidak tersedia sementara. Silakan coba lagi nanti.')
   if (res.status === 401) { onSessionExpired(); throw new Error('Sesi berakhir. Silakan masuk kembali.') }
   if (res.status === 403) throw new Error('Akses ditolak — bukan admin.')
   if (res.status === 422) {
@@ -63,6 +64,7 @@ async function pub(url) {
   } catch {
     throw new Error('Tidak dapat terhubung ke server.')
   }
+  if (res.status === 503 || res.status === 504) throw new Error('Layanan tidak tersedia sementara. Silakan coba lagi nanti.')
   if (!res.ok) throw new Error(`Error ${res.status}`)
   return res.json()
 }
@@ -82,6 +84,7 @@ export async function login(email, password) {
   } catch {
     throw new Error('Tidak dapat terhubung ke server.')
   }
+  if (res.status === 503 || res.status === 504) throw new Error('Layanan tidak tersedia sementara. Silakan coba lagi nanti.')
   if (!res.ok) {
     const e = await res.json().catch(() => ({}))
     throw new Error(e.detail || 'Email atau password salah')
@@ -105,6 +108,7 @@ export async function register({ email, password, full_name, role = 'member' }) 
   } catch {
     throw new Error('Tidak dapat terhubung ke server.')
   }
+  if (res.status === 503 || res.status === 504) throw new Error('Layanan tidak tersedia sementara. Silakan coba lagi nanti.')
   if (!res.ok) {
     const e = await res.json().catch(() => ({}))
     const detail = e.detail
@@ -195,6 +199,7 @@ export const createUser = async (d) => {
   } catch {
     throw new Error('Tidak dapat terhubung ke server.')
   }
+  if (res.status === 503 || res.status === 504) throw new Error('Layanan tidak tersedia sementara. Silakan coba lagi nanti.')
   if (res.status === 401) { onSessionExpired(); throw new Error('Sesi berakhir.') }
   if (!res.ok) {
     const e = await res.json().catch(() => ({}))
