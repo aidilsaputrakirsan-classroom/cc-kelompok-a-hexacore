@@ -501,3 +501,21 @@ def admin_reject_fine(db: Session, fine_id: int, note: str) -> Optional[Fine]:
     db.commit()
     db.refresh(fine)
     return fine
+
+
+def get_fine_stats(db: Session) -> dict:
+    """Menghitung statistik denda (fines)."""
+    from sqlalchemy import func
+    
+    total_items = db.query(Fine).count()
+    total_value = db.query(func.sum(Fine.amount)).scalar() or 0
+    termahal = db.query(func.max(Fine.amount)).scalar() or 0
+    termurah = db.query(func.min(Fine.amount)).filter(Fine.amount > 0).scalar() or 0
+    
+    return {
+        "total_items": total_items,
+        "total_value": total_value,
+        "termahal": termahal,
+        "termurah": termurah
+    }
+
