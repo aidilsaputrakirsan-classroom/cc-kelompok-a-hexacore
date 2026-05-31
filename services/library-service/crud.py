@@ -145,6 +145,7 @@ def create_book(db: Session, data: BookCreate) -> Book:
         cover_image_url  = data.cover_image_url,
         total_stock      = data.total_stock,
         available_stock  = data.available_stock,
+        is_public        = data.is_public,
     )
     
     if data.genre_ids:
@@ -181,6 +182,14 @@ def get_books(
                 Book.isbn.ilike(kw),
             )
         )
+    total = query.count()
+    books = query.offset(skip).limit(limit).all()
+    return {"total": total, "books": books}
+
+
+def get_public_books(db: Session, skip: int = 0, limit: int = 20) -> dict:
+    """Ambil daftar buku publik (is_public = True)."""
+    query = db.query(Book).filter(Book.is_public == True)
     total = query.count()
     books = query.offset(skip).limit(limit).all()
     return {"total": total, "books": books}
