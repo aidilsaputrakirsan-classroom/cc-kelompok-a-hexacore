@@ -104,3 +104,34 @@ def test_invalid_token_rejected(gateway_url):
         headers={"Authorization": "Bearer token-palsu-invalid"}
     )
     assert resp.status_code == 401
+
+
+def test_get_public_items(gateway_url):
+    """Test 9: Mendapatkan daftar item publik (/items/public) tanpa memerlukan otorisasi."""
+    resp = httpx.get(f"{gateway_url}/items/public")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "total" in data
+    assert "books" in data
+    # Kriteria: setiap buku yang dikembalikan harus bertipe publik (is_public=True)
+    for book in data["books"]:
+        assert book["is_public"] is True
+
+
+def test_get_items_stats_auth_needed_normally(gateway_url):
+    """Test 10: Mengakses statistik item (/items/stats) tanpa token secara normal (UP) harus ditolak."""
+    # Selama Auth Service UP, endpoint stats dilindungi auth
+    resp = httpx.get(f"{gateway_url}/items/stats")
+    assert resp.status_code == 401
+
+
+def test_get_items_stats_authorized_normally(gateway_url, test_user):
+    """Test 11: Mengakses statistik item (/items/stats) dengan token valid secara normal harus berhasil."""
+    resp = httpx.get(
+        f"{gateway_url}/items/stats",
+        headers=test_user["headers"]
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "total_items" in data
+    assert "total_value" in data
