@@ -29,7 +29,7 @@ flowchart TD
         IS -.->|"GET /verify"| AS
     end
 
-    USER["👤 Browser / Client"] -->|"http://localhost:3000"| GW
+    USER["👤 Browser / Client"] -->|"http://localhost"| GW
 
     style AUTH fill:#E2EFDA,stroke:#548235
     style ITEM fill:#DEEBF7,stroke:#2E75B6
@@ -87,7 +87,7 @@ Dalam lingkungan pengembangan lokal menggunakan Docker Compose, sistem ini dipec
   * `POST /fines/{id}/submit-payment`: Member mengirim bukti bayar denda.
   * `PUT /fines/{id}/approve` | `PUT /fines/{id}/reject`: Admin memverifikasi atau menolak bukti pembayaran.
   * `GET /fines/stats`: Statistik komprehensif mengenai denda.
-  * `GET /items/stats`: *(Alias Modul 12)* Statistik denda/item termahal dan termurah.
+  * `GET /items/stats`: Statistik denda/item termahal dan termurah.
 
 * **Unggahan Media (Uploads):**
   * `POST /upload/covers`: Mengunggah gambar cover buku.
