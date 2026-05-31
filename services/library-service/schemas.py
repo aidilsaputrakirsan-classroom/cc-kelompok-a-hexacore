@@ -70,6 +70,7 @@ class BookCreate(BaseModel):
     cover_image_url  : Optional[str] = Field(None, description="URL cover buku yang dapat diakses publik")
     total_stock      : int           = Field(1, ge=1, examples=[5])
     available_stock  : int           = Field(1, ge=0, examples=[5])
+    is_public        : bool          = Field(True, description="Apakah buku ini bersifat publik?")
 
     @field_validator("isbn")
     @classmethod
@@ -103,6 +104,7 @@ class BookUpdate(BaseModel):
     cover_image_url  : Optional[str] = None
     total_stock      : Optional[int] = Field(None, ge=1)
     available_stock  : Optional[int] = Field(None, ge=0)
+    is_public        : Optional[bool] = None
 
     @model_validator(mode="after")
     def validate_stock_consistency_when_both_present(self):
@@ -125,6 +127,7 @@ class BookResponse(BaseModel):
     cover_image_url  : Optional[str]
     total_stock      : int
     available_stock  : int
+    is_public        : bool
 
     class Config:
         from_attributes = True
