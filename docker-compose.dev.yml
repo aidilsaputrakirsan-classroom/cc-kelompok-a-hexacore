@@ -1,0 +1,21 @@
+services:
+  auth-service:
+    volumes:
+      - ./services/auth-service:/app  # Sinkronisasi folder lokal ke container
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=development
+
+  library-service:
+    volumes:
+      - ./services/library-service:/app
+    environment:
+      - DEBUG=true
+      - ENVIRONMENT=development
+
+  frontend:
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules              # Proteksi agar node_modules lokal gak tabrakan
+    environment:
+      - VITE_API_URL=http://localhost

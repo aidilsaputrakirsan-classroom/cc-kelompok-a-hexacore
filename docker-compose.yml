@@ -48,6 +48,11 @@ services:
       dockerfile: Dockerfile
     container_name: lentera-auth-service
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'       # Batasi maksimal 50% CPU
+          memory: 256M       # Batasi maksimal 256MB RAM
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=postgresql://postgres:postgres@auth-db:5432/auth_db
@@ -75,6 +80,11 @@ services:
       dockerfile: Dockerfile
     container_name: lentera-library-service
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=postgresql://postgres:postgres@item-db:5432/item_db
@@ -106,6 +116,11 @@ services:
         - VITE_API_URL=http://localhost
     container_name: lentera-frontend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
     ports:
       - "3000:80"
     networks:
@@ -121,6 +136,11 @@ services:
       dockerfile: Dockerfile
     container_name: lentera-gateway
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
     ports:
       - "80:80"
     networks:
