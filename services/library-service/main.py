@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import uuid
 import asyncio
+from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, Query, File, UploadFile, status
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,9 +16,27 @@ import schemas
 import crud
 from config import settings
 import auth_client
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Buat semua tabel di database (jika belum ada)
 Base.metadata.create_all(bind=engine)
+
+# Verifikasi & Migrasi Kolom is_public di tabel books jika belum ada
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name='books' AND column_name='is_public';"
+        )).fetchone()
+        if not result:
+            logger.info("Migrasi: Menambahkan kolom 'is_public' ke tabel 'books'")
+            conn.execute(text("ALTER TABLE books ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT TRUE;"))
+            conn.commit()
+            logger.info("Migrasi: Kolom 'is_public' berhasil ditambahkan")
+except Exception as e:
+    logger.error(f"Gagal melakukan verifikasi/migrasi kolom 'is_public': {e}")
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -659,6 +678,26 @@ def get_fines_stats(db: Session = Depends(get_db)):
 
 
 @app.get("/items/stats", response_model=schemas.FineStatsResponse, tags=["Fines"])
-def get_items_stats_alias(db: Session = Depends(get_db)):
-    """Alias untuk memenuhi tugas terstruktur GET /items/stats (Modul 12)."""
+def get_items_stats_alias(
+    db: Session = Depends(get_db),
+    current_user: Optional[dict] = Depends(auth_client.get_current_user_optional_degraded)
+):
+    """
+    Alias untuk memenuhi tugas terstruktur GET /items/stats (Modul 12).
+    Normal mode: membutuhkan autentikasi (token JWT).
+    Degraded mode (Auth Service down/circuit breaker OPEN): bisa diakses tanpa auth.
+    """
     return crud.get_fine_stats(db=db)
+
+
+@app.get("/items/public", response_model=schemas.BookListResponse, tags=["Books"])
+def get_public_items(
+    skip:  int = Query(0,  ge=0,       description="Offset pagination"),
+    limit: int = Query(20, ge=1, le=100, description="Jumlah data"),
+    db: Session = Depends(get_db)
+):
+    """
+    Mendapatkan daftar item publik (buku dengan is_public=True).
+    Tidak membutuhkan autentikasi.
+    """
+    return crud.get_public_books(db=db, skip=skip, limit=limit)
