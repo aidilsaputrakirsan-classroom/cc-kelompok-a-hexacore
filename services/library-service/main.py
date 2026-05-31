@@ -159,21 +159,41 @@ async def upload_book_cover(
 
 @app.get("/health", tags=["System"])
 def health_check(db: Session = Depends(get_db)):
-    """Health check endpoint untuk mengecek status API dan database."""
+    """Health check endpoint dengan aggregated status untuk mengecek status API dan dependencies."""
+    cb_status = auth_client.auth_circuit.get_status()
+    
+    db_status = "connected"
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+        
+    overall = "healthy"
+    if cb_status["state"] != "CLOSED":
+        overall = "degraded"
+    if db_status != "connected":
+        overall = "unhealthy"
+        
     health = {
-        "status": "healthy",
+        "status": overall,
         "service": "library-service",
         "app": "LenteraPustaka",
         "version": "1.0.0",
+        "dependencies": {
+            "auth-service": {
+                "status": "available" if cb_status["state"] == "CLOSED" else "unavailable",
+                "circuit_breaker": cb_status
+            },
+            "database": {
+                "status": "connected" if db_status == "connected" else "disconnected",
+                "details": db_status
+            }
+        }
     }
-    try:
-        db.execute(text("SELECT 1"))
-        health["database"] = "connected"
-    except Exception as e:
-        health["status"] = "unhealthy"
-        health["database"] = f"error: {str(e)}"
 
-    status_code = 200 if health["status"] == "healthy" else 503
+    status_code = 200
+    if overall == "unhealthy":
+        status_code = 503
     return JSONResponse(content=health, status_code=status_code)
 
 
