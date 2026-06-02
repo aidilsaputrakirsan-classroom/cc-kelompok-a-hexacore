@@ -26,15 +26,10 @@ Base.metadata.create_all(bind=engine)
 # Verifikasi & Migrasi Kolom is_public di tabel books jika belum ada
 try:
     with engine.connect() as conn:
-        result = conn.execute(text(
-            "SELECT column_name FROM information_schema.columns "
-            "WHERE table_name='books' AND column_name='is_public';"
-        )).fetchone()
-        if not result:
-            logger.info("Migrasi: Menambahkan kolom 'is_public' ke tabel 'books'")
-            conn.execute(text("ALTER TABLE books ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT TRUE;"))
-            conn.commit()
-            logger.info("Migrasi: Kolom 'is_public' berhasil ditambahkan")
+        logger.info("Migrasi: Memastikan kolom 'is_public' ada di tabel 'books'")
+        conn.execute(text("ALTER TABLE books ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;"))
+        conn.commit()
+        logger.info("Migrasi: Kolom 'is_public' berhasil diverifikasi/ditambahkan")
 except Exception as e:
     logger.error(f"Gagal melakukan verifikasi/migrasi kolom 'is_public': {e}")
 
