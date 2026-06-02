@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Text,
-    DateTime, ForeignKey, Table, Float
+    DateTime, ForeignKey, Table, Float, Boolean
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -59,6 +59,7 @@ class Book(Base):
     cover_image_url  = Column(String(500), nullable=True)
     total_stock      = Column(Integer, nullable=False, default=1)
     available_stock  = Column(Integer, nullable=False, default=1)
+    is_public        = Column(Boolean, nullable=False, default=True)
 
     category     = relationship("Category", back_populates="books")
     genres       = relationship("Genre", secondary=book_genres, back_populates="books")

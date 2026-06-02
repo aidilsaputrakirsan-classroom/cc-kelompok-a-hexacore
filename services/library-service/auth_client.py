@@ -171,6 +171,80 @@ def get_admin_user(current_user: dict = Depends(get_current_user)) -> dict:
     return current_user
 
 
+async def get_current_user_optional_degraded(
+    authorization: Optional[str] = Header(None)
+) -> Optional[dict]:
+    """
+    Dependency injection: dapatkan user aktif dari token.
+    Jika Auth Service down (circuit breaker OPEN atau transient error 503/504),
+    maka degraded mode aktif: return None (mengizinkan akses tanpa auth).
+    Namun jika Auth Service UP dan token dikirim tapi invalid, tetap raise 401.
+    Jika Auth Service UP dan token tidak dikirim, raise 401.
+    """
+    # 1. Cek status circuit breaker sebelum memanggil Auth Service
+    if not auth_circuit.can_execute():
+        logger.warning(
+            "[Degraded Mode] Auth Service circuit breaker is OPEN. "
+            "Akses diizinkan tanpa autentikasi (degraded)."
+        )
+        return None
+
+    if not authorization:
+        # Jika circuit breaker CLOSED (normal), butuh otorisasi
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Header otorisasi diperlukan (normal mode)"
+        )
+
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Format token salah. Gunakan Bearer <token>"
+        )
+
+    try:
+        response = await _send_request_with_retry(
+            method="GET",
+            path="/verify",
+            headers={"Authorization": authorization}
+        )
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 401:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token tidak valid atau kadaluarsa"
+            )
+        elif response.status_code == 400:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bad auth request"
+            )
+        else:
+            if not auth_circuit.can_execute():
+                logger.warning("[Degraded Mode] Auth Service gagal. Fallback ke degraded mode.")
+                return None
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Layanan autentikasi gagal: {response.status_code}"
+            )
+            
+    except HTTPException as e:
+        if e.status_code in {status.HTTP_503_SERVICE_UNAVAILABLE, status.HTTP_504_GATEWAY_TIMEOUT}:
+            logger.warning(f"[Degraded Mode] Auth Service unavailable ({e.detail}). Fallback ke degraded mode.")
+            return None
+        raise e
+        
+    except Exception as e:
+        if not auth_circuit.can_execute():
+            logger.warning(f"[Degraded Mode] Koneksi ke Auth Service gagal: {e}. Fallback ke degraded mode.")
+            return None
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Otorisasi gagal karena Auth Service tidak dapat dihubungi"
+        )
+
+
 async def check_user_exists(user_id: int) -> bool:
     """
     Mengecek apakah user dengan ID tertentu ada di sistem.
