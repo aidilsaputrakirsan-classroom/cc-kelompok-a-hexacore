@@ -19,7 +19,7 @@ import { useBooks } from '../hooks/useBooks';
 import {
   fmt, fmtDate, validatePassword, pwStrength,
   trxBadge, fineBadge,
-} from '../utils/Formatters';
+} from '../utils/formatters';
 
 import {
   login, register, logout, getMe, token, userCache,
@@ -44,7 +44,7 @@ function HomePage({ user, onNav, toast }) {
   const [detailBook, setDetailBook]   = useState(null)
   const [borrowModal, setBorrowModal] = useState(null)
   const [borrowing, setBorrowing]     = useState(false)
-  const { books, loading, error }     = useBooks(search)
+  const { books, loading, error, isDegraded }     = useBooks(search)
 
   useEffect(() => {
     fetchCategories().then(d => setCats(d || []))
@@ -175,9 +175,14 @@ function HomePage({ user, onNav, toast }) {
 
       {/* ── Book grid ─────────────────────────────────────────── */}
       <div className="section" style={{ paddingBottom: 64 }}>
-        {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠️ {error}</div>}
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>⚠️ {error} {isDegraded && books.length > 0 ? ' (Menampilkan data tersimpan)' : ''}</span>
+            <button onClick={reload} className="btn btn-sm" style={{ padding: '4px 10px', fontSize: 12, background: 'rgba(0,0,0,0.1)', color: 'inherit', border: 'none' }}>Coba Lagi</button>
+          </div>
+        )}
 
-        {loading ? <Spinner /> : sorted.length === 0 ? (
+        {loading && sorted.length === 0 ? <Spinner /> : sorted.length === 0 ? (
           <Empty icon={hasFilter ? '🔍' : '📚'}
             title={hasFilter ? 'Tidak ada buku yang cocok' : 'Belum ada buku'}
             sub={hasFilter ? 'Coba ubah filter atau kata kunci' : ''} />

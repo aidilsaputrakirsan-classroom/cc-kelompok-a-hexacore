@@ -19,7 +19,7 @@ import { useBooks } from '../hooks/useBooks';
 import {
   fmt, fmtDate, validatePassword, pwStrength,
   trxBadge, fineBadge,
-} from '../utils/Formatters';
+} from '../utils/formatters';
 
 import {
   login, register, logout, getMe, token, userCache,
@@ -41,7 +41,7 @@ function BooksAdminPage({ toast }) {
   const [showForm, setShowForm]   = useState(false)
   const [editing, setEditing]     = useState(null)
   const [confirm, setConfirm]     = useState(null)
-  const { books, total, loading, error, reload } = useBooks(search)
+  const { books, total, loading, error, isDegraded, reload } = useBooks(search)
 
   useEffect(() => {
     fetchCategories().then(setCats).catch(() => toast('Gagal memuat kategori', 'error'))
@@ -88,8 +88,9 @@ function BooksAdminPage({ toast }) {
       </div>
 
       {error && (
-        <div className="alert alert-error" style={{ marginBottom: 16 }}>
-          ⚠️ Gagal memuat buku — {error}
+        <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>⚠️ Gagal memuat buku — {error} {isDegraded && books.length > 0 ? ' (Menampilkan data tersimpan)' : ''}</span>
+          <button onClick={reload} className="btn btn-sm" style={{ padding: '4px 10px', fontSize: 12, background: 'rgba(0,0,0,0.1)', color: 'inherit', border: 'none' }}>Coba Lagi</button>
         </div>
       )}
       <ItemList

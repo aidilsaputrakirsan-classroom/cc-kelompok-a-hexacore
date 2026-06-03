@@ -34,6 +34,7 @@ export default function App() {
   const [loginTab, setLoginTab]       = useState('login')
   const [user, setUser]               = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [authDown, setAuthDown]       = useState(false)
   const [badges, setBadges]           = useState({ transactions: 0, fines: 0 })
   const { toasts, toast }             = useToast()
 
@@ -101,14 +102,18 @@ export default function App() {
         setAuthChecked(true)
         // 2. Verifikasi background — refresh data user dari server
         getMe()
-          .then(u => { setUser(u); userCache.set(u) })
-          .catch(() => {
-            // Token invalid/expired — paksa logout
-            token.remove()
-            userCache.remove()
-            setUser(null)
-            sessionStorage.removeItem('lp_page')
-            setPage('home')
+          .then(u => { setUser(u); userCache.set(u); setAuthDown(false) })
+          .catch((err) => {
+            if (err.message.includes('Layanan tidak tersedia') || err.message.includes('Tidak dapat terhubung')) {
+              setAuthDown(true)
+            } else {
+              // Token invalid/expired — paksa logout
+              token.remove()
+              userCache.remove()
+              setUser(null)
+              sessionStorage.removeItem('lp_page')
+              setPage('home')
+            }
           })
       } else {
         // Tidak ada cache, harus hit network
@@ -123,9 +128,13 @@ export default function App() {
             }
             setAuthChecked(true)
           })
-          .catch(() => {
-            token.remove()
-            userCache.remove()
+          .catch((err) => {
+            if (err.message.includes('Layanan tidak tersedia') || err.message.includes('Tidak dapat terhubung')) {
+              setAuthDown(true)
+            } else {
+              token.remove()
+              userCache.remove()
+            }
             setAuthChecked(true)
           })
       }
@@ -223,6 +232,11 @@ export default function App() {
       <div className="layout-side">
         <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} theme={theme} toggleTheme={toggleTheme} />
         <main className="layout-side-main">
+          {authDown && (
+            <div style={{ background: '#f59e0b', color: '#fff', padding: '8px 16px', textAlign: 'center', fontSize: 14, fontWeight: 500 }}>
+              ⚠️ Some features temporarily unavailable (Auth Service is down)
+            </div>
+          )}
           <div className="layout-side-inner">
             <Suspense fallback={<GlobalLoadingState />}>
               {renderPage(safePage)}
@@ -239,6 +253,11 @@ export default function App() {
     <>
       <div className="layout-top">
         <Header page={safePage} onNav={nav} user={user} onLogout={handleLogout} badges={badges} theme={theme} toggleTheme={toggleTheme} />
+        {authDown && (
+          <div style={{ background: '#f59e0b', color: '#fff', padding: '8px 16px', textAlign: 'center', fontSize: 14, fontWeight: 500 }}>
+            ⚠️ Some features temporarily unavailable (Auth Service is down)
+          </div>
+        )}
         {safePage === 'home' || safePage === 'books'
           ? renderPage(safePage)
           : (
