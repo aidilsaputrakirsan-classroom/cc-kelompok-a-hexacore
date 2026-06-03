@@ -131,19 +131,27 @@ jobs:
       - name: 🏥 Health check
         run: |
           echo "Waiting for deployment to be ready..."
-          sleep 30
-          
-          # ⚠️ GANTI 'xxx' di bawah ini dengan subdomain Railway asli tim kamu nanti!
+          # 🚨 PASTIKAN URL DI BAWAH INI SESUAI DENGAN DOMAIN BACKEND KAMU DI RAILWAY YA!
           HEALTH_URL="https://backend-production-3084.up.railway.app/health"
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
+          MAX_ATTEMPTS=30
+          ATTEMPT=1
           
-          if [ "$HTTP_STATUS" == "200" ]; then
-            echo "✅ Health check passed! (HTTP $HTTP_STATUS)"
-          else
-            echo "❌ Health check FAILED! (HTTP $HTTP_STATUS)"
-            echo "Check Railway dashboard for logs."
-            exit 1
-          fi
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
+            
+            if [ "$HTTP_STATUS" == "200" ]; then
+              echo "✅ Health check passed! (HTTP $HTTP_STATUS)"
+              exit 0
+            fi
+            
+            echo "⏳ Attempt $ATTEMPT/$MAX_ATTEMPTS: HTTP $HTTP_STATUS - Retrying in 10s..."
+            sleep 10
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+          
+          echo "❌ Health check FAILED after $MAX_ATTEMPTS attempts!"
+          echo "Check Railway dashboard for logs."
+          exit 1
 
       - name: ✅ Deploy complete
         run: |
