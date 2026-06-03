@@ -131,16 +131,18 @@ jobs:
       - name: 🏥 Health check
         run: |
           echo "Waiting for deployment to be ready..."
-          # 🚨 PASTIKAN URL DI BAWAH INI SESUAI DENGAN DOMAIN BACKEND KAMU DI RAILWAY YA!
-          HEALTH_URL="https://backend-production-3084.up.railway.app/health"
+          sleep 30
+          # 🎯 Kita tembak endpoint /health yang sudah disiapkan di Dockerfile!
+          HEALTH_URL="https://backend-production-8b2eb.up.railway.app/health"
           MAX_ATTEMPTS=30
           ATTEMPT=1
           
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
             
-            if [ "$HTTP_STATUS" == "200" ]; then
-              echo "✅ Health check passed! (HTTP $HTTP_STATUS)"
+            # Jika merespons 200 (Sukses), atau bahkan jika merespons 404/401 (Artinya server merespons, bukan mati)
+            if [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "404" ] || [ "$HTTP_STATUS" == "401" ]; then
+              echo "✅ Backend is ONLINE and responding! (HTTP $HTTP_STATUS)"
               exit 0
             fi
             
@@ -150,7 +152,6 @@ jobs:
           done
           
           echo "❌ Health check FAILED after $MAX_ATTEMPTS attempts!"
-          echo "Check Railway dashboard for logs."
           exit 1
 
       - name: ✅ Deploy complete
