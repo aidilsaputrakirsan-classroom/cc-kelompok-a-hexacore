@@ -132,7 +132,7 @@ jobs:
         run: |
           echo "Waiting for deployment to be ready..."
           # 🚨 PASTIKAN URL DI BAWAH INI SESUAI DENGAN DOMAIN BACKEND KAMU DI RAILWAY YA!
-          HEALTH_URL="https://backend-production-3084.up.railway.app/health"
+          HEALTH_URL="https://backend-production-8b2eb.up.railway.app"
           MAX_ATTEMPTS=30
           ATTEMPT=1
           
@@ -156,5 +156,5 @@ jobs:
       - name: ✅ Deploy complete
         run: |
           echo "✅ Deployment successful!"
-          echo "Backend: https://backend-production-3084.up.railway.app"
+          echo "Backend: https://backend-production-8b2eb.up.railway.app"
           echo "Frontend: https://frontend-production-78efa.up.railway.app"
