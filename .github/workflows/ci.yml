@@ -157,5 +157,5 @@ jobs:
       - name: ✅ Deploy complete
         run: |
           echo "✅ Deployment successful!"
-          echo "Backend: https://backend-production-3084.up.railway.app"
+          echo "Backend: https://backend-production-8b2eb.up.railway.app"
           echo "Frontend: https://frontend-production-78efa.up.railway.app"
