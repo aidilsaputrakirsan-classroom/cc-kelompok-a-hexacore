@@ -23,10 +23,10 @@ describe('StatusPage Component', () => {
       json: async () => ({ 
         service: 'auth-service', 
         uptime_seconds: 300, 
-        total_requests: 10,
+        total_requests: 12,
         total_errors: 0,
         error_rate_percent: 0,
-        latency: { avg_ms: 10, p50_ms: 8, p95_ms: 15, p99_ms: 20 },
+        latency: { avg_ms: 25, p50_ms: 20, p95_ms: 30, p99_ms: 35 },
         endpoints: {}
       }),
     });
@@ -36,8 +36,8 @@ describe('StatusPage Component', () => {
       json: async () => ({ 
         status: 'healthy', 
         dependencies: { 
-          database: { status: 'connected' },
-          'auth-service': { status: 'available', circuit_breaker: { state: 'CLOSED', failure_count: 0 } }
+        database: { status: 'connected' },
+        'auth-service': { status: 'available', circuit_breaker: { state: 'CLOSED', failure_count: 0 } }
         } 
       }),
     });
@@ -47,10 +47,10 @@ describe('StatusPage Component', () => {
       json: async () => ({ 
         service: 'library-service', 
         uptime_seconds: 300, 
-        total_requests: 5,
+        total_requests: 7,
         total_errors: 0,
         error_rate_percent: 0,
-        latency: { avg_ms: 5, p50_ms: 4, p95_ms: 8, p99_ms: 12 },
+        latency: { avg_ms: 15, p50_ms: 11, p95_ms: 18, p99_ms: 22 },
         endpoints: {}
       }),
     });
@@ -68,8 +68,8 @@ describe('StatusPage Component', () => {
     });
 
     // Memastikan metrik berhasil ditampilkan
-    expect(screen.getByText('10')).toBeInTheDocument(); // Total request auth-service
-    expect(screen.getByText('5')).toBeInTheDocument(); // Total request library-service
+    expect(screen.getByText('12')).toBeInTheDocument(); // Total request auth-service
+    expect(screen.getByText('7')).toBeInTheDocument(); // Total request library-service
   });
 
   it('renders error message when a service is unreachable', async () => {
