@@ -21,6 +21,7 @@ const FinesPage = React.lazy(() => import('./pages/FinesPage'));
 const LostBooksPage = React.lazy(() => import('./pages/LostBooksPage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const StatusPage = React.lazy(() => import('./pages/StatusPage'));
 
 const GlobalLoadingState = () => (
   <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--c-slate9)' }}>
@@ -211,6 +212,7 @@ export default function App() {
       case 'lost':         return <LostBooksPage    user={user}   toast={toast} />
       case 'users':        return <UsersPage        toast={toast} />
       case 'profile':      return <ProfilePage      user={user} setUser={setUser} toast={toast} />
+      case 'status':       return <StatusPage />
       case 'about':        return <AboutPage        onBack={() => nav('home')} />
       case 'home':
       default:             return <HomePage         user={user} onNav={nav} toast={toast} />

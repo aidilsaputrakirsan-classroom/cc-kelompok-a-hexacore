@@ -2,7 +2,7 @@ import os
 import httpx
 import asyncio
 import logging
-from fastapi import HTTPException, Header, Depends, status
+from fastapi import HTTPException, Header, Depends, Request, status
 from typing import Optional
 
 from config import settings
@@ -31,13 +31,15 @@ auth_circuit = CircuitBreaker(
 
 
 async def _send_request_with_retry(
-    method: str, 
-    path: str, 
-    headers: Optional[dict] = None, 
-    timeout: float = TIMEOUT_SECONDS
+    method: str,
+    path: str,
+    headers: Optional[dict] = None,
+    timeout: float = TIMEOUT_SECONDS,
+    correlation_id: Optional[str] = None,
 ) -> httpx.Response:
     """
     Kirim request HTTP ke Auth Service dengan Circuit Breaker + Retry + Exponential Backoff.
+    Correlation ID diteruskan via header X-Correlation-ID untuk distributed tracing.
     """
     # Check circuit breaker
     if not auth_circuit.can_execute():
@@ -45,25 +47,31 @@ async def _send_request_with_retry(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Auth Service circuit breaker OPEN. Try again later."
         )
-        
+
     last_exception = None
     url = f"{AUTH_SERVICE_URL.rstrip('/')}/{path.lstrip('/')}"
-    
+
+    # Bangun headers lengkap + Correlation ID
+    request_headers = dict(headers or {})
+    if correlation_id:
+        request_headers["X-Correlation-ID"] = correlation_id
+
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.request(
                     method=method,
                     url=url,
-                    headers=headers,
+                    headers=request_headers,
                     timeout=timeout,
                 )
-            
+
             # Jika respon server error yang layak di-retry
             if response.status_code in RETRYABLE_STATUS_CODES:
                 logger.warning(
                     f"Auth Service returned status {response.status_code} "
-                    f"on {method} {path} (attempt {attempt}/{MAX_RETRIES})"
+                    f"on {method} {path} (attempt {attempt}/{MAX_RETRIES})",
+                    extra={"correlation_id": correlation_id},
                 )
                 last_exception = httpx.HTTPStatusError(
                     message=f"Server error: {response.status_code}",
@@ -73,32 +81,41 @@ async def _send_request_with_retry(
             else:
                 # Berhasil (atau error client 4xx yang menunjukkan service responsif)
                 auth_circuit.record_success()
+                logger.info(
+                    f"Auth verified (attempt {attempt})",
+                    extra={"correlation_id": correlation_id},
+                )
                 return response
-                
+
         except (httpx.ConnectError, httpx.ConnectTimeout) as e:
             logger.warning(
                 f"Cannot connect to Auth Service on {method} {path} "
-                f"(attempt {attempt}/{MAX_RETRIES}): {e}"
+                f"(attempt {attempt}/{MAX_RETRIES}): {e}",
+                extra={"correlation_id": correlation_id},
             )
             last_exception = e
-            
+
         except httpx.TimeoutException as e:
             logger.warning(
                 f"Auth Service timeout on {method} {path} "
-                f"(attempt {attempt}/{MAX_RETRIES}): {e}"
+                f"(attempt {attempt}/{MAX_RETRIES}): {e}",
+                extra={"correlation_id": correlation_id},
             )
             last_exception = e
-            
+
         # Exponential backoff (hanya jika akan retry)
         if attempt < MAX_RETRIES:
             delay = BASE_DELAY * (2 ** (attempt - 1))  # 0.5s, 1s, 2s
-            logger.info(f"Retrying in {delay}s...")
+            logger.info(f"Retrying in {delay}s...", extra={"correlation_id": correlation_id})
             await asyncio.sleep(delay)
-            
-    # Jika sampai di sini, artinya semua attempt gagal -> catat kegagalan di circuit breaker
+
+    # Jika sampai di sini, artinya semua attempt gagal → catat kegagalan di circuit breaker
     auth_circuit.record_failure()
-    logger.error(f"Auth Service unreachable or failing after {MAX_RETRIES} attempts on {method} {path}")
-    
+    logger.error(
+        f"Auth Service unreachable or failing after {MAX_RETRIES} attempts on {method} {path}",
+        extra={"correlation_id": correlation_id},
+    )
+
     if isinstance(last_exception, httpx.HTTPStatusError):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -116,22 +133,30 @@ async def _send_request_with_retry(
         )
 
 
-async def verify_token_with_auth_service(authorization: str = Header(...)) -> dict:
+async def verify_token_with_auth_service(
+    request: Request,
+    authorization: str = Header(...),
+) -> dict:
     """
     Dependency: Memanggil Auth Service via HTTP untuk verifikasi JWT.
+    Meneruskan Correlation ID dari request.state agar log dapat dihubungkan lintas service.
     """
     if not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Format token salah. Gunakan Bearer <token>"
         )
-    
+
+    # Ambil correlation ID dari request state (diisi oleh RequestLoggingMiddleware)
+    correlation_id = getattr(request.state, "correlation_id", None)
+
     response = await _send_request_with_retry(
         method="GET",
         path="/verify",
-        headers={"Authorization": authorization}
+        headers={"Authorization": authorization},
+        correlation_id=correlation_id,
     )
-    
+
     if response.status_code == 200:
         return response.json()  # {user_id, email, full_name, role}
     elif response.status_code == 401:
@@ -159,6 +184,7 @@ def get_current_user(user: dict = Depends(verify_token_with_auth_service)) -> di
     return user
 
 
+
 def get_admin_user(current_user: dict = Depends(get_current_user)) -> dict:
     """
     Dependency injection: pastikan user adalah admin.
@@ -172,7 +198,8 @@ def get_admin_user(current_user: dict = Depends(get_current_user)) -> dict:
 
 
 async def get_current_user_optional_degraded(
-    authorization: Optional[str] = Header(None)
+    request: Request,
+    authorization: Optional[str] = Header(None),
 ) -> Optional[dict]:
     """
     Dependency injection: dapatkan user aktif dari token.
@@ -181,11 +208,15 @@ async def get_current_user_optional_degraded(
     Namun jika Auth Service UP dan token dikirim tapi invalid, tetap raise 401.
     Jika Auth Service UP dan token tidak dikirim, raise 401.
     """
+    # Ambil correlation ID dari request state
+    correlation_id = getattr(request.state, "correlation_id", None)
+
     # 1. Cek status circuit breaker sebelum memanggil Auth Service
     if not auth_circuit.can_execute():
         logger.warning(
             "[Degraded Mode] Auth Service circuit breaker is OPEN. "
-            "Akses diizinkan tanpa autentikasi (degraded)."
+            "Akses diizinkan tanpa autentikasi (degraded).",
+            extra={"correlation_id": correlation_id},
         )
         return None
 
@@ -206,7 +237,8 @@ async def get_current_user_optional_degraded(
         response = await _send_request_with_retry(
             method="GET",
             path="/verify",
-            headers={"Authorization": authorization}
+            headers={"Authorization": authorization},
+            correlation_id=correlation_id,
         )
         if response.status_code == 200:
             return response.json()
@@ -222,27 +254,37 @@ async def get_current_user_optional_degraded(
             )
         else:
             if not auth_circuit.can_execute():
-                logger.warning("[Degraded Mode] Auth Service gagal. Fallback ke degraded mode.")
+                logger.warning(
+                    "[Degraded Mode] Auth Service gagal. Fallback ke degraded mode.",
+                    extra={"correlation_id": correlation_id},
+                )
                 return None
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"Layanan autentikasi gagal: {response.status_code}"
             )
-            
+
     except HTTPException as e:
         if e.status_code in {status.HTTP_503_SERVICE_UNAVAILABLE, status.HTTP_504_GATEWAY_TIMEOUT}:
-            logger.warning(f"[Degraded Mode] Auth Service unavailable ({e.detail}). Fallback ke degraded mode.")
+            logger.warning(
+                f"[Degraded Mode] Auth Service unavailable ({e.detail}). Fallback ke degraded mode.",
+                extra={"correlation_id": correlation_id},
+            )
             return None
         raise e
-        
+
     except Exception as e:
         if not auth_circuit.can_execute():
-            logger.warning(f"[Degraded Mode] Koneksi ke Auth Service gagal: {e}. Fallback ke degraded mode.")
+            logger.warning(
+                f"[Degraded Mode] Koneksi ke Auth Service gagal: {e}. Fallback ke degraded mode.",
+                extra={"correlation_id": correlation_id},
+            )
             return None
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Otorisasi gagal karena Auth Service tidak dapat dihubungi"
         )
+
 
 
 async def check_user_exists(user_id: int) -> bool:
