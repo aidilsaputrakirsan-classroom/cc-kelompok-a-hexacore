@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, Query, Header, status
 from fastapi.responses import JSONResponse
@@ -20,6 +21,12 @@ from auth import (
 )
 import crud
 from config import settings
+from logging_config import setup_logging
+from logging_middleware import RequestLoggingMiddleware
+
+# Setup structured logging
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # Buat semua tabel di database (jika belum ada)
 Base.metadata.create_all(bind=engine)
@@ -39,6 +46,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Logging middleware (setelah CORS)
+app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.on_event("startup")
+async def configure_logging():
+    """Re-apply structured logging setelah Uvicorn selesai inisialisasi."""
+    setup_logging()
+    logger.info("LenteraPustaka Auth Service started — structured JSON logging aktif")
+
 
 def raise_http_from_crud_error(error: ValueError) -> None:
     status_code = 409 if isinstance(error, crud.ConflictError) else 400
@@ -50,6 +67,7 @@ def raise_http_from_crud_error(error: ValueError) -> None:
 # ============================================================
 
 @app.get("/health", tags=["System"])
+@app.get("/auth/health", tags=["System"])
 def health_check(db: Session = Depends(get_db)):
     """Health check endpoint untuk mengecek status API dan database."""
     health = {
@@ -241,3 +259,15 @@ def admin_reset_password(user_id: int, data: AdminResetPasswordRequest, db: Sess
     if not updated:
         raise HTTPException(status_code=404, detail=f"User id={user_id} tidak ditemukan")
     return updated
+
+
+@app.get("/metrics", tags=["Monitoring"])
+@app.get("/auth/metrics", tags=["Monitoring"])
+def get_metrics():
+    """Mengembalikan metrik performa aplikasi."""
+    from metrics import metrics
+    return {
+        "service": "auth-service",
+        **metrics.get_metrics(),
+    }
+

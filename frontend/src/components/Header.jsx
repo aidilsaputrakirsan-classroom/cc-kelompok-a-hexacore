@@ -7,6 +7,7 @@
 
 const GUEST_LINKS = [
   { id: 'home', label: 'Beranda' },
+  { id: 'status', label: 'Status Sistem' },
   { id: 'about', label: 'Tentang' },
 ]
 
@@ -14,6 +15,7 @@ const MEMBER_LINKS = [
   { id: 'home',         label: 'Beranda'   },
   { id: 'transactions', label: 'Transaksi', badgeKey: 'transactions' },
   { id: 'fines',        label: 'Denda',     badgeKey: 'fines'        },
+  { id: 'status',       label: 'Status Sistem' },
   { id: 'profile',      label: 'Profil'    },
   { id: 'about',        label: 'Tentang'   },
 ]
@@ -23,6 +25,7 @@ const ADMIN_GROUPS = [
     label: 'Utama',
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: '▦' },
+      { id: 'status',    label: 'Status Sistem', icon: '📊' },
       { id: 'profile',   label: 'Profil',    icon: '◉' },
       { id: 'about',     label: 'Tentang',   icon: 'ℹ️' },
     ],
