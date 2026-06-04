@@ -17,7 +17,11 @@ import crud
 from config import settings
 import auth_client
 import logging
+from logging_config import setup_logging
+from logging_middleware import RequestLoggingMiddleware
 
+# Setup structured logging
+setup_logging()
 logger = logging.getLogger(__name__)
 
 # Buat semua tabel di database (jika belum ada)
@@ -62,6 +66,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Logging middleware (setelah CORS)
+app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.on_event("startup")
+async def configure_logging():
+    """Re-apply structured logging setelah Uvicorn selesai inisialisasi."""
+    setup_logging()
+    logger.info("LenteraPustaka Library Service started — structured JSON logging aktif")
 
 
 def raise_http_from_crud_error(error: ValueError) -> None:
@@ -172,6 +186,7 @@ async def upload_book_cover(
 # ============================================================
 
 @app.get("/health", tags=["System"])
+@app.get("/items/health", tags=["System"])
 def health_check(db: Session = Depends(get_db)):
     """Health check endpoint dengan aggregated status untuk mengecek status API dan dependencies."""
     cb_status = auth_client.auth_circuit.get_status()
@@ -696,3 +711,15 @@ def get_public_items(
     Tidak membutuhkan autentikasi.
     """
     return crud.get_public_books(db=db, skip=skip, limit=limit)
+
+
+@app.get("/metrics", tags=["Monitoring"])
+@app.get("/items/metrics", tags=["Monitoring"])
+def get_metrics():
+    """Mengembalikan metrik performa aplikasi."""
+    from metrics import metrics
+    return {
+        "service": "library-service",
+        **metrics.get_metrics(),
+    }
+
