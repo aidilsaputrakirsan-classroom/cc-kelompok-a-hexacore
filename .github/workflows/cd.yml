@@ -318,9 +318,10 @@ jobs:
             frontend/pnpm-lock.yaml
 
       - name: Install pnpm (kalau perlu)
-        if: ${{ steps.flags.outputs.do_build == '1' }} && ${{ steps.nodemeta.outputs.pm == 'pnpm' }}
+        if: ${{ steps.flags.outputs.do_build == '1' && steps.nodemeta.outputs.pm == 'pnpm' }}
         uses: pnpm/action-setup@v4
         with:
+          version: 8  # <-- saran Copilot
           run_install: false
 
       - name: Install frontend dependencies
