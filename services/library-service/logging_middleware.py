@@ -33,8 +33,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as e:
             duration_ms = round((time.time() - start_time) * 1000, 2)
+            # Gunakan route template jika tersedia untuk menghindari high-cardinality metrics
+            route = request.scope.get("route")
+            metric_path = route.path if route and hasattr(route, "path") else request.url.path
+            
             # Catat metrics untuk request error 500
-            metrics.record_request(request.method, request.url.path, 500, duration_ms)
+            metrics.record_request(request.method, metric_path, 500, duration_ms)
             
             # Hitung error rate 1 menit terakhir
             recent_error_rate, total_recent = metrics.get_recent_error_rate(60.0)
@@ -61,8 +65,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # Hitung durasi
         duration_ms = round((time.time() - start_time) * 1000, 2)
 
+        # Gunakan route template jika tersedia untuk menghindari high-cardinality metrics
+        route = request.scope.get("route")
+        metric_path = route.path if route and hasattr(route, "path") else request.url.path
+
         # Catat metrics untuk request (semua request)
-        metrics.record_request(request.method, request.url.path, response.status_code, duration_ms)
+        metrics.record_request(request.method, metric_path, response.status_code, duration_ms)
 
         # Log request (skip health checks dan metrics endpoint agar log tidak terlalu noisy)
         if request.url.path not in ["/health", "/metrics"]:

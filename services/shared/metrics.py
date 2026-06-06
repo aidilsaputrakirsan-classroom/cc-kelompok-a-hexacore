@@ -32,7 +32,6 @@ class MetricsCollector:
 
         # Rolling window untuk error rate tracking (60 detik terakhir)
         self.recent_requests = []  # list of tuples: (timestamp, is_error)
-
     def record_request(self, method: str, path: str, status_code: int, duration_ms: float):
         """Catat satu request."""
         with self._lock:
@@ -56,7 +55,12 @@ class MetricsCollector:
                 self.endpoint_stats[key]["errors"] += 1
 
             # Catat request ke rolling window
-            self.recent_requests.append((time.time(), is_error))
+            now = time.time()
+            self.recent_requests.append((now, is_error))
+            
+            # Pruning window (buang data yang lebih dari 60 detik langsung di sini)
+            cutoff = now - 60.0
+            self.recent_requests = [r for r in self.recent_requests if r[0] >= cutoff]
 
     def get_recent_error_rate(self, seconds: float = 60.0) -> tuple[float, int]:
         """Hitung error rate dalam X detik terakhir. Mengembalikan (error_rate_percent, total_requests)."""
@@ -73,7 +77,6 @@ class MetricsCollector:
             errors_recent = sum(1 for r in self.recent_requests if r[1])
             error_rate = round((errors_recent / total_recent) * 100, 2)
             return error_rate, total_recent
-
     def get_metrics(self) -> dict:
         """Return snapshot metrics."""
         with self._lock:
