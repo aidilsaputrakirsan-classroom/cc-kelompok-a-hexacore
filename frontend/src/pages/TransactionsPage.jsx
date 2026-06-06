@@ -110,8 +110,8 @@ function TransactionsPage({ user, toast, onNav }) {
   useEffect(() => {
     if (isAdmin)
       fetchUsers().then((d) => setAdminUsers(Array.isArray(d) ? d : []));
-    // FIX: Fetch buku dengan limit yang cukup besar dan simpan ke state
-    fetchBooks("", 500)
+    // FIX: Fetch buku dengan limit maksimum yang diperbolehkan backend (100) dan simpan ke state
+    fetchBooks("", 100)
       .then((d) => setBookList(d.books || []))
       .catch(() => {});
   }, [isAdmin]);
@@ -168,7 +168,7 @@ function TransactionsPage({ user, toast, onNav }) {
     setBookSearch("");
     setModal(true);
     // Refresh daftar buku setiap kali modal dibuka (pastikan data terkini)
-    fetchBooks("", 500)
+    fetchBooks("", 100)
       .then((d) => setBookList(d.books || []))
       .catch(() => {});
   };

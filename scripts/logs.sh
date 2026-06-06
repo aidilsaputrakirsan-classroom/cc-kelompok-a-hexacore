@@ -9,7 +9,7 @@ case "$1" in
     ;;
   errors)
     echo "❌ Showing ERROR logs only..."
-    docker compose logs auth-service library-service 2>&1 | grep -E '"level":"ERROR"|"level":"CRITICAL"'
+    docker compose logs auth-service library-service 2>&1 | grep -E '"level":\s*"ERROR"|"level":\s*"CRITICAL"'
     ;;
   trace)
     if [ -z "$2" ]; then
