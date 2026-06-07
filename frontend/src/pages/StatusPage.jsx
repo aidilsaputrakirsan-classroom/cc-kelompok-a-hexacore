@@ -16,6 +16,23 @@ const formatUptime = (seconds) => {
   return parts.join(' ');
 };
 
+function ErrorRateBar({ rate }) {
+  const isDanger = rate > 5;
+  const isWarning = rate > 0 && rate <= 5;
+  const color = isDanger ? 'var(--c-red)' : isWarning ? 'var(--c-amber)' : 'var(--c-green)';
+  
+  return (
+    <div style={{ width: '100%', backgroundColor: 'var(--c-slate3)', borderRadius: '4px', overflow: 'hidden', height: '12px', marginTop: '12px' }}>
+      <div style={{
+        height: '100%',
+        width: `${Math.min(100, Math.max(0, rate))}%`,
+        backgroundColor: color,
+        transition: 'width 0.5s ease'
+      }} />
+    </div>
+  );
+}
+
 function ServiceCard({ name, icon, healthUrl, metricsUrl, refreshTrigger }) {
   const [health, setHealth] = useState(null);
   const [metrics, setMetrics] = useState(null);
@@ -163,11 +180,14 @@ function ServiceCard({ name, icon, healthUrl, metricsUrl, refreshTrigger }) {
               </div>
             </div>
 
-            <div style={{ padding: '12px', background: 'var(--c-bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--c-border)' }}>
+            <div style={{ padding: '12px', background: 'var(--c-bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--c-border)', gridColumn: 'span 2' }}>
               <div style={{ fontSize: '11px', color: 'var(--c-text3)', textTransform: 'uppercase', fontWeight: '700' }}>Error Rate</div>
-              <div style={{ fontSize: '18px', fontWeight: '800', color: (metrics?.error_rate_percent > 5) ? 'var(--c-amber)' : 'var(--c-text)', marginTop: '4px' }}>
-                {metrics?.error_rate_percent ?? 0}%
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                <div style={{ fontSize: '18px', fontWeight: '800', color: (metrics?.error_rate_percent > 5) ? 'var(--c-amber)' : 'var(--c-text)' }}>
+                  {metrics?.error_rate_percent ?? 0}%
+                </div>
               </div>
+              <ErrorRateBar rate={metrics?.error_rate_percent ?? 0} />
             </div>
 
             <div style={{ padding: '12px', background: 'var(--c-bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--c-border)' }}>
