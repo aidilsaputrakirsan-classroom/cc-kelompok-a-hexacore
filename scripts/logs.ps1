@@ -24,7 +24,7 @@ switch ($Action) {
     "errors" {
         Write-Host "=== Showing ERROR and CRITICAL logs only ===" -ForegroundColor Red
         # Select-String is safe and works like grep
-        docker compose logs auth-service library-service 2>&1 | Select-String -Pattern '"level":"ERROR"','"level":"CRITICAL"'
+        docker compose logs auth-service library-service 2>&1 | Select-String -Pattern '"level":\s*"ERROR"','"level":\s*"CRITICAL"'
     }
     "trace" {
         if (-not $Param) {

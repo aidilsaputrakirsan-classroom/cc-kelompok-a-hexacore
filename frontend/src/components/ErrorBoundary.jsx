@@ -20,15 +20,60 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       // You can render any custom fallback UI
       return (
-        <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
-          <h2 style={{ color: '#e53e3e' }}>Oops! Sesuatu berjalan tidak semestinya.</h2>
-          <p>Terjadi kesalahan pada aplikasi. Silakan coba muat ulang halaman ini.</p>
-          <button 
-            onClick={() => window.location.reload()}
-            style={{ padding: '10px 20px', marginTop: '10px', cursor: 'pointer', backgroundColor: '#3182ce', color: 'white', border: 'none', borderRadius: '5px' }}
-          >
-            Muat Ulang Halaman
-          </button>
+        <div style={{ 
+          minHeight: '100vh', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          background: 'var(--c-slate9)' 
+        }}>
+          <div style={{
+            background: 'var(--c-surface)',
+            padding: '40px',
+            borderRadius: 'var(--r-lg)',
+            boxShadow: 'var(--sh-lg)',
+            textAlign: 'center',
+            maxWidth: '500px',
+            width: '90%',
+            borderTop: '4px solid var(--c-red)'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚨</div>
+            <h2 style={{ color: 'var(--c-text)', margin: '0 0 12px 0', fontSize: '24px' }}>Oops! Terjadi Kesalahan</h2>
+            <p style={{ color: 'var(--c-text2)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+              Aplikasi mendeteksi adanya masalah yang tidak terduga.<br/>
+              Silakan muat ulang halaman atau kembali ke beranda.
+            </p>
+            
+            {process.env.NODE_ENV === 'development' && (
+              <div style={{ 
+                background: 'var(--c-red-bg)', 
+                color: 'var(--c-red)', 
+                padding: '12px', 
+                borderRadius: 'var(--r-md)',
+                fontSize: '13px',
+                textAlign: 'left',
+                marginBottom: '24px',
+                wordBreak: 'break-all'
+              }}>
+                <strong>Error:</strong> {this.state.errorMessage}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => window.location.href = '/'}
+                className="btn btn-secondary"
+              >
+                Kembali ke Beranda
+              </button>
+              <button 
+                onClick={() => window.location.reload()}
+                className="btn btn-primary"
+              >
+                Muat Ulang Halaman
+              </button>
+            </div>
+          </div>
         </div>
       );
     }

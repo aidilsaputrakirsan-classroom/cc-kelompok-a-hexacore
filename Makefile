@@ -8,6 +8,24 @@
 up:
 	docker compose up -d
 
+# Menjalankan mode Produksi dengan overrides
+prod:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Menjalankan mode Development (Alias untuk up)
+dev:
+	docker compose up -d
+
+# ... (lanjutkan dengan target yang sudah ada: down, build, dll)
+
+# Menampilkan live logs khusus Produksi
+logs-prod:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
+
+# Menampilkan status khusus Produksi
+ps-prod:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+
 # Mematikan semua services
 down:
 	docker compose down

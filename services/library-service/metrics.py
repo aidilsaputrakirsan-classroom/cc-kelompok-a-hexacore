@@ -30,13 +30,16 @@ class MetricsCollector:
             "total_latency_ms": 0,
         })
 
+        # Rolling window untuk error rate tracking (60 detik terakhir)
+        self.recent_requests = []  # list of tuples: (timestamp, is_error)
     def record_request(self, method: str, path: str, status_code: int, duration_ms: float):
         """Catat satu request."""
         with self._lock:
             self.request_count += 1
             self.status_counts[status_code] += 1
 
-            if status_code >= 400:
+            is_error = status_code >= 400
+            if is_error:
                 self.error_count += 1
 
             # Latency
@@ -48,9 +51,32 @@ class MetricsCollector:
             key = f"{method} {path}"
             self.endpoint_stats[key]["count"] += 1
             self.endpoint_stats[key]["total_latency_ms"] += duration_ms
-            if status_code >= 400:
+            if is_error:
                 self.endpoint_stats[key]["errors"] += 1
 
+            # Catat request ke rolling window
+            now = time.time()
+            self.recent_requests.append((now, is_error))
+            
+            # Pruning window (buang data yang lebih dari 60 detik langsung di sini)
+            cutoff = now - 60.0
+            self.recent_requests = [r for r in self.recent_requests if r[0] >= cutoff]
+
+    def get_recent_error_rate(self, seconds: float = 60.0) -> tuple[float, int]:
+        """Hitung error rate dalam X detik terakhir. Mengembalikan (error_rate_percent, total_requests)."""
+        with self._lock:
+            now = time.time()
+            cutoff = now - seconds
+            # Bersihkan request lama
+            self.recent_requests = [r for r in self.recent_requests if r[0] >= cutoff]
+
+            total_recent = len(self.recent_requests)
+            if total_recent == 0:
+                return 0.0, 0
+
+            errors_recent = sum(1 for r in self.recent_requests if r[1])
+            error_rate = round((errors_recent / total_recent) * 100, 2)
+            return error_rate, total_recent
     def get_metrics(self) -> dict:
         """Return snapshot metrics."""
         with self._lock:
