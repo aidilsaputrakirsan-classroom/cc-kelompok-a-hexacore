@@ -68,7 +68,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Origin frontend dibaca dari environment secara terpusat agar mudah disesuaikan.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=['https://backend-production-cefb.up.railway.app'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
