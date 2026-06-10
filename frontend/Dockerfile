@@ -15,7 +15,7 @@ RUN npm ci
 COPY . .
 
 # Set API URL for production build (embedded via Vite)
-ARG VITE_API_URL=https://backend-production-3084.up.railway.app
+ARG VITE_API_URL=http://backend-production-cefb.up.railway.app
 ENV VITE_API_URL=$VITE_API_URL
 
 # Build React app -> output in /app/dist/
