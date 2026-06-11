@@ -30,4 +30,4 @@ dist/
 backend/static/covers/*.png
 backend/static/covers/*.jpg
 backend/static/covers/*.jpeg
-backend/static/fines/
+backend/static/fines/*
