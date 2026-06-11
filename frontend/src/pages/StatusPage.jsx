@@ -8,7 +8,7 @@ const formatUptime = (seconds) => {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
-  
+
   const parts = [];
   if (hrs > 0) parts.push(`${hrs} jam`);
   if (mins > 0) parts.push(`${mins} menit`);
@@ -20,7 +20,7 @@ function ErrorRateBar({ rate }) {
   const isDanger = rate > 5;
   const isWarning = rate > 0 && rate <= 5;
   const color = isDanger ? 'var(--c-red)' : isWarning ? 'var(--c-amber)' : 'var(--c-green)';
-  
+
   return (
     <div style={{ width: '100%', backgroundColor: 'var(--c-slate3)', borderRadius: '4px', overflow: 'hidden', height: '12px', marginTop: '12px' }}>
       <div style={{
@@ -358,7 +358,7 @@ export default function StatusPage() {
           <h1 className="page-title">📊 Status Sistem & Observabilitas</h1>
           <p className="page-sub">Monitoring performa layanan mikro LenteraPustaka secara real-time</p>
         </div>
-        
+
         {/* Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {autoRefresh && (
@@ -366,17 +366,17 @@ export default function StatusPage() {
               Pembaruan otomatis dalam: <strong>{timeLeft}s</strong>
             </span>
           )}
-          
-          <button 
-            className="btn btn-secondary btn-sm" 
+
+          <button
+            className="btn btn-secondary btn-sm"
             onClick={() => setAutoRefresh(prev => !prev)}
             style={{ fontWeight: '600' }}
           >
             {autoRefresh ? '⏸️ Jeda Auto-Refresh' : '▶️ Aktifkan Auto-Refresh'}
           </button>
-          
-          <button 
-            className="btn btn-primary btn-sm" 
+
+          <button
+            className="btn btn-primary btn-sm"
             onClick={handleRefresh}
             style={{ fontWeight: '600' }}
           >
@@ -399,7 +399,7 @@ export default function StatusPage() {
           metricsUrl={`${API_URL}/auth/metrics`}
           refreshTrigger={refreshTrigger}
         />
-        
+
         <ServiceCard
           name="Lentera Library Service"
           icon="📚"
@@ -408,7 +408,7 @@ export default function StatusPage() {
           refreshTrigger={refreshTrigger}
         />
       </div>
-      
+
       {/* CSS Keyframes for animation pulse */}
       <style>{`
         @keyframes pulse {

@@ -74,6 +74,7 @@ import {
   returnBook,
   reportBookLost,
   fetchFines,
+  uploadFineProof,
   submitFinePayment,
   approveFine,
   rejectFine,
@@ -128,24 +129,6 @@ function FinesPage({ user, toast }) {
     { v: "rejected", l: "Ditolak" },
   ];
 
-  // Upload file ke backend /upload/fines
-  const uploadFileToServer = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const t = token.get();
-    const res = await fetch(`${API_BASE}/upload/fines`, {
-      method: "POST",
-      headers: t ? { Authorization: `Bearer ${t}` } : {},
-      body: formData,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || "Gagal mengupload file");
-    }
-    const data = await res.json();
-    return data.url; // returns /static/fines/uuid.ext
-  };
-
   const doSubmitProof = async () => {
     setSubmitting(true);
     try {
@@ -158,7 +141,8 @@ function FinesPage({ user, toast }) {
           return;
         }
         setUploading(true);
-        const uploadedPath = await uploadFileToServer(proofFile);
+        const uploaded = await uploadFineProof(proofFile);
+        const uploadedPath = uploaded.url;
         setUploading(false);
         // Buat full URL dari path relatif
         finalUrl = uploadedPath.startsWith("http")

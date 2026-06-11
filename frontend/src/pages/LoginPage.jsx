@@ -91,21 +91,16 @@ function LoginPage({ onLogin, toast, initialTab = "login", onBack }) {
     setErrors((p) => ({ ...p, [k]: "" }));
   };
   const strength = pwStrength(form.password);
-  const onKey = (e) => {
-    if (e.key === "Enter") submit();
-  };
 
-  const submit = async () => {
-    const e = {};
-    if (!form.email) e.email = "Email wajib diisi";
-    if (!form.password) e.password = "Password wajib diisi";
+  const submit = async (e) => {
+    if (e) e.preventDefault();
+    const errs = {};
     if (tab === "register") {
-      if (!form.full_name) e.full_name = "Nama wajib diisi";
       const pe = validatePassword(form.password);
-      if (pe.length) e.password = pe[0];
+      if (pe.length) errs.password = pe[0];
     }
-    if (Object.keys(e).length) {
-      setErrors(e);
+    if (Object.keys(errs).length) {
+      setErrors(errs);
       return;
     }
 
@@ -210,77 +205,80 @@ function LoginPage({ onLogin, toast, initialTab = "login", onBack }) {
             </div>
           )}
 
-          {tab === "register" && (
-            <Field label="Nama Lengkap" error={errors.full_name}>
+          <form onSubmit={submit}>
+            {tab === "register" && (
+              <Field label="Nama Lengkap" error={errors.full_name}>
+                <Input
+                  value={form.full_name}
+                  onChange={f("full_name")}
+                  placeholder="Nama lengkap"
+                  error={errors.full_name}
+                  autoFocus
+                  required
+                />
+              </Field>
+            )}
+
+            <Field label="Email" error={errors.email}>
               <Input
-                value={form.full_name}
-                onChange={f("full_name")}
-                onKeyDown={onKey}
-                placeholder="Nama lengkap"
-                error={errors.full_name}
-                autoFocus
+                type="email"
+                value={form.email}
+                onChange={f("email")}
+                placeholder="nama@student.itk.ac.id"
+                error={errors.email}
+                autoFocus={tab === "login"}
+                required
               />
             </Field>
-          )}
 
-          <Field label="Email" error={errors.email}>
-            <Input
-              type="email"
-              value={form.email}
-              onChange={f("email")}
-              onKeyDown={onKey}
-              placeholder="nama@student.itk.ac.id"
-              error={errors.email}
-              autoFocus={tab === "login"}
-            />
-          </Field>
-
-          <Field
-            label="Password"
-            error={errors.password}
-            hint={
-              tab === "register"
-                ? "Min. 8 karakter, huruf besar+kecil+angka+spesial"
-                : undefined
-            }
-          >
-            <Input
-              type="password"
-              value={form.password}
-              onChange={f("password")}
-              onKeyDown={onKey}
-              placeholder="Password"
+            <Field
+              label="Password"
               error={errors.password}
-            />
-            {tab === "register" && form.password && (
-              <div style={{ marginTop: 6 }}>
-                <div className="pw-bars">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div
-                      key={i}
-                      className="pw-bar"
-                      style={{
-                        background:
-                          i <= strength.score ? strength.color : undefined,
-                      }}
-                    />
-                  ))}
+              hint={
+                tab === "register"
+                  ? "Min. 8 karakter, huruf besar+kecil+angka+spesial"
+                  : undefined
+              }
+            >
+              <Input
+                type="password"
+                value={form.password}
+                onChange={f("password")}
+                placeholder="Password"
+                error={errors.password}
+                required
+                minLength={8}
+              />
+              {tab === "register" && form.password && (
+                <div style={{ marginTop: 6 }}>
+                  <div className="pw-bars">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div
+                        key={i}
+                        className="pw-bar"
+                        style={{
+                          background:
+                            i <= strength.score ? strength.color : undefined,
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <span className="pw-label" style={{ color: strength.color }}>
+                    {strength.label}
+                  </span>
                 </div>
-                <span className="pw-label" style={{ color: strength.color }}>
-                  {strength.label}
-                </span>
-              </div>
-            )}
-          </Field>
+              )}
+            </Field>
 
-          <button
-            className="btn btn-primary btn-full btn-lg"
-            style={{ marginTop: 8 }}
-            onClick={submit}
-            disabled={loading}
-          >
-            {loading ? "Memproses…" : tab === "login" ? "Masuk" : "Buat Akun"}
-          </button>
+            <button
+              type="submit"
+              className="btn btn-primary btn-full btn-lg"
+              style={{ marginTop: 8 }}
+              disabled={loading}
+            >
+              {loading ? "Memproses…" : tab === "login" ? "Masuk" : "Buat Akun"}
+            </button>
+          </form>
         </div>
       </div>
     </div>
@@ -288,3 +286,4 @@ function LoginPage({ onLogin, toast, initialTab = "login", onBack }) {
 }
 
 export default LoginPage;
+
