@@ -15,12 +15,14 @@ class UserCreate(BaseModel):
         min_length=8, 
         examples=["P4ssw0rd!"]
     )
-    full_name : str = Field(..., min_length=2, max_length=150, examples=["Budi Santoso"])
+    full_name : str = Field(..., min_length=2, max_length=35, examples=["Budi Santoso"])
     role      : str  = Field("member", examples=["member"])   # 'admin' | 'member'
 
     @field_validator('password')
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
+        if len(v) > 128:
+            raise ValueError('Password tidak boleh lebih dari 128 karakter')
         if not re.search(r'[A-Z]', v):
             raise ValueError('Password wajib mengandung minimal 1 huruf besar')
         if not re.search(r'[a-z]', v):
@@ -31,15 +33,47 @@ class UserCreate(BaseModel):
             raise ValueError('Password wajib mengandung minimal 1 karakter spesial (@$!%*?&)')
         return v
 
+    @field_validator('full_name')
+    @classmethod
+    def validate_full_name(cls, v: str) -> str:
+        stripped = v.strip()
+        if len(stripped) < 2:
+            raise ValueError('Nama lengkap minimal 2 karakter setelah di-strip')
+        if len(stripped) > 35:
+            raise ValueError('Nama lengkap maksimal 35 karakter setelah di-strip')
+        return stripped
+
 class UserUpdate(BaseModel):
     """Schema untuk update data user — semua field opsional (partial update)."""
     email     : Optional[EmailStr] = None
-    full_name : Optional[str]      = Field(None, min_length=2, max_length=150)
+    full_name : Optional[str]      = Field(None, min_length=2, max_length=35)
     role      : Optional[str]      = None   # 'admin' | 'member'
+
+    @field_validator('full_name')
+    @classmethod
+    def validate_full_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        stripped = v.strip()
+        if len(stripped) < 2:
+            raise ValueError('Nama lengkap minimal 2 karakter setelah di-strip')
+        if len(stripped) > 35:
+            raise ValueError('Nama lengkap maksimal 35 karakter setelah di-strip')
+        return stripped
 
 class MemberProfileUpdate(BaseModel):
     """Schema khusus Member saat ingin mengubah profilnya (Email dan Role terkunci)."""
-    full_name: str = Field(..., min_length=2, max_length=150, examples=["Nama Baru"])
+    full_name: str = Field(..., min_length=2, max_length=35, examples=["Nama Baru"])
+
+    @field_validator('full_name')
+    @classmethod
+    def validate_full_name(cls, v: str) -> str:
+        stripped = v.strip()
+        if len(stripped) < 2:
+            raise ValueError('Nama lengkap minimal 2 karakter setelah di-strip')
+        if len(stripped) > 35:
+            raise ValueError('Nama lengkap maksimal 35 karakter setelah di-strip')
+        return stripped
 
 class AdminResetPasswordRequest(BaseModel):
     """Schema untuk Admin saat mereset paksa password user manapun."""
@@ -48,6 +82,8 @@ class AdminResetPasswordRequest(BaseModel):
     @field_validator('new_password')
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
+        if len(v) > 128:
+            raise ValueError('Password tidak boleh lebih dari 128 karakter')
         if not re.search(r'[A-Z]', v):
             raise ValueError('Password wajib mengandung minimal 1 huruf besar')
         if not re.search(r'[a-z]', v):
@@ -66,6 +102,8 @@ class MemberChangePasswordRequest(BaseModel):
     @field_validator('new_password')
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
+        if len(v) > 128:
+            raise ValueError('Password tidak boleh lebih dari 128 karakter')
         if not re.search(r'[A-Z]', v):
             raise ValueError('Password wajib mengandung minimal 1 huruf besar')
         if not re.search(r'[a-z]', v):

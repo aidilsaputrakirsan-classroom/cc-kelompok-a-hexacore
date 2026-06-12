@@ -86,21 +86,16 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
     setErrors(p => ({ ...p, isbn: validateIsbn(nextValue) || '' }))
   }
 
-  const handleSave = async () => {
-    // Validasi field wajib
-    const e = {}
-    if (!form.title.trim())           e.title      = 'Judul wajib diisi'
-    if (!form.author.trim())          e.author     = 'Pengarang wajib diisi'
-    if (!form.category_id)            e.category_id = 'Kategori wajib dipilih'
+  const handleSave = async (e) => {
+    if (e) e.preventDefault()
+    
+    const errs = {}
     if (!isEdit) {
       const isbnError = validateIsbn(form.isbn)
-      if (isbnError) e.isbn = isbnError
+      if (isbnError) errs.isbn = isbnError
     }
-    if (Number(form.total_stock) < 1) e.total_stock = 'Minimal 1'
-    if (Number(form.available_stock) > Number(form.total_stock))
-                                      e.available_stock = 'Tidak boleh melebihi total stok'
 
-    if (Object.keys(e).length) { setErrors(e); return }
+    if (Object.keys(errs).length) { setErrors(errs); return }
 
     setLoading(true)
     try {
@@ -141,94 +136,95 @@ function ItemForm({ editingItem, categories, genres, onSave, isOpen, onClose }) 
       size="lg"
       footer={
         <>
-          <button className="btn btn-ghost" onClick={onClose}>Batal</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={loading}>
+          <button className="btn btn-ghost" onClick={onClose} type="button">Batal</button>
+          <button type="submit" form="item-form" className="btn btn-primary" disabled={loading}>
             {loading ? 'Menyimpan…' : 'Simpan'}
           </button>
         </>
       }
     >
-      {/* Error dari backend */}
-      {errors._submit && (
-        <div className="alert alert-error" style={{ marginBottom: 16 }}>
-          {errors._submit}
-        </div>
-      )}
-
-      {isEdit ? (
-        <div className="isbn-info">
-          <span style={{ color: 'var(--c-text3)' }}>🔒</span>
-          <div>
-            <span style={{ fontWeight: 600 }}>ISBN: </span>
-            <span style={{ fontFamily: 'monospace' }}>{editingItem.isbn ?? '—'}</span>
-            <span style={{ display: 'block', fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
-              ISBN tidak dapat diubah setelah buku dibuat
-            </span>
-          </div>
-        </div>
-      ) : (
-        <Field label="ISBN" optional hint="Wajib angka + strip, 10-20 karakter — contoh: 978-602-03-3446-5" error={errors.isbn}>
-          <Input value={form.isbn} onChange={handleIsbnChange} maxLength={20} placeholder="978-602-03-3446-5" error={errors.isbn} />
-        </Field>
-      )}
-
-      <Field label="Cover Buku" optional hint="Opsional: Upload gambar untuk cover buku">
-        <input type="file" accept="image/*" onChange={e => setCoverFile(e.target.files[0])} className="input" style={{ background: 'var(--c-bg)', padding: '6px' }} />
-        {form.cover_image_url && !coverFile && (
-          <div style={{ marginTop: 8, padding: 8, background: 'var(--c-bg)', borderRadius: 6, display: 'inline-block' }}>
-            <span style={{ display: 'block', fontSize: 11, marginBottom: 4, color: 'var(--c-text3)' }}>Cover saat ini:</span>
-            <img src={`${API_BASE}${form.cover_image_url}`} style={{ height: 60, borderRadius: 4 }} alt="Current Cover" />
+      <form id="item-form" onSubmit={handleSave}>
+        {/* Error dari backend */}
+        {errors._submit && (
+          <div className="alert alert-error" style={{ marginBottom: 16 }}>
+            {errors._submit}
           </div>
         )}
-      </Field>
 
-      <div className="form-row">
-        <Field label="Judul *" error={errors.title}>
-          <Input value={form.title} onChange={f('title')} placeholder="Judul buku" error={errors.title}
-            onKeyDown={e => { if (e.key === 'Enter') handleSave() }} />
-        </Field>
-        <Field label="Pengarang *" error={errors.author}>
-          <Input value={form.author} onChange={f('author')} placeholder="Nama pengarang" error={errors.author}
-            onKeyDown={e => { if (e.key === 'Enter') handleSave() }} />
-        </Field>
-      </div>
-
-      <div className="form-row">
-        <Field label="Penerbit" optional>
-          <Input value={form.publisher} onChange={f('publisher')} placeholder="Nama penerbit" />
-        </Field>
-        <Field label="Tahun Terbit" optional>
-          <Input value={form.publication_year} onChange={f('publication_year')} type="number" placeholder="2024" />
-        </Field>
-      </div>
-
-      <div className="form-row">
-        <Field label="Kategori *" error={errors.category_id}>
-          <Select value={form.category_id} onChange={f('category_id')} error={errors.category_id}>
-            <option value="">Pilih kategori…</option>
-            {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
-          </Select>
-        </Field>
-        <div className="form-row" style={{ gap: 8 }}>
-          <Field label="Total Stok" error={errors.total_stock}>
-            <Input value={form.total_stock} onChange={f('total_stock')} type="number" min="1" error={errors.total_stock} />
+        {isEdit ? (
+          <div className="isbn-info">
+            <span style={{ color: 'var(--c-text3)' }}>🔒</span>
+            <div>
+              <span style={{ fontWeight: 600 }}>ISBN: </span>
+              <span style={{ fontFamily: 'monospace' }}>{editingItem.isbn ?? '—'}</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
+                ISBN tidak dapat diubah setelah buku dibuat
+              </span>
+            </div>
+          </div>
+        ) : (
+          <Field label="ISBN" optional hint="Wajib angka + strip, 10-20 karakter — contoh: 978-602-03-3446-5" error={errors.isbn}>
+            <Input value={form.isbn} onChange={handleIsbnChange} maxLength={20} placeholder="978-602-03-3446-5" error={errors.isbn} />
           </Field>
-          <Field label="Tersedia" error={errors.available_stock}>
-            <Input value={form.available_stock} onChange={f('available_stock')} type="number" min="0" error={errors.available_stock} />
+        )}
+
+        <Field label="Cover Buku" optional hint="Opsional: Upload gambar untuk cover buku">
+          <input type="file" accept="image/*" onChange={e => setCoverFile(e.target.files[0])} className="input" style={{ background: 'var(--c-bg)', padding: '6px' }} />
+          {form.cover_image_url && !coverFile && (
+            <div style={{ marginTop: 8, padding: 8, background: 'var(--c-bg)', borderRadius: 6, display: 'inline-block' }}>
+              <span style={{ display: 'block', fontSize: 11, marginBottom: 4, color: 'var(--c-text3)' }}>Cover saat ini:</span>
+              <img src={`${API_BASE}${form.cover_image_url}`} style={{ height: 60, borderRadius: 4 }} alt="Current Cover" />
+            </div>
+          )}
+        </Field>
+
+        <div className="form-row">
+          <Field label="Judul *" error={errors.title}>
+            <Input value={form.title} onChange={f('title')} placeholder="Judul buku" error={errors.title} required />
+          </Field>
+          <Field label="Pengarang *" error={errors.author}>
+            <Input value={form.author} onChange={f('author')} placeholder="Nama pengarang" error={errors.author} required />
           </Field>
         </div>
-      </div>
 
-      <Field label="Genre" optional hint={`${form.genre_ids.length} dipilih`}>
-        <GenreChips genres={genres} selected={form.genre_ids}
-          onChange={ids => setForm(p => ({ ...p, genre_ids: ids }))} />
-      </Field>
+        <div className="form-row">
+          <Field label="Penerbit" optional>
+            <Input value={form.publisher} onChange={f('publisher')} placeholder="Nama penerbit" />
+          </Field>
+          <Field label="Tahun Terbit" optional>
+            <Input value={form.publication_year} onChange={f('publication_year')} type="number" placeholder="2024" />
+          </Field>
+        </div>
 
-      <Field label="Sinopsis" optional>
-        <Textarea value={form.synopsis} onChange={f('synopsis')} rows={3} placeholder="Ringkasan singkat…" />
-      </Field>
+        <div className="form-row">
+          <Field label="Kategori *" error={errors.category_id}>
+            <Select value={form.category_id} onChange={f('category_id')} error={errors.category_id} required>
+              <option value="">Pilih kategori…</option>
+              {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
+            </Select>
+          </Field>
+          <div className="form-row" style={{ gap: 8 }}>
+            <Field label="Total Stok" error={errors.total_stock}>
+              <Input value={form.total_stock} onChange={f('total_stock')} type="number" min="1" error={errors.total_stock} required />
+            </Field>
+            <Field label="Tersedia" error={errors.available_stock}>
+              <Input value={form.available_stock} onChange={f('available_stock')} type="number" min="0" max={form.total_stock} error={errors.available_stock} required />
+            </Field>
+          </div>
+        </div>
+
+        <Field label="Genre" optional hint={`${form.genre_ids.length} dipilih`}>
+          <GenreChips genres={genres} selected={form.genre_ids}
+            onChange={ids => setForm(p => ({ ...p, genre_ids: ids }))} />
+        </Field>
+
+        <Field label="Sinopsis" optional>
+          <Textarea value={form.synopsis} onChange={f('synopsis')} rows={3} placeholder="Ringkasan singkat…" />
+        </Field>
+      </form>
     </Modal>
   )
 }
 
 export default ItemForm
+

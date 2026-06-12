@@ -22,9 +22,9 @@ def test_admin_headers(gateway_url):
     """
     # Mencoba login dengan email default admin
     # (Di kelompok HEXACORE, Anda bisa menyesuaikan email admin bawaan Anda)
-    email = "admin@lenterapustaka.com"
-    password = "adminpassword"
-    
+    email = os.getenv("ADMIN_EMAIL")
+    password = os.getenv("ADMIN_PASSWORD")
+
     try:
         response = httpx.post(
             f"{gateway_url}/auth/login",
