@@ -15,8 +15,8 @@ RUN npm ci
 COPY . .
 
 # Set API URL for production monolith build (embedded via Vite)
-# ARG VITE_API_URL=https://backend-production-cefb.up.railway.app 
-# ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_API_URL=https://backend-production-cefb.up.railway.app
+ENV VITE_API_URL=$VITE_API_URL
 
 # ==============================================================================
 # Set API URLs for production microservices build (embedded via Vite)
