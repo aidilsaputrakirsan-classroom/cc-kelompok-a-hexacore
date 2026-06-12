@@ -7,6 +7,13 @@ Selamat datang di rilis final LenteraPustaka untuk Ujian Akhir Semester! Pada pe
 
 ---
 
+## 🏗️ Peningkatan Arsitektur Utama (Major Architectural Upgrade)
+* **Migrasi Monolith ke Microservices:** Merombak total arsitektur *backend* tunggal menjadi dua layanan yang sepenuhnya independen: **Auth Service** (menangani pengguna & autentikasi JWT) dan **Library Service** (menangani inventaris katalog & sirkulasi). 
+* **Isolasi Database Logis:** Memisahkan data ke dalam `auth_db` dan `item_db` untuk menjamin independensi data antar-layanan (memenuhi kaidah *database-per-service* pada tingkatan logis).
+* **Decentralized Cloud Routing:** Mengubah alur *routing* produksi di Railway agar *Frontend* berkomunikasi langsung dengan masing-masing *service* melalui *Environment Variables* dinamis, meninggalkan ketergantungan pada *gateway* tunggal.
+
+---
+
 ## 🎉 Fitur Baru (New Features)
 
 * **Arsitektur Microservices:** Sistem kini dipecah menjadi dua layanan independen, yaitu `Auth Service` (menangani pengguna & JWT) dan `Library Service` (menangani katalog, sirkulasi, dan denda).
@@ -28,7 +35,8 @@ Selamat datang di rilis final LenteraPustaka untuk Ujian Akhir Semester! Pada pe
 
 ## 🔧 Perbaikan Kutu & Pembersihan (Bug Fixes & Refactoring)
 
-* **Resolusi Tautan Produksi:** Memperbaiki *bug* kegagalan koneksi di *Frontend* dengan memperbarui konfigurasi URL API `cefb` di dalam `.env.production`.
+* **Migrasi Dockerfile Frontend (Microservices):** Mengimplementasikan *multi-stage build* (Node.js & Nginx) pada `frontend/Dockerfile`. *Image* produksi kini dioptimalkan untuk menyajikan aset statis secara mandiri.
+* **Pemisahan Environment Variable API:** Menghapus konfigurasi URL *monolith* tunggal dan menggantinya dengan injeksi variabel dinamis (`VITE_AUTH_API_URL` & `VITE_LIBRARY_API_URL`) saat proses *build* untuk mendukung arsitektur layanan yang terisolasi.
 * **Perbaikan Tampilan Antarmuka UI:** Menyelesaikan masalah tata letak input (*field display errors*) yang sebelumnya terpotong pada layar resolusi tertentu setelah tahap *midterm*.
 * **Optimalisasi Indikator Pemuatan (*Loading State*):** Memperbaiki *bug* indikator pemuatan yang hilang (*missing loading indicators*) saat proses pengambilan data katalog yang berat, sehingga UX menjadi lebih responsif.
 * **Standardisasi Respons API:** Merapikan struktur respons JSON agar konsisten mengembalikan detail `message`, `data`, dan `status_code` di seluruh *endpoint*.
