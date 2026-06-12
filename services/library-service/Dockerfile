@@ -54,12 +54,12 @@ RUN mkdir -p /app/static/covers /app/static/fines && \
 USER appuser
 
 # Beritahu Docker bahwa aplikasi berjalan di port 8002
-EXPOSE 8002
+EXPOSE ${PORT:-8002}
 
 # --- TUGAS BACKEND: Healthcheck ---
 # Mengecek status aplikasi setiap 30 detik via endpoint /health di port 8002
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD curl -f http://localhost:8002/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8002}/health || exit 1
 
 # Perintah utama untuk menyalakan aplikasi FastAPI menggunakan Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8002}
