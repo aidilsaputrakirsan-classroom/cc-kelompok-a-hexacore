@@ -163,4 +163,6 @@ jobs:
         run: |
           echo "✅ Deployment successful!"
           echo "Backend Monolith Gateway: https://backend-production-cefb.up.railway.app"
+          echo "Auth-services: https://auth-services-production-4163.up.railway.app"
+          echo "Library-service: https://library-service-production-6b14.up.railway.app"
           echo "Frontend Cluster: https://frontend-production-78efa.up.railway.app"
