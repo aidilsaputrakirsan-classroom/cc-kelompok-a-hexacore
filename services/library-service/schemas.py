@@ -26,6 +26,14 @@ class CategoryCreate(BaseModel):
     name        : str           = Field(..., min_length=1, max_length=100, examples=["Fiksi"])
     description : Optional[str] = Field(None, examples=["Buku-buku fiksi dan novel"])
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Nama kategori tidak boleh kosong atau berisi spasi saja")
+        return stripped
+
 
 class CategoryResponse(BaseModel):
     category_id : int
@@ -43,6 +51,14 @@ class CategoryResponse(BaseModel):
 class GenreCreate(BaseModel):
     name        : str           = Field(..., min_length=1, max_length=100, examples=["Horor"])
     description : Optional[str] = Field(None, examples=["Cerita yang menakutkan"])
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Nama genre tidak boleh kosong atau berisi spasi saja")
+        return stripped
 
 
 class GenreResponse(BaseModel):
@@ -96,6 +112,7 @@ class BookCreate(BaseModel):
 class BookUpdate(BaseModel):
     category_id      : Optional[int] = None
     genre_ids        : Optional[list[int]] = Field(None, description="Ganti seluruh relasi genre buku ini")
+    isbn             : Optional[str] = Field(None, min_length=10, max_length=20, examples=["978-602-03-3446-5"])
     title            : Optional[str] = Field(None, min_length=1, max_length=255)
     author           : Optional[str] = Field(None, min_length=1, max_length=150)
     publisher        : Optional[str] = None
@@ -105,6 +122,20 @@ class BookUpdate(BaseModel):
     total_stock      : Optional[int] = Field(None, ge=1)
     available_stock  : Optional[int] = Field(None, ge=0)
     is_public        : Optional[bool] = None
+
+    @field_validator("isbn")
+    @classmethod
+    def validate_isbn_format(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        value = v.strip()
+        if not value:
+            return None
+        if not re.fullmatch(r"[0-9-]+", value):
+            raise ValueError("ISBN hanya boleh berisi angka dan strip (-)")
+        if "-" not in value:
+            raise ValueError("ISBN wajib menggunakan format angka + strip (-)")
+        return value
 
     @model_validator(mode="after")
     def validate_stock_consistency_when_both_present(self):

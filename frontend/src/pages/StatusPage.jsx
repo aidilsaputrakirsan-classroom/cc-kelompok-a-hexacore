@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost';
+// ==============================================================================
+// CONFIGURATION: Alamat Absolut Produksi Microservices (Bebas dari Bug Localhost)
+// ==============================================================================
+const AUTH_BASE_PRODUCTION = 'https://auth-services-production-4163.up.railway.app';
+const LIBRARY_BASE_PRODUCTION = 'https://library-service-production-6b14.up.railway.app';
 
 // Helper format uptime
 const formatUptime = (seconds) => {
@@ -8,7 +12,7 @@ const formatUptime = (seconds) => {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
-  
+
   const parts = [];
   if (hrs > 0) parts.push(`${hrs} jam`);
   if (mins > 0) parts.push(`${mins} menit`);
@@ -20,7 +24,7 @@ function ErrorRateBar({ rate }) {
   const isDanger = rate > 5;
   const isWarning = rate > 0 && rate <= 5;
   const color = isDanger ? 'var(--c-red)' : isWarning ? 'var(--c-amber)' : 'var(--c-green)';
-  
+
   return (
     <div style={{ width: '100%', backgroundColor: 'var(--c-slate3)', borderRadius: '4px', overflow: 'hidden', height: '12px', marginTop: '12px' }}>
       <div style={{
@@ -85,7 +89,7 @@ function ServiceCard({ name, icon, healthUrl, metricsUrl, refreshTrigger }) {
     }
   };
 
-  const statusVal = health?.status || 'unreachable';
+  const statusVal = health?.status || (health?.database === 'connected' ? 'healthy' : 'unreachable');
   const cfg = getStatusConfig(statusVal);
 
   return (
@@ -119,7 +123,7 @@ function ServiceCard({ name, icon, healthUrl, metricsUrl, refreshTrigger }) {
           gap: '6px',
           border: `1px solid ${cfg.color}33`
         }}>
-          <span style={{ fontSize: '10px', animation: statusVal === 'healthy' ? 'pulse 2s infinite' : 'none' }}>{cfg.icon}</span>
+          <span style={{ fontSize: '10px', animation: statusVal === 'healthy' || statusVal === 'connected' ? 'pulse 2s infinite' : 'none' }}>{cfg.icon}</span>
           {cfg.label}
         </span>
       </div>
@@ -162,7 +166,7 @@ function ServiceCard({ name, icon, healthUrl, metricsUrl, refreshTrigger }) {
             <div style={{ padding: '12px', background: 'var(--c-bg)', borderRadius: 'var(--r-md)', border: '1px solid var(--c-border)' }}>
               <div style={{ fontSize: '11px', color: 'var(--c-text3)', textTransform: 'uppercase', fontWeight: '700' }}>Uptime</div>
               <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--c-text)', marginTop: '4px' }}>
-                {formatUptime(metrics?.uptime_seconds)}
+                {formatUptime(metrics?.uptime_seconds || health?.uptime_seconds)}
               </div>
             </div>
 
@@ -249,8 +253,8 @@ function ServiceCard({ name, icon, healthUrl, metricsUrl, refreshTrigger }) {
               justifyContent: 'space-between'
             }}>
               <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--c-text2)' }}>🔌 Database Connection</span>
-              <span className={`badge ${health?.database === 'connected' || health?.dependencies?.database?.status === 'connected' ? 'badge-green' : 'badge-red'}`}>
-                {health?.database || health?.dependencies?.database?.status || 'disconnected'}
+              <span className={`badge ${health?.database === 'connected' || health?.dependencies?.database?.status === 'connected' || health?.status === 'healthy' ? 'badge-green' : 'badge-red'}`}>
+                {health?.database || health?.dependencies?.database?.status || (health?.status === 'healthy' ? 'connected' : 'disconnected')}
               </span>
             </div>
 
@@ -358,7 +362,7 @@ export default function StatusPage() {
           <h1 className="page-title">📊 Status Sistem & Observabilitas</h1>
           <p className="page-sub">Monitoring performa layanan mikro LenteraPustaka secara real-time</p>
         </div>
-        
+
         {/* Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {autoRefresh && (
@@ -366,17 +370,17 @@ export default function StatusPage() {
               Pembaruan otomatis dalam: <strong>{timeLeft}s</strong>
             </span>
           )}
-          
-          <button 
-            className="btn btn-secondary btn-sm" 
+
+          <button
+            className="btn btn-secondary btn-sm"
             onClick={() => setAutoRefresh(prev => !prev)}
             style={{ fontWeight: '600' }}
           >
             {autoRefresh ? '⏸️ Jeda Auto-Refresh' : '▶️ Aktifkan Auto-Refresh'}
           </button>
-          
-          <button 
-            className="btn btn-primary btn-sm" 
+
+          <button
+            className="btn btn-primary btn-sm"
             onClick={handleRefresh}
             style={{ fontWeight: '600' }}
           >
@@ -395,20 +399,20 @@ export default function StatusPage() {
         <ServiceCard
           name="Lentera Auth Service"
           icon="🔐"
-          healthUrl={`${API_URL}/auth/health`}
-          metricsUrl={`${API_URL}/auth/metrics`}
+          healthUrl={`${AUTH_BASE_PRODUCTION}/health`}
+          metricsUrl={`${AUTH_BASE_PRODUCTION}/metrics`}
           refreshTrigger={refreshTrigger}
         />
-        
+
         <ServiceCard
           name="Lentera Library Service"
           icon="📚"
-          healthUrl={`${API_URL}/items/health`}
-          metricsUrl={`${API_URL}/items/metrics`}
+          healthUrl={`${LIBRARY_BASE_PRODUCTION}/health`}
+          metricsUrl={`${LIBRARY_BASE_PRODUCTION}/metrics`}
           refreshTrigger={refreshTrigger}
         />
       </div>
-      
+
       {/* CSS Keyframes for animation pulse */}
       <style>{`
         @keyframes pulse {

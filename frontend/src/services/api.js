@@ -1,10 +1,23 @@
 // ============================================================
 // services/api.js — LenteraPustaka v0.4.0 FINAL
-// Sinkron penuh dengan backend/main.py
+// Sinkron penuh dengan backend microservices (Auth=8001, Library=8002)
 // Public endpoints (books, categories, genres, book stats) 
 // TIDAK pakai token — bisa diakses guest
 // ============================================================
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// export const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8001'
+// export const LIBRARY_API_BASE = import.meta.env.VITE_LIBRARY_API_URL || 'http://localhost:8002'
+
+// Langsung kunci ke URL publik Railway kalian (Wajib pake https://)
+export const AUTH_API_BASE = 'https://auth-services-production-4163.up.railway.app';
+export const LIBRARY_API_BASE = 'https://library-service-production-6b14.up.railway.app';
+
+// Untuk compatibility dengan file lain yang mungkin masih import API_BASE
+export const API_BASE = LIBRARY_API_BASE
+
+function getBaseUrl(url) {
+  if (url.startsWith('/auth') || url.startsWith('/users')) return AUTH_API_BASE;
+  return LIBRARY_API_BASE;
+}
 
 // ── Token + User cache di localStorage ───────────────────────
 export const token = {
@@ -28,13 +41,14 @@ function onSessionExpired() {
 
 // ── Core request (dengan token, untuk protected endpoints) ────
 async function req(url, opts = {}) {
+  const base = getBaseUrl(url)
   const t = token.get()
   const headers = { 'Content-Type': 'application/json', ...opts.headers }
   if (t) headers['Authorization'] = `Bearer ${t}`
 
   let res
   try {
-    res = await fetch(`${API_BASE}${url}`, { ...opts, headers })
+    res = await fetch(`${base}${url}`, { ...opts, headers })
   } catch {
     throw new Error('Tidak dapat terhubung ke server. Pastikan backend berjalan.')
   }
@@ -58,9 +72,10 @@ async function req(url, opts = {}) {
 
 // ── Public fetch (tanpa token, untuk guest) ───────────────────
 async function pub(url) {
+  const base = getBaseUrl(url)
   let res
   try {
-    res = await fetch(`${API_BASE}${url}`)
+    res = await fetch(`${base}${url}`)
   } catch {
     throw new Error('Tidak dapat terhubung ke server.')
   }
@@ -76,7 +91,7 @@ export async function login(email, password) {
   const body = new URLSearchParams({ username: email, password })
   let res
   try {
-    res = await fetch(`${API_BASE}/auth/login`, {
+    res = await fetch(`${AUTH_API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
@@ -100,7 +115,7 @@ export async function login(email, password) {
 export async function register({ email, password, full_name, role = 'member' }) {
   let res
   try {
-    res = await fetch(`${API_BASE}/auth/register`, {
+    res = await fetch(`${AUTH_API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, full_name, role }),
@@ -160,7 +175,7 @@ export const uploadBookCover = async (fileBlob) => {
   // Biarkan fetch mengurus Content-Type dan boundary otomatis
   let res
   try {
-    res = await fetch(`${API_BASE}/upload/covers`, {
+    res = await fetch(`${LIBRARY_API_BASE}/upload/covers`, {
       method: 'POST',
       headers,
       body: formData,
@@ -191,7 +206,7 @@ export const createUser = async (d) => {
   const t = token.get()
   let res
   try {
-    res = await fetch(`${API_BASE}/auth/register`, {
+    res = await fetch(`${AUTH_API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) },
       body: JSON.stringify(d),
@@ -234,6 +249,31 @@ export const reportBookLost     = (id) => req(`/transactions/${id}/lost`,    { m
 // GET /fines?status_filter=... (bukan &status=)
 export const fetchFines = (statusFilter = null, limit = 50, skip = 0) =>
   req(`/fines?skip=${skip}&limit=${limit}${statusFilter ? `&status_filter=${statusFilter}` : ''}`)
+
+export const uploadFineProof = async (fileBlob) => {
+  const t = token.get()
+  const formData = new FormData()
+  formData.append('file', fileBlob)
+
+  const headers = t ? { 'Authorization': `Bearer ${t}` } : {}
+  let res
+  try {
+    res = await fetch(`${LIBRARY_API_BASE}/upload/fines`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+  } catch {
+    throw new Error('Tidak dapat terhubung ke server.')
+  }
+
+  if (res.status === 401) throw new Error('Sesi berakhir. Silakan masuk kembali.')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Error ${res.status} saat upload bukti pembayaran`)
+  }
+  return res.json()
+}
 
 // POST /fines/{id}/submit-payment — body: { payment_proof_url: string }
 // payment_proof_url adalah URL gambar (Google Drive, Imgur, dll)

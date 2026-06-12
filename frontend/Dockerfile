@@ -14,9 +14,18 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Set API URL for production build (embedded via Vite)
-ARG VITE_API_URL=https://backend-production-cefb.up.railway.app
-ENV VITE_API_URL=$VITE_API_URL
+# # Set API URL for production monolith build (embedded via Vite)
+# ARG VITE_API_URL=https://backend-production-cefb.up.railway.app
+# ENV VITE_API_URL=$VITE_API_URL
+
+# ==============================================================================
+# Build argument for Vite environment variables (Microservices Migration)
+# ==============================================================================
+ARG VITE_AUTH_API_URL
+ARG VITE_LIBRARY_API_URL
+
+ENV VITE_AUTH_API_URL=$VITE_AUTH_API_URL
+ENV VITE_LIBRARY_API_URL=$VITE_LIBRARY_API_URL
 
 # Build React app -> output in /app/dist/
 RUN npm run build
