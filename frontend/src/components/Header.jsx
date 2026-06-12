@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 // ============================================================
 // components/Header.jsx
 // TopNav  → Guest & Member
@@ -67,24 +69,24 @@ function TopNav({ page, onNav, user, onLogout, badges = {}, theme, toggleTheme }
   const links = user ? MEMBER_LINKS : GUEST_LINKS
   return (
     <header className="topnav">
-      <button className="topnav-brand" onClick={() => onNav('home')}>
+      <Link to="/" className="topnav-brand" style={{ textDecoration: 'none' }}>
         <div className="topnav-brand-mark">📚</div>
         <span className="topnav-brand-text">
           Lentera<span>Pustaka</span>
         </span>
-      </button>
+      </Link>
 
       <nav className="topnav-nav">
         {links.map(l => (
-          <button
+          <Link
             key={l.id}
+            to={l.id === 'home' ? '/' : `/${l.id}`}
             className={`topnav-link${page === l.id ? ' active' : ''}`}
-            onClick={() => onNav(l.id)}
-            style={{ display: 'inline-flex', alignItems: 'center' }}
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
           >
             {l.label}
             {l.badgeKey && <BadgeDot count={badges[l.badgeKey]} />}
-          </button>
+          </Link>
         ))}
       </nav>
 
@@ -94,10 +96,10 @@ function TopNav({ page, onNav, user, onLogout, badges = {}, theme, toggleTheme }
         </button>
         {user ? (
           <>
-            <button className="topnav-user-btn" onClick={() => onNav('profile')}>
+            <Link to="/profile" className="topnav-user-btn" style={{ textDecoration: 'none' }}>
               <div className="avatar avatar-sm">{user.full_name?.[0]?.toUpperCase()}</div>
               <span>{user.full_name?.split(' ')[0]}</span>
-            </button>
+            </Link>
             <button className="btn btn-ghost btn-sm" onClick={onLogout}
               style={{ color: 'var(--c-text3)', fontSize: 13 }}>
               Keluar
@@ -105,8 +107,8 @@ function TopNav({ page, onNav, user, onLogout, badges = {}, theme, toggleTheme }
           </>
         ) : (
           <>
-            <button className="btn btn-ghost btn-sm" onClick={() => onNav('login', { tab: 'login' })}>Masuk</button>
-            <button className="btn btn-primary btn-sm" onClick={() => onNav('login', { tab: 'register' })}>Daftar</button>
+            <Link to="/login" className="btn btn-ghost btn-sm" onClick={() => onNav('login', { tab: 'login' })} style={{ textDecoration: 'none' }}>Masuk</Link>
+            <Link to="/login" className="btn btn-primary btn-sm" onClick={() => onNav('login', { tab: 'register' })} style={{ textDecoration: 'none' }}>Daftar</Link>
           </>
         )}
       </div>
@@ -130,18 +132,18 @@ function Sidebar({ page, onNav, user, onLogout, badges = {}, theme, toggleTheme 
           <div key={g.label}>
             <div className="sidebar-section-label">{g.label}</div>
             {g.items.map(item => (
-              <button
+              <Link
                 key={item.id}
+                to={item.id === 'home' ? '/' : `/${item.id}`}
                 className={`sidebar-link${page === item.id ? ' active' : ''}`}
-                onClick={() => onNav(item.id)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none' }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span className="sidebar-link-icon">{item.icon}</span>
                   {item.label}
                 </span>
                 {item.badgeKey && <BadgeDot count={badges[item.badgeKey]} />}
-              </button>
+              </Link>
             ))}
           </div>
         ))}
@@ -152,13 +154,13 @@ function Sidebar({ page, onNav, user, onLogout, badges = {}, theme, toggleTheme 
           <button className="sidebar-logout" onClick={toggleTheme} style={{ marginBottom: 12, justifyContent: 'center' }}>
             {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
           </button>
-          <div className="sidebar-user" onClick={() => onNav('profile')}>
+          <Link to="/profile" className="sidebar-user" style={{ textDecoration: 'none' }}>
             <div className="avatar avatar-md">{user.full_name?.[0]?.toUpperCase()}</div>
             <div style={{ overflow: 'hidden', flex: 1 }}>
               <div className="sidebar-user-name">{user.full_name}</div>
               <div className="sidebar-user-role">Administrator</div>
             </div>
-          </div>
+          </Link>
           <button className="sidebar-logout" onClick={onLogout}>
             <span>↩</span> Keluar
           </button>
