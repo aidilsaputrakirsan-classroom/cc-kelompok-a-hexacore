@@ -1,5 +1,4 @@
 # ☁️ Cloud App - [LenteraPustaka]
-![CI Pipeline](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/actions/workflows/ci.yml/badge.svg)
 
 ![CI Pipeline](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore/actions/workflows/ci.yml/badge.svg)
 
@@ -23,40 +22,66 @@ Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apa
 
 ## 👥 Tim
 
-| Nama | NIM | Peran |
-|------|-----|-------|
-| Maulana Malik Ibrahim | 10231051 | Lead Backend |
-| Micka Mayulia Utama | 10231053 | Lead Frontend |
-| Khanza Nabila Tsabita | 10231049 | Lead DevOps |
-| Muhammad Aqila Ardhi | 10231057 | Lead QA & Docs |
+| Nama | NIM | Peran | Kontribusi Utama |
+|------|-----|-------|------------------|
+| Maulana Malik Ibrahim | 10231051 | Lead Backend | Merancang Auth & Library Service, integrasi database, dan validasi Pydantic. |
+| Micka Mayulia Utama | 10231053 | Lead Frontend | Membangun UI React, integrasi Axios, dan halaman Status Dashboard. |
+| Khanza Nabila Tsabita | 10231049 | Lead DevOps | Menulis Dockerfile, konfigurasi Nginx Gateway, CI/CD Actions, dan Railway deploy. |
+| Muhammad Aqila Ardhi | 10231057 | Lead QA & Docs | Membuat unit/integration tests (Pytest), pengujian Swagger, dan menyusun dokumentasi. |
 
 ## 🌐 Live Demo
 
-| Service | URL |
-|---------|-----|
-| Frontend | https://frontend-production-78efa.up.railway.app/ |
-| Backend API | https://backend-production-3084.up.railway.app/health |
-| API Docs (Swagger) | https://backend-production-3084.up.railway.app/docs |
+| Layanan (Service) | Deskripsi | Tautan (URL) |
+| :--- | :--- | :--- |
+| **Frontend Web** | Antarmuka pengguna (React/Vite) | [Buka Aplikasi](https://frontend-production-78efa.up.railway.app/) |
+| **Auth Service** | API Autentikasi & Swagger UI | [Buka Auth API Docs](https://auth-services-production-4163.up.railway.app/docs) |
+| **Library Service**| API Manajemen Buku & Swagger UI| [Buka Library API Docs](https://library-service-production-6b14.up.railway.app/docs) |
 
 ## 🛠️ Tech Stack
 
 | Teknologi | Fungsi |
 |-----------|--------|
-| FastAPI   | Backend REST API |
-| React     | Frontend SPA |
-| PostgreSQL | Database |
-| Docker    | Containerization |
+| FastAPI | Backend REST API Microservices |
+| React | Frontend SPA |
+| PostgreSQL | Database Server (1 Instance dengan 2 DB terisolasi: `auth_db` & `item_db`) |
+| Docker | Containerization |
+| Nginx | API Gateway (Local Development) & Web Server Frontend (Production) |
 | GitHub Actions | CI/CD |
 | Railway/Render | Cloud Deployment |
+| Custom Metrics | Observability & Logging |
 
 ## 🏗️ Architecture
 
-```text
-[React Frontend] <--HTTP--> [FastAPI Backend] <--SQL--> [PostgreSQL]
-       |                            |
-  Vite + JSX               REST API Endpoints
-(Port 3000/5173)              (Port 8000)
+```mermaid
+flowchart TD
+    USER["👤 User"] --> GW["🚪 API Gateway<br/>Nginx :80"]
+    GW -->|"/auth/*, /users/*"| AUTH["🔐 Auth Service<br/>FastAPI :8001"]
+    GW -->|"/items/*, /categories, /transactions"| ITEM["📦 Library Service<br/>FastAPI :8002"]
+    GW -->|"/"| FE["⚛️ Frontend<br/>React :3000"]
+    
+    subgraph RailwayDB ["🗄️ Railway PostgreSQL Server (1 Instance)"]
+        ADB[("auth_db<br/>(Isolated DB)")]
+        IDB[("item_db<br/>(Isolated DB)")]
+    end
+
+    AUTH --> ADB
+    ITEM --> IDB
+    ITEM -.->|"HTTP /verify"| AUTH
 ```
+
+## 🚀 Project Journey (Evolusi Sistem)
+
+Proyek ini berevolusi melalui 3 fase utama:
+1. **Monolith (Milestone 1):** Backend FastAPI tunggal dan UI React yang terhubung ke satu PostgreSQL.
+2. **Containerization & CI/CD (Milestone 2):** Aplikasi dibungkus Docker Compose, dengan *pipeline* otomatisasi GitHub Actions untuk *testing* dan *deploy* ke Railway.
+3. 3. **Microservices & Security (Milestone 3):** Sistem dipecah menjadi dua layanan independen (`Auth` dan `Library`). Pada *local environment*, sistem dirutekan melalui Nginx API Gateway. Sedangkan pada *production* (Railway), Nginx bertindak sebagai penyaji web statis, dan Frontend langsung menembak URL masing-masing layanan secara terisolasi via *Environment Variables*.
+
+## ☁️ Deployment (Railway)
+
+Aplikasi ini di-*deploy* menggunakan CI/CD ke platform Railway:
+1. Kredensial rahasia (`.env`) disimpan secara aman di menu Variables Railway.
+2. GitHub Actions (`ci.yml`) akan menjalankan *Integration Test* setiap ada *commit* atau *Merge Request* ke *branch* utama.
+3. Jika *test* lolos (*Passed*), GitHub akan men-*trigger* *webhook* Railway untuk *build image* terbaru dan me-*restart* aplikasi di *cloud* tanpa hambatan (*zero-downtime deployment*).
 
 ## 🤖 Getting Started
 
@@ -68,26 +93,35 @@ Kami telah menyediakan panduan langkah-demi-langkah yang lengkap untuk menjalank
 
 Proyek ini sudah terkonfigurasi penuh menggunakan Docker Compose untuk memudahkan proses deployment lokal.
 
-#### 1. Jalankan Seluruh Sistem  
+#### 1. Clone & Siapkan Environment
+Buka terminal dan jalankan perintah berikut untuk mengunduh repositori dan menyiapkan kredensial:
+```bash
+git clone [https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore.git](https://github.com/aidilsaputrakirsan-classroom/cc-kelompok-a-hexacore.git)
+cd cc-kelompok-a-hexacore
+cp .env.example .env
+# Wajib: Edit file .env dengan kredensial/password lokal Anda
+```
+
+#### 2. Jalankan Seluruh Sistem  
 Buka terminal di root folder proyek dan jalankan perintah:
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 (Perintah ini akan secara otomatis membuat network lentera_net, menyiapkan volume lentera_data, dan menyalakan Database, Backend, serta Frontend secara bersamaan).
 
-#### 2. Cek Status Aplikasi
+#### 3. Cek Status Aplikasi
 Pastikan ketiga services sudah berstatus Up (healthy):
 
 ```bash
 docker compose ps
 ```
 
-#### 3. Akses Aplikasi
-- Frontend (UI): http://localhost:3000
-- Backend API: http://localhost:8000
-- API Documentation (Swagger): http://localhost:8000/docs
+#### 4. Akses Aplikasi
+- **Frontend (UI):** http://localhost:3000
+- **API Docs - Auth Service (Swagger):** http://localhost:8001/docs
+- **API Docs - Library Service (Swagger):** http://localhost:8002/docs
 
-#### 4. Mematikan Sistem
+#### 5. Mematikan Sistem
 Untuk mematikan sistem tanpa menghilangkan data database:
 
 ```bash
@@ -101,15 +135,23 @@ Prasyarat
 - Git
 
 Automated Setup: `./setup.sh`
-- Backend
-```
-cd backend
+
+**1. Auth Service (Backend)**
+```bash
+cd services/auth-service
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8001
 ```
 
-- Frontend
+**2. Library Service (Backend)**
+```bash
+cd services/library-service
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8002
 ```
+
+**3. Frontend**
+```bash
 cd frontend
 npm install
 npm install recharts
@@ -117,9 +159,9 @@ npm run dev
 ```
 
 Access
-- API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-- Frontend: http://localhost:5173
+- Auth API Docs: http://localhost:8001/docs
+- Library API Docs: http://localhost:8002/docs
+- Frontend UI: http://localhost:5173
 
 ### 🛠 DevOps Automation
 Gunakan perintah berikut untuk mempermudah workflow:
@@ -138,77 +180,32 @@ Gunakan perintah berikut untuk mempermudah workflow:
 | 5-7 | Docker & Compose | ✅ |
 | 8 | UTS Demo | ✅ |
 | 9-11 | CI/CD Pipeline | ✅ |
-| 12-14 | Microservices | ⬜ |
+| 12-14 | Microservices | ✅ |
 | 15-16 | Final & UAS | ⬜ |
 
 ## 🗃️ Project Structure
 
-```
+```text
 CC-KELOMPOK-A-HEXACORE/
-├── .github/
-│   ├── CODEOWNERS
-│   ├── pull_request_template.md
-│   └── workflows/
-│       └── ci.yml                     ← Baru
-├── backend/
-│   ├── static/   
-│   ├── Dockerfile           
-│   ├── .dockerignore                   
-│   ├── crud.py              
-│   ├── database.py
-│   ├── main.py              
-│   ├── models.py            
-│   ├── requirements.txt               ← Updated (pytest, httpx)
-│   ├── pytest.ini                     ← Baru
-│   ├── tests/                         ← Baru
-│   │   ├── __init__.py
-│   │   ├── conftest.py
-│   │   ├── test_auth.py
-│   │   ├── test_items.py
-│   │   └── test_health.py
-│   ├── schemas.py           
-│   ├── .env                 
-│   └── .env.example         
-├── docs/ 
-│   ├── test/                
-│   ├── api-documentation.md 
-│   ├── api-test-results.md   
-│   ├── auth-test-results.md
-│   ├── docker-cheatsheet.md   
-│   ├── image-comparison.md  
-│   ├── env-setup.md
-│   ├── schemadatabase.md    
-│   ├── member-aqila.md
-│   ├── member-Khanza_Nabila_Tsabita.md
-│   ├── member-Maulana_Malik_Ibrahim.md
-│   ├── member-Micka_Mayulia_Utama.md
-│   ├── setup-guide.md      
-│   └── ui-test-result.md
-├── frontend/  
-│   ├── frontend/
-│   ├── node_modules/
-│   ├── public/    
-│   ├── vite.config.js                 ← Updated (test config)
-│   ├── package.json                   ← Updated (test scripts)
-│   └── src/                
-│        ├── App.jsx                  
-│        ├── App.css                  
-│        ├── main.jsx                 
-│        └── components/
-│        │   ├── Header.jsx           
-│        │   ├── SearchBar.jsx        
-│        │   ├── ItemForm.jsx         
-│        │   ├── ItemList.jsx         
-│        │   └── ItemCard.jsx         
-│        └── test/                      ← Baru
-│            └── setup.js
-│            └── api.test.js
-├── docker-compose.yml                
-├── docker-compose.prod.yml           
-├── .gitignore            
-├── Makefile
-├── setup.sh                
-└── README.md                          ← Updated (CI badge)
+├── backend/                 # (Legacy) Kode sumber arsitektur Monolith lama
+├── docs/                    # Dokumentasi teknis, arsitektur, dan panduan tim
+│   └── test/                # Direktori bukti pengujian (Screenshot Swagger & UI)
+├── frontend/                # Layanan Antarmuka Pengguna (React SPA + Vite)
+│   ├── public/              # Aset statis publik
+│   └── src/                 # Kode sumber komponen UI dan integrasi Axios
+├── scripts/                 # Kumpulan skrip utilitas (Bash & PowerShell)
+├── services/                # [Core] Arsitektur Microservices Utama
+│   ├── auth-service/        # Layanan Autentikasi, Profil, dan JWT (FastAPI)
+│   ├── gateway/             # API Gateway & Rate Limiting (Nginx)
+│   ├── library-service/     # Layanan Katalog Buku, Transaksi, & Denda (FastAPI)
+│   └── shared/              # Modul utilitas bersama (Log & Metrik)
+├── tests/                   # Suite Pengujian Otomatis QA
+│   └── integration/         # Skenario pengujian lintas-layanan (Cross-Service)
+├── docker-compose.yml       # Orkestrasi kontainer untuk environment lokal
+├── docker-compose.prod.yml  # Orkestrasi kontainer untuk environment produksi
+├── Makefile                 # Kumpulan perintah otomatisasi workflow
+├── setup.sh                 # Skrip setup instalasi environment lokal (Native)
+└── readme.md                # Dokumentasi utama repositori
 ```
 
 ## 📁 Tabel ERD
@@ -260,42 +257,73 @@ Berikut adalah detail arsitektur *database* PostgreSQL yang digunakan oleh aplik
 
 ---
 
-## 📡 Dokumentasi & Hasil Testing Endpoint API
+## 📡 API Documentation & Endpoints
 
-Berikut adalah daftar *endpoint* beserta bukti pengujian menggunakan Swagger/Thunder Client. 
+Pada tahap *local development*, seluruh akses API dirutekan secara terpusat melalui Nginx API Gateway. Namun pada *production* (Railway), setiap layanan berdiri independen dan Frontend langsung berkomunikasi dengan *endpoint* spesifik mereka. Aplikasi ini menggunakan JSON Web Token (JWT) Bearer untuk autentikasi pada *endpoint* yang dilindungi.
 
-*(Daftar pengujian mencakup 6 poin utama dengan total 22 sub-poin)*:
-<br><img src="docs/test/categories.png" width="500">
+### 1. Auth & User Service
+Layanan ini menangani pendaftaran, autentikasi, dan manajemen profil pengguna.
 
-| No | method | URL | request body | response example |
-|:--:|--------|--------|--------|--------|
-| **1** | `GET` | `/system/health` | *-* | Status `healthy` v0.3.0<br><img src="docs/test/systemget1.png" width="300"> |
-| **2** | `GET` | `/system/team` | *-* | Data tim beranggotakan 4 orang<br><img src="docs/test/responsystemget.png" width="300"> |
-| **3** | `POST` | `/categories` | <pre><code>{"name": "Non-Fiksi", "description": "Karya tulis informatif..."}</code></pre><img src="docs/test/post4.png" width="300"> | Berhasil membuat data kategori<br><img src="docs/test/responspost.png" width="300"> |
-| **4** | `GET` | `/categories` | *-* | Menampilkan *list* kategori<br><img src="docs/test/responsget.png" width="300"> |
-| **5** | `GET` | `/categories/{category_id}` | Parameter: `category_id = 1`<br><img src="docs/test/get2.png" width="300"> | Menampilkan detail kategori ID 1<br><img src="docs/test/responsget2.png" width="300"> |
-| **6** | `PUT` | `/categories/{category_id}` | `category_id = 1`<br><pre><code>{"name": "Fiksi", "description": "Karya sastra naratif..."}</code></pre><img src="docs/test/put3.png" width="300"> | Data kategori berhasil di-update<br><img src="docs/test/responsput.png" width="300"> |
-| **7** | `DELETE` | `/categories/{category_id}` | Parameter: `category_id = 1`<br><img src="docs/test/delete1.png" width="300"> | `access-control-allow-credentials: true`<br><img src="docs/test/responsdelete1.png" width="300"> |
-| **8** | `GET` | `/categories` | *(Pengecekan setelah hapus)*<br>*-* | Kategori ID 1 sudah terhapus<br><img src="docs/test/getdelete.png" width="300"> |
-| **9** | `POST` | `/books` | <pre><code>{"category_id": 1, "isbn": "978-602-033-294-9", "title": "Bulan", "author": "Tere Liye", "total_stock": 5...}</code></pre><img src="docs/test/bookspost1.png" width="300"> | Berhasil membuat data buku<br><img src="docs/test/responspostbook.png" width="300"> |
-| **10** | `GET` | `/books/stats` | *(Statistik inventaris awal)*<br>*-* | Menampilkan statistik total buku<br><img src="docs/test/getbookawalpng" width="300"> |
-| **11** | `GET` | `/books` | Parameter: `ISBN = 978-602-033-294-9`<br><img src="docs/test/getbook.png" width="300"> | Menampilkan hasil pencarian buku<br><img src="docs/test/responsgetbook.png" width="300"> |
-| **12** | `GET` | `/books/{book_id}` | Parameter: `book_id`<br><img src="docs/test/getbook2.png" width="300"> | Menampilkan detail spesifik buku<br><img src="docs/test/responsgetbook2.png" width="300"> |
-| **13** | `PUT` | `/books/{book_id}` | `book_id`<br><pre><code>{"available_stock": 3...}</code></pre><img src="docs/test/putbook.png" width="300"> | Stok buku berhasil di-update<br><img src="docs/test/responsputbook.png" width="300"> |
-| **14** | `GET` | `/books/stats` | *(Cek statistik pasca update)*<br>*-* | Perubahan statistik inventaris<br><img src="docs/test/getbookput.png" width="300"> |
-| **15** | `DELETE` | `/books/{book_id}` | Parameter: `book_id`<br>*-* | Data buku berhasil dihapus<br><img src="docs/test/responsdeletebook.png" width="300"> |
-| **16** | `GET` | `/books` | *(Pengecekan setelah hapus)*<br>*-* | Menampilkan *list* buku terbaru<br><img src="docs/test/responsgetdeletebook.png" width="300"> |
-| **17** | `GET` | `/books/stats` | *(Cek statistik pasca hapus)*<br>*-* | Statistik inventaris berkurang<br><img src="docs/test/getbookdelete.png" width="300"> |
-| **18** | `POST` | `/user` | <pre><code>{"email": "micka@example.com", "password": "password456", "full_name": "Micka Mayulia", "role": "member"}</code></pre><img src="docs/test/postuser.png" width="300"> | Berhasil membuat *user* baru<br><img src="docs/test/responsputuser.png" width="300"> |
-| **19** | `GET` | `/user` | *-* | Menampilkan *list* *user*<br><img src="docs/test/responsgetuser.png" width="300"> |
-| **20** | `GET` | `/user/{user_id}` | Parameter: `user_id`<br><img src="docs/test/getuser2.png" width="300"> | Menampilkan detail *user*<br><img src="docs/test/responsgetuser2.png" width="300"> |
-| **21** | `POST` | `/transaction` | <pre><code>{"user_id": "96b872f9...", "book_id": "29efea5f...", "due_date": "2026-03-07..."}</code></pre><img src="docs/test/postransaction.png" width="300"> | Peminjaman buku berhasil dicatat<br><img src="docs/test/responspostransaction.png" width="300"> |
-| **22** | `GET` | `/transaction` | Menampilkan status (dipinjam, dikembalikan, dll)<br><img src="docs/test/getransaction.png" width="300"> | Menampilkan *list* transaksi<br><img src="docs/test/responsgetransaction.png" width="300"> |
-| **23** | `GET` | `/transaction/{id}` | Parameter: `transaction_id`<br><img src="docs/test/getransaction2.png" width="300"> | Menampilkan detail transaksi spesifik<br><img src="docs/test/responsgetransaction2.png" width="300"> |
-| **24** | `PUT` | `/transaction/{id}` | Parameter: `transaction_id`<br><img src="docs/test/putransaction.png" width="300"> | Pembaruan status transaksi berhasil<br><img src="docs/test/responsputransaction.png" width="300"> |
-| **25** | `GET` | `/fines` | Parameter: `belum lunas`<br><img src="docs/test/getfines.png" width="300"> | Menampilkan detail denda berjalan<br><img src="docs/test/responsgetfines.png" width="300"> |
-| **26** | `PUT` | `/fines/{fines_id}` | Parameter: `fines_id`<br><img src="docs/test/putfines.png" width="300"> | Status pelunasan berhasil di-update<br><img src="docs/test/responsputfines.png" width="300"> |
-| **27** | `GET` | `/fines` | Parameter: `lunas`<br><img src="docs/test/getfines2.png" width="300"> | Menampilkan riwayat denda lunas<br><img src="docs/test/responsgetfines2.png" width="300"> |
+| Method | Endpoint | Auth | Deskripsi |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/auth/login` | ❌ | Autentikasi kredensial dan mendapatkan token JWT. |
+| `POST` | `/auth/register` | ❌ | Mendaftarkan akun pengguna baru. |
+| `GET` | `/auth/me` | ✅ | Mengambil data profil milik pengguna yang sedang *login*. |
+| `PUT` | `/auth/me/profile` | ✅ | Memperbarui data profil pengguna saat ini. |
+| `PUT` | `/auth/me/change-password` | ✅ | Memperbarui kata sandi pengguna saat ini. |
+| `GET`, `POST` | `/users` | ✅ | (Admin) Mengelola daftar seluruh pengguna. |
+| `GET`, `PUT`, `DELETE`| `/users/{user_id}` | ✅ | (Admin) Mengelola data pengguna spesifik. |
+| `PUT` | `/users/{user_id}/reset-password` | ✅ | (Admin) Melakukan reset paksa kata sandi pengguna. |
+| `GET` | `/verify` | ✅ | Verifikasi validitas token (digunakan internal antar-layanan). |
+| `GET` | `/team` | ❌ | Menampilkan informasi tim pengembang. |
+| `GET` | `/auth/health`, `/auth/metrics` | ❌ | Pengecekan status operasional dan metrik performa layanan. |
+
+### 2. Library Service (Katalog & Sirkulasi)
+Layanan ini menangani inventaris buku, kategori, transaksi peminjaman, dan sistem denda.
+
+| Method | Endpoint | Auth | Deskripsi |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/items/public` | ❌ | Mengambil daftar buku untuk pengunjung tanpa akun (*guest*). |
+| `GET`, `POST` | `/books` | ✅ | Mengambil seluruh katalog atau menambahkan buku baru. |
+| `GET`, `PUT`, `DELETE`| `/books/{book_id}` | ✅ | Melihat, mengubah, atau menghapus spesifik buku. |
+| `GET`, `POST` | `/categories` & `/genres` | ✅ | Mengelola data klasifikasi kategori dan genre buku. |
+| `GET`, `POST` | `/transactions` | ✅ | Melihat riwayat peminjaman atau mengajukan pinjaman baru. |
+| `PUT` | `/transactions/{id}/approve` | ✅ | (Admin) Menyetujui pengajuan peminjaman buku. |
+| `PUT` | `/transactions/{id}/reject` | ✅ | (Admin) Menolak pengajuan peminjaman buku. |
+| `PUT` | `/transactions/{id}/return` | ✅ | (Admin) Mencatat pengembalian buku dari pengguna. |
+| `PUT` | `/transactions/{id}/lost` | ✅ | (Admin) Menandai buku yang hilang dalam masa peminjaman. |
+| `PUT` | `/transactions/{id}/simulate-overdue` | ✅ | (Dev/Admin) Mensimulasikan keterlambatan batas waktu. |
+| `GET` | `/fines` | ✅ | Melihat daftar denda pengguna. |
+| `PUT` | `/fines/{fine_id}/submit-payment` | ✅ | (Member) Mengunggah bukti pembayaran denda. |
+| `PUT` | `/fines/{fine_id}/approve` | ✅ | (Admin) Memverifikasi dan menyetujui pelunasan denda. |
+| `POST` | `/upload/covers` & `/upload/fines` | ✅ | *Endpoint* untuk mengunggah berkas gambar/dokumen. |
+| `GET` | `/books/stats`, `/items/stats`, `/fines/stats`| ✅ | Mengambil agregasi data statistik untuk *dashboard* Admin. |
+| `GET` | `/items/health`, `/items/metrics` | ❌ | Pengecekan status operasional dan metrik performa layanan. |
+
+---
+
+### 🔍 Panduan Pengecekan & Pengujian API
+
+Untuk memvalidasi dan menguji seluruh *endpoint* di atas, Anda dapat menggunakan antarmuka grafis yang ter- *generate* secara otomatis atau menggunakan terminal:
+
+**1. Melalui Antarmuka Swagger UI (Direkomendasikan)**
+FastAPI menyediakan dokumentasi interaktif yang memungkinkan Anda mengeksekusi *request* langsung dari *browser*.
+1. Pastikan seluruh layanan berjalan (via Docker Compose).
+2. Akses antarmuka Auth Service: `http://localhost:8001/docs` (Atau via gateway jika diatur).
+3. Akses antarmuka Library Service: `http://localhost:8002/docs`.
+4. Klik tombol **"Authorize"** di pojok kanan atas dan masukkan token Anda untuk mengakses *endpoint* yang terkunci (✅).
+5. Pilih *endpoint* yang diinginkan, klik **"Try it out"**, isi parameter/ *body*, dan klik **"Execute"**.
+
+**2. Melalui Terminal (cURL)**
+Untuk pengecekan cepat tanpa *browser*:
+```bash
+# Contoh 1: Pengecekan Metrik Publik
+curl -s http://localhost/auth/metrics
+
+# Contoh 2: Menembak Endpoint Terlindungi (Membutuhkan Header Otorisasi)
+curl -X GET http://localhost/items/stats \
+  -H "Authorization: Bearer MASUKKAN_TOKEN_JWT_ANDA_DISINI"
+```
 
   
 ## 📚 Dokumentasi Teknis & Laporan Pengujian
@@ -316,7 +344,8 @@ Berikut adalah daftar *endpoint* beserta bukti pengujian menggunakan Swagger/Thu
 * [Analisis & Perbandingan Ukuran Base Image Docker](docs/image-comparison.md)
 * [Cheat Sheet: Daftar Perintah Esensial Docker](docs/docker-cheatsheet.md)
 
-**🎯 Persiapan UTS & Arsitektur Utama**
-* 🚀 **[Naskah Demo UTS Kelompok Hexacore](docs/uts-demo-script.md)**
-* 🗄️ **[Detail Skema Database & ERD Terkini](docs/SchemaDatabase.md)**
+**🎯 Persiapan UAS & Arsitektur Utama**
+* 🚀 [Naskah Demo UAS Kelompok Hexacore](docs/uas-demo-script.md)
+* ✅ [Final Readiness Checklist UAS](docs/final-checklist.md)
+* 🗄️ [Detail Skema Database & ERD Terkini](docs/SchemaDatabase.md)
 
