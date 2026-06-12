@@ -91,7 +91,7 @@ function HomePage({ user, onNav, toast }) {
   const [detailBook, setDetailBook] = useState(null);
   const [borrowModal, setBorrowModal] = useState(null);
   const [borrowing, setBorrowing] = useState(false);
-  const { books, loading, error, isDegraded } = useBooks(search);
+  const { books, loading, error, isDegraded, reload } = useBooks(search);
 
   useEffect(() => {
     fetchCategories().then((d) => setCats(d || []));
@@ -183,6 +183,9 @@ function HomePage({ user, onNav, toast }) {
           <div className="hero-search">
             <span className="hero-search-icon">⌕</span>
             <input
+              id="hero-search"
+              name="search"
+              aria-label="Cari buku"
               className="hero-search-input"
               placeholder="Cari judul, pengarang, atau ISBN…"
               value={inputVal}
