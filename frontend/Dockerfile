@@ -19,10 +19,10 @@ COPY . .
 # ENV VITE_API_URL=$VITE_API_URL
 
 # ==============================================================================
-# Set API URLs for production microservices build (embedded via Vite)
+# Build argument for Vite environment variables (Microservices Migration)
 # ==============================================================================
-ARG VITE_AUTH_API_URL=https://auth-services-production-4163.up.railway.app
-ARG VITE_LIBRARY_API_URL=https://library-service-production-6b14.up.railway.app
+ARG VITE_AUTH_API_URL
+ARG VITE_LIBRARY_API_URL
 
 ENV VITE_AUTH_API_URL=$VITE_AUTH_API_URL
 ENV VITE_LIBRARY_API_URL=$VITE_LIBRARY_API_URL
