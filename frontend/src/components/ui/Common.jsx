@@ -1,7 +1,7 @@
 // ============================================================
 // components/ui/Common.jsx
 // ============================================================
-import { useEffect } from 'react'
+import React, { useEffect, useId, cloneElement, isValidElement } from 'react'
 
 export function Spinner({ text = 'Memuat data…' }) {
   return (
@@ -67,16 +67,27 @@ export function Confirm({ title, message, onConfirm, onCancel, danger = false })
   )
 }
 
-export function Field({ label, optional, hint, error, children }) {
+export function Field({ label, optional, hint, error, children, id }) {
+  const generatedId = useId();
+  const fieldId = id || generatedId;
+
+  // Assign id and name to the input child so the label can associate with it
+  const child = isValidElement(children) 
+    ? cloneElement(children, { 
+        id: children.props.id || fieldId, 
+        name: children.props.name || fieldId 
+      })
+    : children;
+
   return (
     <div className="form-group">
       {label && (
-        <label className="form-label">
+        <label className="form-label" htmlFor={fieldId}>
           {label}
           {optional && <span className="form-label-opt">(opsional)</span>}
         </label>
       )}
-      {children}
+      {child}
       {hint && !error && <span className="form-hint">{hint}</span>}
       {error && <span className="form-error">{error}</span>}
     </div>

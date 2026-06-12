@@ -20,7 +20,10 @@ function SearchBar({ onSearch, placeholder = 'Cari…' }) {
         ⌕
       </span>
       <input
-        className="input"
+        id="main-search"
+        name="q"
+        aria-label="Kolom pencarian"
+        className="search-input"
         style={{ paddingLeft: 34, paddingRight: q ? 34 : 12 }}
         placeholder={placeholder}
         value={q}
