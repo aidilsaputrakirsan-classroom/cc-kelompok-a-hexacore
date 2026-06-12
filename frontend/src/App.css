@@ -2294,3 +2294,76 @@ textarea.input {
     gap: 12px;
   }
 }
+
+/* ================================================================
+   UI MICRO-INTERACTIONS
+   ================================================================ */
+
+/* Buttons */
+.btn, button, .book-select-btn {
+  transition: transform var(--t) cubic-bezier(0.4, 0, 0.2, 1), box-shadow var(--t), background-color var(--t) !important;
+}
+
+.btn:hover:not(:disabled), button:hover:not(:disabled), .book-select-btn:hover {
+  transform: translateY(-1.5px);
+  box-shadow: var(--sh-md);
+}
+
+.btn:active:not(:disabled), button:active:not(:disabled), .book-select-btn:active {
+  transform: scale(0.96) translateY(0) !important;
+}
+
+/* Table Rows */
+.data-table tbody tr {
+  transition: transform var(--t), background-color var(--t), box-shadow var(--t) !important;
+  cursor: pointer;
+}
+
+.data-table tbody tr:hover {
+  transform: translateY(-2px);
+  background-color: var(--c-bg);
+  box-shadow: var(--sh-md);
+  z-index: 10;
+  position: relative;
+}
+
+.data-table tbody tr:active {
+  transform: scale(0.99) translateY(0) !important;
+}
+
+/* Lists and Cards */
+.card, .stat-card, li.list-item, .item-card {
+  transition: transform var(--t), box-shadow var(--t) !important;
+}
+
+.card:hover, .stat-card:hover, li.list-item:hover, .item-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-lg);
+}
+
+.card:active, .stat-card:active, li.list-item:active, .item-card:active {
+  transform: scale(0.98) translateY(0) !important;
+}
+
+/* Table head */
+.data-table thead th {
+  transition: background-color var(--t), color var(--t) !important;
+}
+
+.data-table thead th:hover {
+  background-color: var(--c-border);
+}
+
+/* Chips and Badges */
+.cat-chip, .badge {
+  transition: transform var(--t), background-color var(--t), color var(--t), border-color var(--t) !important;
+}
+
+.cat-chip:hover {
+  transform: translateY(-1.5px);
+  box-shadow: var(--sh-sm);
+}
+
+.cat-chip:active {
+  transform: scale(0.94) !important;
+}
