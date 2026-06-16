@@ -121,6 +121,9 @@ jobs:
           echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" > .env
           echo "SECRET_KEY=${SECRET_KEY}" >> .env
           echo "VITE_API_URL=http://localhost" >> .env
+          # Berikan izin penuh ke folder static agar kontainer non-root (appuser) bisa menulis ke dalamnya
+          mkdir -p services/library-service/static/covers services/library-service/static/fines
+          chmod -R 777 services/library-service/static
           docker compose up -d --build
 
       - name: ⏳ Tunggu semua services siap
