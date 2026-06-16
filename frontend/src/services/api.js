@@ -4,12 +4,8 @@
 // Public endpoints (books, categories, genres, book stats) 
 // TIDAK pakai token — bisa diakses guest
 // ============================================================
-// export const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8001'
-// export const LIBRARY_API_BASE = import.meta.env.VITE_LIBRARY_API_URL || 'http://localhost:8002'
-
-// Langsung kunci ke URL publik Railway kalian (Wajib pake https://)
-export const AUTH_API_BASE = 'https://auth-services-production-4163.up.railway.app';
-export const LIBRARY_API_BASE = 'https://library-service-production-6b14.up.railway.app';
+export const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8001'
+export const LIBRARY_API_BASE = import.meta.env.VITE_LIBRARY_API_URL || 'http://localhost:8002'
 
 // Untuk compatibility dengan file lain yang mungkin masih import API_BASE
 export const API_BASE = LIBRARY_API_BASE

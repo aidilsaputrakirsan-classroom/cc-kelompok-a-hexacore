@@ -51,12 +51,12 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Beritahu Docker bahwa aplikasi berjalan di port 8001
-EXPOSE 8001
+EXPOSE ${PORT:-8001}
 
 # --- TUGAS BACKEND: Healthcheck ---
 # Mengecek status aplikasi setiap 30 detik via endpoint /health di port 8001
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8001}/health || exit 1
 
 # Perintah utama untuk menyalakan aplikasi FastAPI menggunakan Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8001}

@@ -64,7 +64,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://frontend-production-78efa.up.railway.app",
-        "http://localhost:5173"  # Masukkan ini agar aman saat tes lokal lewat Vite
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost"  # Kunci utama buat Docker lokal anak FE
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],

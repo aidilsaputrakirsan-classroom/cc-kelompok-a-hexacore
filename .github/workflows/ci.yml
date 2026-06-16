@@ -132,37 +132,36 @@ jobs:
           cd frontend
           railway up --service frontend --detach
 
-      # OTOMASI HEALTH CHECK (Tugas Spesifik Lead DevOps)
-      - name: 🏥 Health check
+      # 🏥 OTOMASI HEALTH CHECK UNTUK SELURUH MICROSERVICES
+      - name: 🏥 Multi-Service Health Check
         run: |
-          echo "Waiting for deployment to be ready..."
+          echo "Waiting for all microservices deployment to be ready..."
           sleep 30
-          # 🎯 Kita tembak endpoint /health yang sudah disiapkan di Dockerfile!
-          HEALTH_URL="https://backend-production-cefb.up.railway.app/health"
-          MAX_ATTEMPTS=30
-          ATTEMPT=1
           
-          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
-            
-            # Jika merespons 200 (Sukses), atau bahkan jika merespons 404/401 (Artinya server merespons, bukan mati)
-            if [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "404" ] || [ "$HTTP_STATUS" == "401" ]; then
-              echo "✅ Backend is ONLINE and responding! (HTTP $HTTP_STATUS)"
-              exit 0
-            fi
-            
-            echo "⏳ Attempt $ATTEMPT/$MAX_ATTEMPTS: HTTP $HTTP_STATUS - Retrying in 10s..."
-            sleep 10
-            ATTEMPT=$((ATTEMPT + 1))
-          done
+          # 1. Validasi Health Check Auth Service
+          AUTH_URL="https://auth-services-production-4163.up.railway.app/health"
+          echo "Checking Auth Service at $AUTH_URL..."
+          AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_URL)
+          echo "Auth Service Response: $AUTH_STATUS"
           
-          echo "❌ Health check FAILED after $MAX_ATTEMPTS attempts!"
-          exit 1
+          # 2. Validasi Health Check Library Service
+          LIB_URL="https://library-service-production-6b14.up.railway.app/health"
+          echo "Checking Library Service at $LIB_URL..."
+          LIB_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $LIB_URL)
+          echo "Library Service Response: $LIB_STATUS"
+          
+          # Evaluasi Akhir: Pipeline sukses hanya jika KEDUA service merespon 200 OK
+          if [ "$AUTH_STATUS" -eq 200 ] && [ "$LIB_STATUS" -eq 200 ]; then
+            echo "🔥 Awesome! All microservices are healthy and live!"
+            exit 0
+          else
+            echo "❌ Validation failed. One or more services are down."
+            exit 1
+          fi
 
       - name: ✅ Deploy complete
         run: |
           echo "✅ Deployment successful!"
-          echo "Backend Monolith Gateway: https://backend-production-cefb.up.railway.app"
           echo "Auth-services: https://auth-services-production-4163.up.railway.app"
           echo "Library-service: https://library-service-production-6b14.up.railway.app"
           echo "Frontend Cluster: https://frontend-production-78efa.up.railway.app"

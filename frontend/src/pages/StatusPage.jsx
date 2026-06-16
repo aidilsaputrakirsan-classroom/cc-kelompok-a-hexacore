@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
-// ==============================================================================
-// CONFIGURATION: Alamat Absolut Produksi Microservices (Bebas dari Bug Localhost)
-// ==============================================================================
-const AUTH_BASE_PRODUCTION = 'https://auth-services-production-4163.up.railway.app';
-const LIBRARY_BASE_PRODUCTION = 'https://library-service-production-6b14.up.railway.app';
+const AUTH_API_BASE = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8001';
+const LIBRARY_API_BASE = import.meta.env.VITE_LIBRARY_API_URL || 'http://localhost:8002';
 
 // Helper format uptime
 const formatUptime = (seconds) => {
@@ -289,25 +286,25 @@ function ServiceCard({ name, icon, healthUrl, metricsUrl, refreshTrigger }) {
               <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--c-text2)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Traffic Endpoint Teratas
               </h4>
-              <div style={{ overflowX: 'auto', border: '1px solid var(--c-border)', borderRadius: 'var(--r-md)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+              <div className="table-wrap">
+                <table className="data-table" style={{ fontSize: '12px' }}>
                   <thead>
-                    <tr style={{ background: 'var(--c-bg)', borderBottom: '1px solid var(--c-border)', color: 'var(--c-text3)' }}>
-                      <th style={{ padding: '8px 12px' }}>Endpoint</th>
-                      <th style={{ padding: '8px 12px', width: '80px', textAlign: 'right' }}>Calls</th>
-                      <th style={{ padding: '8px 12px', width: '80px', textAlign: 'right' }}>Errors</th>
-                      <th style={{ padding: '8px 12px', width: '100px', textAlign: 'right' }}>Avg Latency</th>
+                    <tr>
+                      <th>Endpoint</th>
+                      <th style={{ width: '80px', textAlign: 'right' }}>Calls</th>
+                      <th style={{ width: '80px', textAlign: 'right' }}>Errors</th>
+                      <th style={{ width: '100px', textAlign: 'right' }}>Avg Latency</th>
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(metrics.endpoints).map(([endpoint, stats]) => (
-                      <tr key={endpoint} style={{ borderBottom: '1px solid var(--c-border)', color: 'var(--c-text2)' }}>
-                        <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: '600', color: 'var(--c-text)' }}>{endpoint}</td>
-                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600' }}>{stats.count}</td>
-                        <td style={{ padding: '8px 12px', textAlign: 'right', color: stats.errors > 0 ? 'var(--c-red)' : 'inherit', fontWeight: '600' }}>
+                      <tr key={endpoint}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: '600', color: 'var(--c-text)' }}>{endpoint}</td>
+                        <td style={{ textAlign: 'right', fontWeight: '600' }}>{stats.count}</td>
+                        <td style={{ textAlign: 'right', color: stats.errors > 0 ? 'var(--c-red)' : 'inherit', fontWeight: '600' }}>
                           {stats.errors}
                         </td>
-                        <td style={{ padding: '8px 12px', textAlign: 'right' }}>{stats.avg_latency_ms} ms</td>
+                        <td style={{ textAlign: 'right' }}>{stats.avg_latency_ms} ms</td>
                       </tr>
                     ))}
                   </tbody>
@@ -406,16 +403,16 @@ export default function StatusPage() {
         <ServiceCard
           name="Lentera Auth Service"
           icon="🔐"
-          healthUrl={`${AUTH_BASE_PRODUCTION}/health`}
-          metricsUrl={`${AUTH_BASE_PRODUCTION}/metrics`}
+          healthUrl={`${AUTH_API_BASE}/health`}
+          metricsUrl={`${AUTH_API_BASE}/metrics`}
           refreshTrigger={refreshTrigger}
         />
 
         <ServiceCard
           name="Lentera Library Service"
           icon="📚"
-          healthUrl={`${LIBRARY_BASE_PRODUCTION}/health`}
-          metricsUrl={`${LIBRARY_BASE_PRODUCTION}/metrics`}
+          healthUrl={`${LIBRARY_API_BASE}/health`}
+          metricsUrl={`${LIBRARY_API_BASE}/metrics`}
           refreshTrigger={refreshTrigger}
         />
       </div>
