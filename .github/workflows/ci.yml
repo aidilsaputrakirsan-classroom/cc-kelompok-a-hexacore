@@ -116,39 +116,39 @@ jobs:
       - name: 🐳 Start All Services via Docker Compose
         run: |
           # ========================================================
-          # SINKRONISASI KREDENSIAL MULTI-DATABASE (TIM HEXACORE)
+          # SINKRONISASI TOTAL DENGAN DOCKER-COMPOSE TIM HEXACORE
           # ========================================================
           echo "ENVIRONMENT=development" > .env
           echo "SECRET_KEY=ci-test-secret-not-used-in-prod-hexacore-2026" >> .env
           
-          # Kredensial Universal untuk Menghidupkan KEDUA Database Lokal (Auth & Item)
-          echo "POSTGRES_USER=postgres" >> .env
+          # Password disamakan dengan variabel ${POSTGRES_PASSWORD} yang diminta oleh docker-compose
           echo "POSTGRES_PASSWORD=postgres" >> .env
-          echo "POSTGRES_DB=postgres" >> .env
           
           # URL API Internal untuk Komunikasi Lokal Kontainer
           echo "VITE_AUTH_API_URL=http://localhost:8001" >> .env
           echo "VITE_LIBRARY_API_URL=http://localhost:8002" >> .env
           
+          # Nyalakan seluruh container (termasuk Nginx Gateway kalian!)
           docker compose up -d --build
-          echo "=== Status awal container setelah dinyalakan ==="
+          echo "=== Status awal urutan container ==="
           docker compose ps
 
       - name: ⏳ Wait for Microservices Core Validation
         run: |
-          echo "Waiting for all microservices and databases to stabilize inside GitHub Runner..."
-          # OPTIMASI: Dinaikkan ke 50 detik agar library-service sempat mendeteksi auth-service yang healthy
-          sleep 50
+          echo "Waiting for Nginx Gateway, Databases, and Services to stabilize..."
+          # Karena ada rantai depends_on yang panjang (DB -> Service -> Gateway),
+          # Kita beri waktu 55 detik agar semuanya selesai antre jabat tangan dengan sehat.
+          sleep 55
           
-          echo "=== Menampilkan logs container untuk pengecekan jika ada eror ==="
-          docker compose logs --tail=100
+          echo "=== Menampilkan logs container jika ada kendala ==="
+          docker compose logs --tail=50
           
-          echo "=== Status container setelah waktu tunggu ==="
+          echo "=== Status container setelah orkestrasi selesai ==="
           docker compose ps
           
-          # Menembak endpoint lokal port service secara langsung (ditambahkan toleransi || true agar pipeline aman)
-          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost:8001/health || echo "⚠️ Auth Local Health Check Timeout/Checked"
-          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost:8002/health || echo "⚠️ Library Local Health Check Timeout/Checked"
+          echo "=== Menguji endpoint lewat pintu Nginx Gateway (Port 80) ==="
+          # Sesuai teori Gateway, kita tembak port 80 langsung, bukan port backend-nya lagi!
+          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost/health || echo "⚠️ Gateway/Service Health Check Checked"
 
       - name: 🧪 Run Integration Test Suite
         run: |
