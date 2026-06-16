@@ -95,7 +95,7 @@ services:
           memory: 256M
     environment:
       - ENVIRONMENT=production
-      - PORT=8002                                                 # 1. FIX: Menyuntikkan variabel PORT yang hilang
+      - PORT=8002
       - DATABASE_URL=postgresql://postgres:postgres@item-db:5432/item_db
       - AUTH_SERVICE_URL=http://auth-service:8001
       - ALLOWED_ORIGINS=http://localhost,http://localhost:3000,http://localhost:5173
@@ -120,8 +120,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 30s                                               # 2. FIX: Melonggarkan waktu tunggu agar selaras dengan Dockerfile
-      timeout: 10s                                                # 3. FIX: Memberikan napas lebih panjang bagi aplikasi di CI cloud
+      interval: 15s                                               # Diturunkan frekuensinya biar ga padat
+      timeout: 10s                                                # Diberi batas waktu jawab 10 detik
+      retries: 5                                                  # Dikasih kesempatan mencoba sampai 5 kali
+      start_period: 40s                                           # 🔥 KUNCI UTAMA: Waktu toleransi migrasi database
       retries: 3
 
   # ==================== FRONTEND ====================
