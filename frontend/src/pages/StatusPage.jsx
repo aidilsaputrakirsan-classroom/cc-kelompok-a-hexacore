@@ -320,9 +320,16 @@ function ServiceCard({ name, icon, healthUrl, metricsUrl, refreshTrigger }) {
 
 export default function StatusPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(() => {
+    const saved = localStorage.getItem('lp_status_auto_refresh');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [timeLeft, setTimeLeft] = useState(10);
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem('lp_status_auto_refresh', autoRefresh);
+  }, [autoRefresh]);
 
   const handleRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
