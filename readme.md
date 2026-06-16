@@ -31,21 +31,21 @@ Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apa
 
 ## 🌐 Live Demo
 
-| Service | URL |
-|---------|-----|
-| Frontend | https://frontend-production-78efa.up.railway.app/ |
-| Backend API | https://backend-production-cefb.up.railway.app/health |
-| API Docs (Swagger) | https://backend-production-cefb.up.railway.app/docs |
+| Layanan (Service) | Deskripsi | Tautan (URL) |
+| :--- | :--- | :--- |
+| **Frontend Web** | Antarmuka pengguna (React/Vite) | [Buka Aplikasi](https://frontend-production-78efa.up.railway.app/) |
+| **Auth Service** | API Autentikasi & Swagger UI | [Buka Auth API Docs](https://auth-services-production-4163.up.railway.app/docs) |
+| **Library Service**| API Manajemen Buku & Swagger UI| [Buka Library API Docs](https://library-service-production-6b14.up.railway.app/docs) |
 
 ## 🛠️ Tech Stack
 
 | Teknologi | Fungsi |
 |-----------|--------|
-| FastAPI   | Backend REST API Microservices |
-| React     | Frontend SPA |
-| PostgreSQL| Database Terisolasi per Service |
-| Docker    | Containerization |
-| Nginx     | API Gateway & Rate Limiting |
+| FastAPI | Backend REST API Microservices |
+| React | Frontend SPA |
+| PostgreSQL | Database Server (1 Instance dengan 2 DB terisolasi: `auth_db` & `item_db`) |
+| Docker | Containerization |
+| Nginx | API Gateway (Local Development) & Web Server Frontend (Production) |
 | GitHub Actions | CI/CD |
 | Railway/Render | Cloud Deployment |
 | Custom Metrics | Observability & Logging |
@@ -58,6 +58,12 @@ flowchart TD
     GW -->|"/auth/*, /users/*"| AUTH["🔐 Auth Service<br/>FastAPI :8001"]
     GW -->|"/items/*, /categories, /transactions"| ITEM["📦 Library Service<br/>FastAPI :8002"]
     GW -->|"/"| FE["⚛️ Frontend<br/>React :3000"]
+    
+    subgraph RailwayDB ["🗄️ Railway PostgreSQL Server (1 Instance)"]
+        ADB[("auth_db<br/>(Isolated DB)")]
+        IDB[("item_db<br/>(Isolated DB)")]
+    end
+
     AUTH --> ADB[("auth_db<br/>PostgreSQL :5433")]
     ITEM --> IDB[("item_db<br/>PostgreSQL :5434")]
     ITEM -.->|"HTTP /verify"| AUTH
@@ -68,9 +74,9 @@ flowchart TD
 Proyek ini berevolusi melalui 3 fase utama:
 1. **Monolith (Milestone 1):** Backend FastAPI tunggal dan UI React yang terhubung ke satu PostgreSQL.
 2. **Containerization & CI/CD (Milestone 2):** Aplikasi dibungkus Docker Compose, dengan *pipeline* otomatisasi GitHub Actions untuk *testing* dan *deploy* ke Railway.
-3. **Microservices & Security (Milestone 3):** Sistem dipecah menjadi dua layanan independen (`Auth` dan `Library`), menggunakan Nginx sebagai API Gateway untuk *Rate Limiting*, serta penerapan manajemen rahasia yang ketat (*Environment Variables*).
+3. 3. **Microservices & Security (Milestone 3):** Sistem dipecah menjadi dua layanan independen (`Auth` dan `Library`). Pada *local environment*, sistem dirutekan melalui Nginx API Gateway. Sedangkan pada *production* (Railway), Nginx bertindak sebagai penyaji web statis, dan Frontend langsung menembak URL masing-masing layanan secara terisolasi via *Environment Variables*.
 
-## ☁️ Deployment (Railway)
+## ☁️ Deployment (Railway) 
 
 Aplikasi ini di-*deploy* menggunakan CI/CD ke platform Railway:
 1. Kredensial rahasia (`.env`) disimpan secara aman di menu Variables Railway.
@@ -111,9 +117,9 @@ docker compose ps
 ```
 
 #### 4. Akses Aplikasi
-- Frontend (UI): http://localhost:3000
-- Backend API: http://localhost:8000
-- API Documentation (Swagger): http://localhost:8000/docs
+- **Frontend (UI):** http://localhost:3000
+- **API Docs - Auth Service (Swagger):** http://localhost:8001/docs
+- **API Docs - Library Service (Swagger):** http://localhost:8002/docs
 
 #### 5. Mematikan Sistem
 Untuk mematikan sistem tanpa menghilangkan data database:
@@ -155,7 +161,7 @@ npm run dev
 Access
 - Auth API Docs: http://localhost:8001/docs
 - Library API Docs: http://localhost:8002/docs
-- Frontend UI: http://localhost:5173
+- Frontend UI: http://localhost:3000
 
 ### 🛠 DevOps Automation
 Gunakan perintah berikut untuk mempermudah workflow:
@@ -253,7 +259,7 @@ Berikut adalah detail arsitektur *database* PostgreSQL yang digunakan oleh aplik
 
 ## 📡 API Documentation & Endpoints
 
-Seluruh akses API dirutekan secara terpusat melalui Nginx API Gateway. Aplikasi ini menggunakan JSON Web Token (JWT) Bearer untuk autentikasi pada *endpoint* yang dilindungi.
+Pada tahap *local development*, seluruh akses API dirutekan secara terpusat melalui Nginx API Gateway. Namun pada *production* (Railway), setiap layanan berdiri independen dan Frontend langsung berkomunikasi dengan *endpoint* spesifik mereka. Aplikasi ini menggunakan JSON Web Token (JWT) Bearer untuk autentikasi pada *endpoint* yang dilindungi.
 
 ### 1. Auth & User Service
 Layanan ini menangani pendaftaran, autentikasi, dan manajemen profil pengguna.
@@ -338,7 +344,8 @@ curl -X GET http://localhost/items/stats \
 * [Analisis & Perbandingan Ukuran Base Image Docker](docs/image-comparison.md)
 * [Cheat Sheet: Daftar Perintah Esensial Docker](docs/docker-cheatsheet.md)
 
-**🎯 Persiapan UTS & Arsitektur Utama**
-* 🚀 **[Naskah Demo UTS Kelompok Hexacore](docs/uts-demo-script.md)**
-* 🗄️ **[Detail Skema Database & ERD Terkini](docs/SchemaDatabase.md)**
+**🎯 Persiapan UAS & Arsitektur Utama**
+* 🚀 [Naskah Demo UAS Kelompok Hexacore](docs/uas-demo-script.md)
+* ✅ [Final Readiness Checklist UAS](docs/final-checklist.md)
+* 🗄️ [Detail Skema Database & ERD Terkini](docs/SchemaDatabase.md)
 
