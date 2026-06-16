@@ -87,7 +87,7 @@ jobs:
   build-docker:
     name: 🐳 Build Docker
     runs-on: ubuntu-latest
-    needs: [test-backend, test-frontend] # Hanya jalan jika test HIJAU
+    needs: [test-backend, test-frontend, integration-test] # Hanya jalan jika unit test & integration test HIJAU
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -169,7 +169,7 @@ jobs:
   deploy:
     name: 🚀 Deploy to Railway
     runs-on: ubuntu-latest
-    needs: [test-backend, test-frontend, build-docker, integration-test]
+    needs: [build-docker] # Hanya jalan jika build-docker HIJAU
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     # ↑ HANYA deploy saat push/merge ke main (bukan saat PR)
 
