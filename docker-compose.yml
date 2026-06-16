@@ -124,7 +124,6 @@ services:
       timeout: 10s                                                # Diberi batas waktu jawab 10 detik
       retries: 5                                                  # Dikasih kesempatan mencoba sampai 5 kali
       start_period: 40s                                           # 🔥 KUNCI UTAMA: Waktu toleransi migrasi database
-      retries: 3
 
   # ==================== FRONTEND ====================
   frontend:
