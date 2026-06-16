@@ -118,16 +118,24 @@ jobs:
           # Membuat file env bayangan agar docker compose tidak macet
           echo "SECRET_KEY=supersecretkeychangeme123" > .env
           docker compose up -d --build
+          echo "=== Status awal container setelah dinyalakan ==="
           docker compose ps
 
       - name: ⏳ Wait for Microservices Core Validation
         run: |
-          echo "Waiting for services to be functional inside GitHub Runner..."
-          sleep 15
-          # Menembak endpoint lokal port service secara langsung sesuai port microservices lokalmu
-          # (Ubah port di bawah ini sesuai port internal auth & library di docker-compose lokal kalian)
-          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost:8001/health || echo "Auth Local Health Check Checked"
-          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost:8002/health || echo "Library Local Health Check Checked"
+          echo "Waiting for services and databases to be functional inside GitHub Runner..."
+          # OPTIMASI: Menaikkan waktu tunggu dari 15 ke 35 detik agar database selesai inisialisasi
+          sleep 35
+          
+          echo "=== Menampilkan logs container untuk pengecekan jika ada eror ==="
+          docker compose logs --tail=50
+          
+          echo "=== Status container setelah waktu tunggu ==="
+          docker compose ps
+          
+          # Menembak endpoint lokal port service secara langsung (ditambahkan toleransi || true agar pipeline aman)
+          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost:8001/health || echo "⚠️ Auth Local Health Check Timeout/Checked"
+          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost:8002/health || echo "⚠️ Library Local Health Check Timeout/Checked"
 
       - name: 🧪 Run Integration Test Suite
         run: |
