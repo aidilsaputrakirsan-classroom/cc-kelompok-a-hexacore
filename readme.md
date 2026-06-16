@@ -348,4 +348,3 @@ curl -X GET http://localhost/items/stats \
 * 🚀 [Naskah Demo UAS Kelompok Hexacore](docs/uas-demo-script.md)
 * ✅ [Final Readiness Checklist UAS](docs/final-checklist.md)
 * 🗄️ [Detail Skema Database & ERD Terkini](docs/SchemaDatabase.md)
-
