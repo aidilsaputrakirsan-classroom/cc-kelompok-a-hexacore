@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -186,16 +187,14 @@ function LoginPage({ onLogin, toast, initialTab = "login", onBack }) {
 
           <div className="login-tabs">
             {["login", "register"].map((t) => (
-              <button
+              <Link
                 key={t}
+                to={`/${t}`}
                 className={`login-tab${tab === t ? " active" : ""}`}
-                onClick={() => {
-                  setTab(t);
-                  setErrors({});
-                }}
+                style={{ textDecoration: 'none' }}
               >
                 {t === "login" ? "Masuk" : "Daftar"}
-              </button>
+              </Link>
             ))}
           </div>
 
