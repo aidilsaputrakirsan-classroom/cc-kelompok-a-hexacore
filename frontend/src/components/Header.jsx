@@ -107,8 +107,8 @@ function TopNav({ page, onNav, user, onLogout, badges = {}, theme, toggleTheme }
           </>
         ) : (
           <>
-            <Link to="/login" className="btn btn-ghost btn-sm" onClick={() => onNav('login', { tab: 'login' })} style={{ textDecoration: 'none' }}>Masuk</Link>
-            <Link to="/login" className="btn btn-primary btn-sm" onClick={() => onNav('login', { tab: 'register' })} style={{ textDecoration: 'none' }}>Daftar</Link>
+            <Link to="/login" className="btn btn-ghost btn-sm" style={{ textDecoration: 'none' }}>Masuk</Link>
+            <Link to="/register" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>Daftar</Link>
           </>
         )}
       </div>
