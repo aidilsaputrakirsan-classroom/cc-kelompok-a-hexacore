@@ -64,8 +64,8 @@ flowchart TD
         IDB[("item_db<br/>(Isolated DB)")]
     end
 
-    AUTH --> ADB
-    ITEM --> IDB
+    AUTH --> ADB[("auth_db<br/>PostgreSQL :5433")]
+    ITEM --> IDB[("item_db<br/>PostgreSQL :5434")]
     ITEM -.->|"HTTP /verify"| AUTH
 ```
 
@@ -161,7 +161,7 @@ npm run dev
 Access
 - Auth API Docs: http://localhost:8001/docs
 - Library API Docs: http://localhost:8002/docs
-- Frontend UI: http://localhost:5173
+- Frontend UI: http://localhost:3000
 
 ### 🛠 DevOps Automation
 Gunakan perintah berikut untuk mempermudah workflow:
@@ -348,4 +348,3 @@ curl -X GET http://localhost/items/stats \
 * 🚀 [Naskah Demo UAS Kelompok Hexacore](docs/uas-demo-script.md)
 * ✅ [Final Readiness Checklist UAS](docs/final-checklist.md)
 * 🗄️ [Detail Skema Database & ERD Terkini](docs/SchemaDatabase.md)
-
