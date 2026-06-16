@@ -116,16 +116,15 @@ jobs:
       - name: 🐳 Start All Services via Docker Compose
         run: |
           # ========================================================
-          # SINKRONISASI KREDENSIAL: Menyamakan nilai dummy CI 
-          # dengan Hardcode Kredensial di docker-compose.yml tim
+          # SINKRONISASI KREDENSIAL MULTI-DATABASE (TIM HEXACORE)
           # ========================================================
           echo "ENVIRONMENT=development" > .env
           echo "SECRET_KEY=ci-test-secret-not-used-in-prod-hexacore-2026" >> .env
           
-          # DISAMAKAN: Menggunakan kredensial sesuai hardcode backend kalian
+          # Kredensial Universal untuk Menghidupkan KEDUA Database Lokal (Auth & Item)
           echo "POSTGRES_USER=postgres" >> .env
           echo "POSTGRES_PASSWORD=postgres" >> .env
-          echo "POSTGRES_DB=auth_db" >> .env
+          echo "POSTGRES_DB=postgres" >> .env
           
           # URL API Internal untuk Komunikasi Lokal Kontainer
           echo "VITE_AUTH_API_URL=http://localhost:8001" >> .env
@@ -137,12 +136,12 @@ jobs:
 
       - name: ⏳ Wait for Microservices Core Validation
         run: |
-          echo "Waiting for services and databases to be functional inside GitHub Runner..."
-          # OPTIMASI: Menaikkan waktu tunggu dari 15 ke 35 detik agar database selesai inisialisasi
-          sleep 35
+          echo "Waiting for all microservices and databases to stabilize inside GitHub Runner..."
+          # OPTIMASI: Dinaikkan ke 50 detik agar library-service sempat mendeteksi auth-service yang healthy
+          sleep 50
           
           echo "=== Menampilkan logs container untuk pengecekan jika ada eror ==="
-          docker compose logs --tail=50
+          docker compose logs --tail=100
           
           echo "=== Status container setelah waktu tunggu ==="
           docker compose ps
