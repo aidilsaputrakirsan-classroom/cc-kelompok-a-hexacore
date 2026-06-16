@@ -79,7 +79,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"] # Sesuaikan endpoint health check backend-mu
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 8
+      start_period: 30s
 
   # ==================== LIBRARY SERVICE ====================
   library-service:
@@ -121,7 +122,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 8
+      start_period: 30s
 
   # ==================== FRONTEND ====================
   frontend:
