@@ -30,7 +30,6 @@ export default function App() {
   const location = useLocation();
   const page = location.pathname === '/' ? 'home' : location.pathname.substring(1).split('/')[0];
 
-  const [loginTab, setLoginTab]       = useState('login');
   const [user, setUser]               = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [authDown, setAuthDown]       = useState(false);
@@ -74,7 +73,6 @@ export default function App() {
   }, [toast]);
 
   const nav = useCallback((p, opts = {}) => {
-    if (p === 'login' && opts.tab) setLoginTab(opts.tab);
     navigate(p === 'home' ? '/' : `/${p}`);
   }, [navigate]);
 
@@ -135,7 +133,6 @@ export default function App() {
   const handleLogin = useCallback(u => {
     setUser(u);
     userCache.set(u);
-    setLoginTab('login');
     const dest = u.role === 'admin' ? '/dashboard' : '/';
     navigate(dest);
     refreshBadges(u);
@@ -185,13 +182,14 @@ export default function App() {
         <Route path="/profile" element={<ProtectedRoute><ProfilePage user={user} setUser={setUser} toast={toast} /></ProtectedRoute>} />
         <Route path="/status" element={<StatusPage />} />
         <Route path="/about" element={<AboutPage onBack={() => nav('home')} />} />
-        <Route path="/login" element={user ? <Navigate to={isAdmin ? "/dashboard" : "/"} replace /> : <LoginPage onLogin={handleLogin} toast={toast} initialTab={loginTab} onBack={() => { nav('home'); setLoginTab('login'); }} />} />
+        <Route path="/login" element={user ? <Navigate to={isAdmin ? "/dashboard" : "/"} replace /> : <LoginPage key="login" onLogin={handleLogin} toast={toast} initialTab="login" onBack={() => nav('home')} />} />
+        <Route path="/register" element={user ? <Navigate to={isAdmin ? "/dashboard" : "/"} replace /> : <LoginPage key="register" onLogin={handleLogin} toast={toast} initialTab="register" onBack={() => nav('home')} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );
 
-  if (page === 'login' && !user) return (
+  if ((page === 'login' || page === 'register') && !user) return (
     <>
       {renderRoutes()}
       <ToastContainer toasts={toasts} />
