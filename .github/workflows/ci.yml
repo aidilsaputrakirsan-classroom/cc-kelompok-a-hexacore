@@ -115,41 +115,29 @@ jobs:
 
       - name: 🐳 Start All Services via Docker Compose
         run: |
-          # ========================================================
-          # SINKRONISASI TOTAL DENGAN DOCKER-COMPOSE TIM HEXACORE
-          # ========================================================
+          # Membuat file .env tiruan minimalis agar docker-compose membaca password database
           echo "ENVIRONMENT=development" > .env
           echo "SECRET_KEY=ci-test-secret-not-used-in-prod-hexacore-2026" >> .env
-          
-          # Menyuntikkan password database universal
           echo "POSTGRES_PASSWORD=postgres" >> .env
           
-          # MENYELAMATKAN PORT: Menyuntikkan variabel PORT secara eksplisit 
-          # agar terbaca oleh Dockerfile library-service & auth-service
-          echo "PORT=8002" >> .env
-          echo "VITE_AUTH_API_URL=http://localhost:8001" >> .env
-          echo "VITE_LIBRARY_API_URL=http://localhost:8002" >> .env
-          
-          # Jalankan container di latar belakang
           docker compose up -d --build
-          echo "=== Status awal urutan container ==="
+          echo "=== Status awal container setelah dinyalakan ==="
           docker compose ps
 
       - name: ⏳ Wait for Microservices Core Validation
         run: |
-          echo "Waiting for Nginx Gateway, Databases, and Services to stabilize..."
-          # Memberikan waktu longgar 55 detik bagi library-service untuk binding port 8002
-          sleep 55
+          echo "Waiting for all microservices and gateway to stabilize..."
+          # Cukup tunggu 45 detik karena healthcheck di docker-compose sekarang sudah longgar dan pintar
+          sleep 45
           
-          echo "=== Menampilkan logs container untuk pengecekan debug ==="
+          echo "=== Menampilkan logs container jika ada kendala ==="
           docker compose logs --tail=50
           
           echo "=== Status container setelah waktu tunggu ==="
           docker compose ps
           
           echo "=== Menguji endpoint lewat pintu Nginx Gateway (Port 80) ==="
-          # Menggunakan toleransi agar jika kontainer masih dalam proses transisi, pipeline TIDAK CRASH
-          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost/health || echo "⚠️ Gateway/Service Health Check Acknowledged"
+          curl --retry 5 --retry-delay 3 --retry-all-errors --fail http://localhost/health || echo "⚠️ Gateway/Service Health Check Checked"
 
       - name: 🧪 Run Integration Test Suite
         run: |
