@@ -160,7 +160,7 @@ function LoginPage({ onLogin, toast, initialTab = "login", onBack }) {
       {/* Right panel */}
       <div className="login-right">
         <div className="login-card">
-          <h2 className="login-brand-title">LenteraPustaka</h2>
+          <h2 className="login-brand-title">LENTERA PUSTAKA HEXACORE</h2>
           <p className="login-brand-sub">
             HEXACORE · Institut Teknologi Kalimantan
           </p>
