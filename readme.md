@@ -26,7 +26,7 @@ Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apa
 |------|-----|-------|------------------|
 | Maulana Malik Ibrahim | 10231051 | Lead Backend | Merancang Auth & Library Service, integrasi database, dan validasi Pydantic. |
 | Micka Mayulia Utama | 10231053 | Lead Frontend | Membangun UI React, integrasi Axios, dan halaman Status Dashboard. |
-| Khanza Nabila Tsabita | 10231049 | Lead DevOps | Menulis Dockerfile, konfigurasi Nginx Gateway, CI/CD Actions, dan Railway deploy. |
+| Khanza Nabila Tsabita | 10231049 | Lead DevOps | Menulis Dockerfile, CI/CD Actions, dan integrasi Railway deploy. |
 | Muhammad Aqila Ardhi | 10231057 | Lead QA & Docs | Membuat unit/integration tests (Pytest), pengujian Swagger, dan menyusun dokumentasi. |
 
 ## 🌐 Live Demo
@@ -54,19 +54,23 @@ Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apa
 
 ```mermaid
 flowchart TD
-    USER["👤 User"] --> GW["🚪 API Gateway<br/>Nginx :80"]
-    GW -->|"/auth/*, /users/*"| AUTH["🔐 Auth Service<br/>FastAPI :8001"]
-    GW -->|"/items/*, /categories, /transactions"| ITEM["📦 Library Service<br/>FastAPI :8002"]
-    GW -->|"/"| FE["⚛️ Frontend<br/>React :3000"]
+    USER["👤 User (Browser)"] -->|1. Akses & Muat Web| FE["⚛️ Frontend (React)<br/>Public URL Railway"]
+    
+    %% Alur Request dari Sisi Client Frontend React ke Backend
+    FE -->|2a. HTTP Request<br/>/auth/, /users/| AUTH["🔐 Auth Service (FastAPI)<br/>Public URL Railway :8001"]
+    FE -->|2b. HTTP Request<br/>/transactions, /books| ITEM["📚 Library Service (FastAPI)<br/>Public URL Railway :8002"]
     
     subgraph RailwayDB ["🗄️ Railway PostgreSQL Server (1 Instance)"]
         ADB[("auth_db<br/>(Isolated DB)")]
         IDB[("item_db<br/>(Isolated DB)")]
     end
 
-    AUTH --> ADB[("auth_db<br/>PostgreSQL :5433")]
-    ITEM --> IDB[("item_db<br/>PostgreSQL :5434")]
-    ITEM -.->|"HTTP /verify"| AUTH
+    %% Koneksi Database
+    AUTH --> ADB
+    ITEM --> IDB
+    
+    %% Komunikasi Antar-Layanan di Belakang (Backchannel)
+    ITEM -.->|"3. HTTP /verify<br/>(Private Domain)"| AUTH
 ```
 
 ## 🚀 Project Journey (Evolusi Sistem)
@@ -74,7 +78,7 @@ flowchart TD
 Proyek ini berevolusi melalui 3 fase utama:
 1. **Monolith (Milestone 1):** Backend FastAPI tunggal dan UI React yang terhubung ke satu PostgreSQL.
 2. **Containerization & CI/CD (Milestone 2):** Aplikasi dibungkus Docker Compose, dengan *pipeline* otomatisasi GitHub Actions untuk *testing* dan *deploy* ke Railway.
-3. 3. **Microservices & Security (Milestone 3):** Sistem dipecah menjadi dua layanan independen (`Auth` dan `Library`). Pada *local environment*, sistem dirutekan melalui Nginx API Gateway. Sedangkan pada *production* (Railway), Nginx bertindak sebagai penyaji web statis, dan Frontend langsung menembak URL masing-masing layanan secara terisolasi via *Environment Variables*.
+3. **Microservices & Security (Milestone 3):** Sistem dipecah menjadi dua layanan independen (`Auth` dan `Library`). Pada *local environment*, sistem dirutekan melalui Nginx API Gateway. Sedangkan pada *production* (Railway), Nginx bertindak sebagai penyaji web statis, dan Frontend langsung menembak URL masing-masing layanan secara terisolasi via *Environment Variables*.
 
 ## ☁️ Deployment (Railway)
 
@@ -196,7 +200,7 @@ CC-KELOMPOK-A-HEXACORE/
 ├── scripts/                 # Kumpulan skrip utilitas (Bash & PowerShell)
 ├── services/                # [Core] Arsitektur Microservices Utama
 │   ├── auth-service/        # Layanan Autentikasi, Profil, dan JWT (FastAPI)
-│   ├── gateway/             # API Gateway & Rate Limiting (Nginx)
+│   ├── gateway/             # AI Gateway & Rate Limiting (Nginx)  
 │   ├── library-service/     # Layanan Katalog Buku, Transaksi, & Denda (FastAPI)
 │   └── shared/              # Modul utilitas bersama (Log & Metrik)
 ├── tests/                   # Suite Pengujian Otomatis QA
@@ -309,7 +313,7 @@ Untuk memvalidasi dan menguji seluruh *endpoint* di atas, Anda dapat menggunakan
 **1. Melalui Antarmuka Swagger UI (Direkomendasikan)**
 FastAPI menyediakan dokumentasi interaktif yang memungkinkan Anda mengeksekusi *request* langsung dari *browser*.
 1. Pastikan seluruh layanan berjalan (via Docker Compose).
-2. Akses antarmuka Auth Service: `http://localhost:8001/docs` (Atau via gateway jika diatur).
+2. Akses antarmuka Auth Service: `http://localhost:8001/docs`
 3. Akses antarmuka Library Service: `http://localhost:8002/docs`.
 4. Klik tombol **"Authorize"** di pojok kanan atas dan masukkan token Anda untuk mengakses *endpoint* yang terkunci (✅).
 5. Pilih *endpoint* yang diinginkan, klik **"Try it out"**, isi parameter/ *body*, dan klik **"Execute"**.
@@ -348,3 +352,10 @@ curl -X GET http://localhost/items/stats \
 * 🚀 [Naskah Demo UAS Kelompok Hexacore](docs/uas-demo-script.md)
 * ✅ [Final Readiness Checklist UAS](docs/final-checklist.md)
 * 🗄️ [Detail Skema Database & ERD Terkini](docs/SchemaDatabase.md)
+* ☁️ [Panduan Deployment Railway Terkini](docs/deployment-guide.md)
+* 📢 [Release Notes Milestone 3 (Microservices)](docs/release-notes-m3.md)
+* 📝 **Reflection Papers (Individual):**
+  * [Muhammad Aqila Ardhi - Lead QA & Docs](docs/reflection-aqila.md)
+  * [Maulana Malik Ibrahim - Lead Backend](docs/reflection-maulana.md)
+  * [Micka Mayulia Utama - Lead Frontend](docs/reflection-micka.md)
+  * [Khanza Nabila Tsabita - Lead DevOps](docs/reflection-khanza.md)
