@@ -45,6 +45,7 @@ Mengatasi masalah pengunjung yang harus datang langsung hanya untuk mengecek apa
 | React | Frontend SPA |
 | PostgreSQL | Database Server (1 Instance dengan 2 DB terisolasi: `auth_db` & `item_db`) |
 | Docker | Containerization |
+| Nginx | API Gateway (Local Development) & Web Server Frontend (Production) |
 | GitHub Actions | CI/CD |
 | Railway/Render | Cloud Deployment |
 | Custom Metrics | Observability & Logging |
@@ -77,7 +78,7 @@ flowchart TD
 Proyek ini berevolusi melalui 3 fase utama:
 1. **Monolith (Milestone 1):** Backend FastAPI tunggal dan UI React yang terhubung ke satu PostgreSQL.
 2. **Containerization & CI/CD (Milestone 2):** Aplikasi dibungkus Docker Compose, dengan *pipeline* otomatisasi GitHub Actions untuk *testing* dan *deploy* ke Railway.
-3. **Microservices & Security (Milestone 3):** Sistem dipecah menjadi dua layanan independen (`Auth` dan `Library`). Frontend berkomunikasi secara langsung ke URL masing-masing layanan secara terisolasi via *Environment Variables*, baik pada *local environment* maupun *production* (Railway).
+3. **Microservices & Security (Milestone 3):** Sistem dipecah menjadi dua layanan independen (`Auth` dan `Library`). Pada *local environment*, sistem dirutekan melalui Nginx API Gateway. Sedangkan pada *production* (Railway), Nginx bertindak sebagai penyaji web statis, dan Frontend langsung menembak URL masing-masing layanan secara terisolasi via *Environment Variables*.
 
 ## ☁️ Deployment (Railway)
 
@@ -199,6 +200,7 @@ CC-KELOMPOK-A-HEXACORE/
 ├── scripts/                 # Kumpulan skrip utilitas (Bash & PowerShell)
 ├── services/                # [Core] Arsitektur Microservices Utama
 │   ├── auth-service/        # Layanan Autentikasi, Profil, dan JWT (FastAPI)
+│   ├── gateway/             # AI Gateway & Rate Limiting (Nginx)  
 │   ├── library-service/     # Layanan Katalog Buku, Transaksi, & Denda (FastAPI)
 │   └── shared/              # Modul utilitas bersama (Log & Metrik)
 ├── tests/                   # Suite Pengujian Otomatis QA
@@ -261,7 +263,7 @@ Berikut adalah detail arsitektur *database* PostgreSQL yang digunakan oleh aplik
 
 ## 📡 API Documentation & Endpoints
 
-Sistem ini menerapkan arsitektur terdistribusi di mana setiap layanan berdiri secara independen. Frontend langsung berkomunikasi dengan *endpoint* spesifik dari masing-masing layanan (Auth & Library) tanpa melalui API Gateway terpusat. Aplikasi ini menggunakan JSON Web Token (JWT) Bearer untuk autentikasi pada *endpoint* yang dilindungi.
+Pada tahap *local development*, seluruh akses API dirutekan secara terpusat melalui Nginx API Gateway. Namun pada *production* (Railway), setiap layanan berdiri independen dan Frontend langsung berkomunikasi dengan *endpoint* spesifik mereka. Aplikasi ini menggunakan JSON Web Token (JWT) Bearer untuk autentikasi pada *endpoint* yang dilindungi.
 
 ### 1. Auth & User Service
 Layanan ini menangani pendaftaran, autentikasi, dan manajemen profil pengguna.
