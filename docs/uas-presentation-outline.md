@@ -58,20 +58,69 @@
      - *Maulana:* "Halaman status memvalidasi kesehatan (*health check*) seluruh layanan. Kode 200 OK berarti Gateway, Auth, dan Library merespons secara optimal."
 - **Backup:** Rekaman video demonstrasi lengkap telah disiapkan (untuk antisipasi apabila terjadi kendala jaringan).
 
-## Slide 6: Challenges & Lessons Learned (🎤 Speaker: Semua Anggota / Round-robin | Durasi: 1.5 menit)
+## Slide 6: Challenges & Lessons Learned (🎤 Speaker: Semua Anggota | Estafet)
 Bagian ini dibacakan secara estafet (*round-robin*) sesuai dengan domain kendala masing-masing:
 
-- **Maulana (Lead Backend):** 
-  - *Challenge:* Memecah satu database monolith raksasa menjadi 2 DB terpisah (*Auth* dan *Item/Library*) tanpa memutus relasi data.
-  - *Solution:* Melakukan refaktor skema ORM, menghilangkan *hard-relation*, dan memisahkan koneksi PostgreSQL per *service*.
-- **Micka (Lead Frontend):**
-  - *Challenge:* Mengubah integrasi sistem agar *Frontend* (React) dapat mengonsumsi berbagai layanan *backend* tanpa harus memanggil port yang berbeda-beda.
-  - *Solution:* Menyesuaikan rute pemanggilan API *(fetch)* ke satu pintu Nginx Gateway, serta memperbaiki *error handling UI* lintas-layanan.
-- **Khanza (Lead DevOps):**
-  - *Challenge:* Kompleksitas komunikasi lintas-kontainer (Docker) dan sinkronisasi rahasia (*environment variables*) antara lokal dan *production*.
-  - *Solution:* Menggunakan Nginx sebagai *reverse proxy* penyatu dan mengatur `docker-compose.yml` yang terpusat.
-- **Aqila (Lead QA & Docs) — Biggest Learning:**
-  - *Kesimpulan Pelajaran:* "Pelajaran terbesar dari tim Hexacore adalah menyadari *trade-off* *microservices*. Keunggulan skalabilitas dan isolasinya sangat hebat, namun mengorbankan kesederhanaan. Ini menuntut tim kami untuk super disiplin menjaga dokumentasi, menguji kontrak API, dan melakukan *deployment*."
+### 👨‍💻 Maulana (Lead Backend)
+**1. Kehilangan Hubungan Relasional (Foreign Key) & Duplikasi Data**
+* **Kendala:** Pemecahan database monolith (`lentera_db`) menjadi `auth_db` (port 5433) dan `item_db` (port 5434) membuat *join query* SQL langsung dan integritas referensial (Foreign Key) antar-layanan menjadi tidak mungkin dilakukan.
+* **Solusi:** Menghapus *Foreign Key* fisik pada database dan memindahkan validasi ke *Application Layer*. Sistem kini mengeksekusi HTTP REST API Call asinkron (`httpx.AsyncClient`) ke `auth-service` untuk memverifikasi validitas *user_id* sebelum transaksi dibuat.
+
+**2. Bahaya Kegagalan Beruntun (*Cascading Failure*)**
+* **Kendala:** *Network boundary* pada *microservices* membuat rute yang butuh autentikasi terancam *hang* atau mati total jika `auth-service` mengalami *overload* atau gangguan.
+* **Solusi:** Mengimplementasikan 3 tingkat pertahanan (*resilience patterns*):
+  1. *Retry Logic* dengan *Exponential Backoff* (maksimal 3 kali percobaan ulang).
+  2. *Circuit Breaker* (memutus arus / *OPEN* selama 30 detik setelah 5 kegagalan beruntun).
+  3. *Graceful Degradation* (mengaktifkan akses *Guest anonim* agar katalog buku tetap diakses pengunjung meski sistem otorisasi sedang *down*).
+
+**3. Sulitnya Debugging pada Kontainer Terdistribusi**
+* **Kendala:** Sangat membingungkan melacak *bug* karena *log* tersebar di banyak kontainer (Gateway, Library, Auth). Sulit mencocokkan *request* *frontend* mana yang memicu *error*.
+* **Solusi:** Mengimplementasikan *middleware logging* JSON terstruktur dengan menyuntikkan *Correlation ID* (`X-Correlation-ID`) dari API Gateway ke seluruh layanan di belakangnya untuk pelacakan *request* terpusat.
+
+---
+
+### 👩‍💻 Micka (Lead Frontend)
+**1. Integrasi Frontend dengan Layanan Mandiri**
+* **Kendala:** Mengubah integrasi sistem agar *Frontend* (React) dapat mengonsumsi berbagai layanan mandiri tanpa harus pusing memanggil port yang berbeda-beda.
+* **Solusi:** Menyesuaikan rute pemanggilan API (*fetch*) ke satu pintu melalui Nginx API Gateway tersentralisasi.
+
+**2. Sinkronisasi Environment Lintas Platform**
+* **Kendala:** Mengatur sinkronisasi *environment* antara fase pengembangan di lokal dengan peladen produksi.
+* **Solusi:** Memanfaatkan `docker-compose.yml` dengan konfigurasi variabel dinamis pada berkas `.env`.
+
+---
+
+### 👩‍🔧 Khanza (Lead DevOps)
+**1. Kompleksitas Eksekusi Kontainer**
+* **Kendala:** Menjalankan *container* secara manual via CLI sangat memakan waktu dan rentan *human error*.
+* **Solusi:** Mengotomatisasi proses dengan Docker Compose sehingga seluruh layanan naik sekaligus lewat satu perintah `docker compose up --build`.
+
+**2. Isu Pemblokiran Jaringan (CORS) di Production**
+* **Kendala:** Terjadi isu pemblokiran CORS saat *deployment* ke Railway yang membuat *frontend* gagal terhubung ke *backend*.
+* **Solusi:** Menambahkan daftar URL *whitelist* secara eksplisit pada masing-masing layanan.
+
+**3. Pemantauan Status Layanan Otomatis**
+* **Kendala:** Memastikan keandalan layanan setelah di-*deploy* karena pengecekan lama masih mengarah ke *monolith*.
+* **Solusi:** Menambahkan *health check* otomatis pada *GitHub Actions* untuk memantau status *microservices* secara berkala.
+
+**4. Pembuktian Perbandingan Arsitektur**
+* **Kendala:** Menunjukkan bukti nyata perbedaan *monolith* vs *microservices* kepada penilai.
+* **Solusi:** Menjalankan arsitektur *monolith* dan *microservices* secara bersamaan agar perbandingan performa dan isolasinya terlihat langsung.
+
+---
+
+### 🕵️‍♀️ Aqila (Lead QA & Docs)
+**1. Akurasi Dokumentasi & Otorisasi Terdistribusi**
+* **Kendala:** Memastikan seluruh dokumentasi API (Swagger) dan *automated testing* (Pytest) tetap akurat setelah perombakan arsitektur, serta kerumitan menguji *endpoint* publik vs JWT terproteksi.
+* **Solusi:** Menerapkan disiplin pengujian terisolasi per modul untuk memvalidasi setiap kontrak API sesuai dengan tingkat otorisasinya.
+
+**2. Bentrokan Integrasi Kode (Git Conflicts)**
+* **Kendala:** Menangani stres dan ancaman hilangnya data akibat *merge conflict* di Git saat seluruh tim mendorong kode (*push*) secara bersamaan di fase akhir.
+* **Solusi:** Menggunakan manajemen *branching* yang ketat, fitur *stash*, dan *force push* terkendali untuk menjaga repositori tim tetap bersih dan sinkron.
+
+---
+**💡 Kesimpulan Tim (*Biggest Learning*):**
+*"Pelajaran terbesar dari tim Hexacore adalah menyadari **trade-off** dari arsitektur microservices. Keunggulan skalabilitas dan isolasinya sangat luar biasa, namun ia menuntut harga mahal berupa hilangnya kesederhanaan sistem. Ini menuntut tim kami untuk super disiplin dalam menjaga dokumentasi, merancang jaringan, dan mengelola integrasi kode."*
 
 ## Slide 7: Team Contributions (🎤 Speaker: Semua Anggota / Round-robin | Durasi: 1.5 menit)
 - Maulana Malik Ibrahim — Lead Backend — Pemecahan FastAPI ke *microservices*, skema *database*, logika bisnis *endpoint* API — [63 commits, 11 PRs]
